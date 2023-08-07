@@ -7,15 +7,13 @@ import pretty_errors
 from ase import Atoms
 from ase.io.vasp import write_vasp
 
-# python main.py -m [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -g ['Cn(6)','U()','sigmaV()'] -c {'T_Q':[5,3]}
-
 parser = argparse.ArgumentParser(description="generating line group structure")
 
 parser.add_argument(
     "-m",
     "--motif",
     default=[[3, np.pi / 24, 0.6], [2.2, np.pi / 24, 0.8]],
-    help="the initial atom position",
+    help="the Cylindrical coordinates of initial atom position",
 )
 
 parser.add_argument(
@@ -29,7 +27,8 @@ parser.add_argument(
     "-c",
     "--cyclic",
     default={"T_Q": [6, 1.5]},
-    help="The generalized translation group",
+    help="The generalized translation group. For T_Q the first parameter is Q and the second parameter is f."
+    " For T_V the parameter is f",
 )
 
 parser.add_argument(
@@ -65,7 +64,6 @@ def Cn(n):
             [0, 0, 1],
         ]
     )
-    # mat = [[np.cos(2*np.pi/n), -np.sin(2*np.pi/n), 0], [np.sin(2*np.pi/n),np.cos(2*np.pi/n), 0], [0,0,1]]
     return mat
 
 
@@ -259,8 +257,8 @@ def generate_line_group_structure(monomer_pos, cyclic_group):
         all_pos = np.unique(np.round(all_pos, 4), axis=0)
         A = Q * f
 
-    elif list(cyclic_group.keys())[0] == "T_v":
-        f = cyclic_group["T_Q"][0]
+    elif list(cyclic_group.keys())[0] == "T_V":
+        f = cyclic_group["T_V"]
         for ii in range(2):
             all_pos = np.vstack((all_pos, T_v(f, all_pos)))
         all_pos = np.unique(np.round(all_pos, 4), axis=0)
