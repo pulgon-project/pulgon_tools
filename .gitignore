@@ -1,3 +1,4 @@
 .idea/
 .pre-commit-config.yaml
 *.vasp
+__pycache__/
