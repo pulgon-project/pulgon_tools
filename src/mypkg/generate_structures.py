@@ -236,6 +236,14 @@ def change_center(st1):
     return st2
 
 
+def sortrows(a):
+    """
+    :param a:
+    :return: Compare each row in ascending order
+    """
+    return a[np.lexsort(np.rot90(a))]
+
+
 def generate_line_group_structure(monomer_pos, cyclic_group):
     """
 
@@ -251,7 +259,24 @@ def generate_line_group_structure(monomer_pos, cyclic_group):
         Q = cyclic_group["T_Q"][0]
         f = cyclic_group["T_Q"][1]
         for ii in range(np.ceil(Q).astype(np.int32)):
-            all_pos = np.vstack((all_pos, T_Q(Q, f, all_pos)))
+            if ii == 0:
+                tmp_monomer_pos = T_Q(Q, f, monomer_pos)
+                all_pos = np.vstack((all_pos, tmp_monomer_pos))
+            else:
+                tmp_monomer_pos = T_Q(Q, f, tmp_monomer_pos)
+                all_pos = np.vstack((all_pos, tmp_monomer_pos))
+                judge = np.sum(
+                    (
+                        sortrows(np.round(monomer_pos[:, :2], 2))
+                        - sortrows(np.round(tmp_monomer_pos[:, :2], 2))
+                    )
+                    ** 2
+                )
+                # set_trace()
+                if judge < 0.1:
+                    Q = ii + 1
+                    break
+                # set_trace()
         all_pos = np.unique(np.round(all_pos, 4), axis=0)
         A = Q * f
 
@@ -275,7 +300,13 @@ def generate_line_group_structure(monomer_pos, cyclic_group):
 def main():
     pos_cylin = np.array(eval(args.motif))
     if pos_cylin.ndim == 1:
-        pos = pos_cylin.reshape(pos_cylin.shape[0], 1)
+        pos = np.array(
+            [
+                pos_cylin[0] * np.cos(pos_cylin[1]),
+                pos_cylin[0] * np.sin(pos_cylin[1]),
+                pos_cylin[2],
+            ]
+        )
     else:
         pos = np.array(
             [
@@ -287,15 +318,16 @@ def main():
         pos = pos.T
     generators = np.array([eval(tmp) for tmp in eval(args.generators)])
     cg = eval(args.cyclic)
-    # set_trace()
     st_name = args.st_name
 
     rot_sym = dimino(generators, symec=4)
     monomer_pos = []
     for sym in rot_sym:
+        # set_trace()
         if pos.ndim == 1:
-            monomer_pos.append(np.dot(sym, pos).T[0])
+            monomer_pos.append(np.dot(sym, pos.reshape(pos.shape[0], 1)).T[0])
         else:
+            # set_trace()
             monomer_pos.extend([np.dot(sym, line) for line in pos])
     monomer_pos = np.array(monomer_pos)
 
