@@ -20,4 +20,3 @@ python main.py -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -g ['Cn(6)','U()','sigm
 -s: saved file name  
 
 ##### Note: No space in the list or dict.
-
