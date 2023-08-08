@@ -11,7 +11,7 @@ pytest
 You need to specify the motiff, generators of point groups and generalized translation group. An example:
 
 ```
-python main.py -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -g ['Cn(6)','U()','sigmaV()'] -c {'T_Q':[5,3]} -s poscar.vasp
+python src/mypkg/generate_structures.py -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -g ['Cn(6)','U()','sigmaV()'] -c {'T_Q':[5,3]} -s poscar.vasp
 ```   
 
 -m: the Cylindrical coordinates of initial atom position   
