@@ -1,9 +1,7 @@
 import argparse
 import copy
-from pdb import set_trace
 
 import numpy as np
-import pretty_errors
 from ase import Atoms
 from ase.io.vasp import write_vasp
 

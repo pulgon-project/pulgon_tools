@@ -1,0 +1,11 @@
+LICENSE
+README.md
+pyproject.toml
+src/Generate_line_group_structure_module.egg-info/PKG-INFO
+src/Generate_line_group_structure_module.egg-info/SOURCES.txt
+src/Generate_line_group_structure_module.egg-info/dependency_links.txt
+src/Generate_line_group_structure_module.egg-info/requires.txt
+src/Generate_line_group_structure_module.egg-info/top_level.txt
+src/mypkg/__init__.py
+src/mypkg/generate_structures.py
+test/test_Dimino.py

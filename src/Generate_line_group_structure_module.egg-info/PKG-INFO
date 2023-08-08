@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: Generate-line-group-structure-module
+Version: 0.0.0
+Summary: Generating line group structures
+Author-email: Yujie Cen <yujie.cen@tuwien.ac.at>
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Requires-Python: <3.11,>=3.9
+License-File: LICENSE

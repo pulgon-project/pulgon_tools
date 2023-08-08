@@ -1,10 +1,6 @@
-import os
-import sys
-
 import pytest
 
-sys.path.append(os.getcwd())
-from main import Cn, U, dimino, sigmaV
+from src.mypkg.generate_structures import Cn, U, dimino, sigmaV
 
 
 @pytest.fixture(name="generators")
