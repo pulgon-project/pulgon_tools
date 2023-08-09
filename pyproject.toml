@@ -5,7 +5,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "Generate_line_group_structure_module"
+name = "pulgon_tools_wip"
 authors = [
     {name = "Yujie Cen", email = "yujie.cen@tuwien.ac.at"}
 ]
