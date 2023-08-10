@@ -1,6 +1,6 @@
 import pytest
 
-from src.mypkg.generate_structures import Cn, U, dimino, sigmaV
+from pulgon_tools_wip.generate_structures import Cn, U, dimino, sigmaV
 
 
 @pytest.fixture(name="generators")
