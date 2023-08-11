@@ -5,40 +5,6 @@ import numpy as np
 from ase import Atoms
 from ase.io.vasp import write_vasp
 
-parser = argparse.ArgumentParser(description="generating line group structure")
-
-parser.add_argument(
-    "-m",
-    "--motif",
-    default=[[3, np.pi / 24, 0.6], [2.2, np.pi / 24, 0.8]],
-    help="the Cylindrical coordinates of initial atom position",
-)
-
-parser.add_argument(
-    "-g",
-    "--generators",
-    default=["Cn(6)", "sigmaV()"],
-    help="the point group generator of monomer",
-)
-
-parser.add_argument(
-    "-c",
-    "--cyclic",
-    default={"T_Q": [6, 1.5]},
-    help="The generalized translation group. For T_Q the first parameter is Q and the second parameter is f."
-    " For T_V the parameter is f",
-)
-
-parser.add_argument(
-    "-s",
-    "--st_name",
-    type=str,
-    default="poscar.vasp",
-    help="the saved file name",
-)
-
-args = parser.parse_args()
-
 
 def e():
     """
@@ -298,6 +264,42 @@ def generate_line_group_structure(monomer_pos, cyclic_group):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="generating line group structure"
+    )
+
+    parser.add_argument(
+        "-m",
+        "--motif",
+        default=[[3, np.pi / 24, 0.6], [2.2, np.pi / 24, 0.8]],
+        help="the Cylindrical coordinates of initial atom position",
+    )
+
+    parser.add_argument(
+        "-g",
+        "--generators",
+        default=["Cn(6)", "sigmaV()"],
+        help="the point group generator of monomer",
+    )
+
+    parser.add_argument(
+        "-c",
+        "--cyclic",
+        default={"T_Q": [6, 1.5]},
+        help="The generalized translation group. For T_Q the first parameter is Q and the second parameter is f."
+        " For T_V the parameter is f",
+    )
+
+    parser.add_argument(
+        "-s",
+        "--st_name",
+        type=str,
+        default="poscar.vasp",
+        help="the saved file name",
+    )
+
+    args = parser.parse_args()
+
     pos_cylin = np.array(eval(args.motif))
     if pos_cylin.ndim == 1:
         pos = np.array(
