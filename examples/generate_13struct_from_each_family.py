@@ -2,7 +2,7 @@ import numpy as np
 import pretty_errors
 from ase.io.vasp import write_vasp
 
-from src.mypkg.generate_structures import (
+from pulgon_tools_wip.generate_structures import (
     T_Q,
     Cn,
     S2n,
