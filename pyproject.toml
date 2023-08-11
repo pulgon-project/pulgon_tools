@@ -23,3 +23,6 @@ dynamic = ["version"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[project.scripts]
+pulgon-generate-structures = "pulgon_tools_wip:generate_structures.main"
