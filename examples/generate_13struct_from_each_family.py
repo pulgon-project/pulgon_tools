@@ -1,3 +1,5 @@
+from pdb import set_trace
+
 import numpy as np
 import pretty_errors
 from ase.io.vasp import write_vasp
@@ -122,7 +124,7 @@ def input13():
 
 
 def main():
-    pos_cylin, generators, cg, st_name = input12()
+    pos_cylin, generators, cg, st_name = input13()
 
     if pos_cylin.ndim == 1:
         pos = np.array(
@@ -151,6 +153,7 @@ def main():
     monomer_pos = np.array(monomer_pos)
 
     st = generate_line_group_structure(monomer_pos, cg)
+    # set_trace()
     write_vasp("%s" % st_name, st, direct=True, sort=True)
 
 
