@@ -11,9 +11,9 @@ def sortrows(a):
     return a[np.lexsort(np.rot90(a))]
 
 
-def refine_cell(scale_pos, cell, numbers, syemc=1e-5):
+def refine_cell(scale_pos, cell, numbers, syemc=6):
     # scale_pos = np.dot(pos, np.linalg.inv(cell))
-    scale_pos, _ = np.round(np.modf(scale_pos), 4)
+    scale_pos, _ = np.round(np.modf(scale_pos), syemc)
     pos, index = np.unique(scale_pos, axis=0, return_index=True)
     numbers = numbers[index]
     # set_trace()
