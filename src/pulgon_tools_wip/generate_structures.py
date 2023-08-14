@@ -1,9 +1,12 @@
 import argparse
 import copy
+from pdb import set_trace
 
 import numpy as np
 from ase import Atoms
 from ase.io.vasp import write_vasp
+
+from pulgon_tools_wip.utils import refine_cell, sortrows
 
 
 def e():
@@ -202,14 +205,6 @@ def change_center(st1):
     return st2
 
 
-def sortrows(a):
-    """
-    :param a:
-    :return: Compare each row in ascending order
-    """
-    return a[np.lexsort(np.rot90(a))]
-
-
 def generate_line_group_structure(monomer_pos, cyclic_group):
     """
 
@@ -259,8 +254,14 @@ def generate_line_group_structure(monomer_pos, cyclic_group):
     cell = np.array([[p0 * 3, 0, 0], [0, p0 * 3, 0], [0, 0, A]])
 
     st1 = Atoms(symbols="C" + str(len(all_pos)), positions=all_pos, cell=cell)
-    st2 = change_center(st1)  # change the axis center to cell center
-    return st2
+
+    refine_pos, refine_num = refine_cell(
+        st1.get_scaled_positions(), cell, st1.numbers
+    )
+    st2 = Atoms(numbers=refine_num, scaled_positions=refine_pos, cell=cell)
+
+    st3 = change_center(st2)  # change the axis center to cell center
+    return st3
 
 
 def main():
