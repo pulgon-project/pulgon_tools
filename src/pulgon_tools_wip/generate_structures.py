@@ -93,8 +93,8 @@ def S2n(n):
     """
     mat = np.array(
         [
-            [np.cos(np.pi / n), -np.sin(np.pi / n), 0],
-            [np.sin(np.pi / n), np.cos(np.pi / n), 0],
+            [np.cos(np.pi / n), np.sin(np.pi / n), 0],
+            [-np.sin(np.pi / n), np.cos(np.pi / n), 0],
             [0, 0, -1],
         ]
     )
@@ -258,8 +258,8 @@ def generate_line_group_structure(monomer_pos, cyclic_group):
     refine_pos, refine_num = refine_cell(
         st1.get_scaled_positions(), cell, st1.numbers
     )
+    # set_trace()
     st2 = Atoms(numbers=refine_num, scaled_positions=refine_pos, cell=cell)
-
     st3 = change_center(st2)  # change the axis center to cell center
     return st3
 
