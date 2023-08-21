@@ -3,26 +3,47 @@ from pdb import set_trace
 
 import numpy as np
 import pretty_errors
+from ase.data import atomic_masses
 from ase.io import read
 from pymatgen.core import Molecule
 from pymatgen.core.operations import SymmOp
 from pymatgen.symmetry.analyzer import PointGroupAnalyzer
-from ase.data import atomic_masses
-
 
 
 def _inertia_tensor(self):
     weights = np.array([site.species.weight for site in self.centered_mol])
-    Ixx = np.sum(weights * np.sum(self.centered_mol.cart_coords[:, 1:] ** 2, axis=1))
-    Iyy = np.sum(weights * np.sum(self.centered_mol.cart_coords[:, [0,2]] ** 2, axis=1))
-    Izz = np.sum(weights * np.sum(self.centered_mol.cart_coords[:, :2] ** 2, axis=1))
-    Ixy = -1 * np.sum(weights * self.centered_mol.cart_coords[:,0] * self.centered_mol.cart_coords[:,1])
-    Ixz = -1 * np.sum(weights * self.centered_mol.cart_coords[:,0] * self.centered_mol.cart_coords[:,2])
-    Iyz = -1 * np.sum(weights * self.centered_mol.cart_coords[:,1] * self.centered_mol.cart_coords[:,2])
-    inertia_tensor = np.array([[Ixx,Ixy,Izz], [Ixy,Iyy,Iyz], [Ixz,Iyz,Izz]])
+    Ixx = np.sum(
+        weights * np.sum(self.centered_mol.cart_coords[:, 1:] ** 2, axis=1)
+    )
+    Iyy = np.sum(
+        weights * np.sum(self.centered_mol.cart_coords[:, [0, 2]] ** 2, axis=1)
+    )
+    Izz = np.sum(
+        weights * np.sum(self.centered_mol.cart_coords[:, :2] ** 2, axis=1)
+    )
+    Ixy = -1 * np.sum(
+        weights
+        * self.centered_mol.cart_coords[:, 0]
+        * self.centered_mol.cart_coords[:, 1]
+    )
+    Ixz = -1 * np.sum(
+        weights
+        * self.centered_mol.cart_coords[:, 0]
+        * self.centered_mol.cart_coords[:, 2]
+    )
+    Iyz = -1 * np.sum(
+        weights
+        * self.centered_mol.cart_coords[:, 1]
+        * self.centered_mol.cart_coords[:, 2]
+    )
+    inertia_tensor = np.array(
+        [[Ixx, Ixy, Izz], [Ixy, Iyy, Iyz], [Ixz, Iyz, Izz]]
+    )
 
-    total_inertia = np.sum(weights * np.sum(self.centered_mol.cart_coords ** 2, axis=1))
-    inertia_tensor = inertia_tensor/total_inertia
+    total_inertia = np.sum(
+        weights * np.sum(self.centered_mol.cart_coords**2, axis=1)
+    )
+    inertia_tensor = inertia_tensor / total_inertia
     return inertia_tensor
 
 
@@ -42,7 +63,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
     def _analyze(self):
         inertia_tensor = _inertia_tensor(self)
         _, eigvecs = np.linalg.eigh(inertia_tensor)
-        self.principal_axes = eigvecs.T     # only be used in _proc_no_rot_sym
+        self.principal_axes = eigvecs.T  # only be used in _proc_no_rot_sym
 
         self.rot_sym = []
         self.symmops = [SymmOp(np.eye(4))]

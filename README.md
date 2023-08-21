@@ -32,4 +32,3 @@ pulgon-detect-AxialPointGroup poscar.vasp --enable_pg
 ```
 
 --enable_pg : detecting point group
-
