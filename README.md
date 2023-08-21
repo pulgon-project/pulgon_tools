@@ -23,6 +23,9 @@ pulgon-generate-structures -m  "[[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]]" -g "['Cn(
 -c: select from {'T_Q':[5,3]} and {'T_v':3}  
 -s: saved file name  
 
+##### Note: No space in the list or dict.
+
+
 ### 2. detect axial point group
 ```
 pulgon-detect-AxialPointGroup poscar.vasp --enable_pg
@@ -30,5 +33,3 @@ pulgon-detect-AxialPointGroup poscar.vasp --enable_pg
 
 --enable_pg : detecting point group
 
-
-##### Note: No space in the list or dict.
