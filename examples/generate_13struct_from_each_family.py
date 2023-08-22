@@ -20,6 +20,7 @@ from pulgon_tools_wip.generate_structures import (
 
 
 def input1():
+    """(Cq|f),Cn"""
     motif = np.array([2, 0, 0])
     generators = np.array([Cn(4)])
     cyclic = {"T_Q": [6, 1.5]}
@@ -28,6 +29,7 @@ def input1():
 
 
 def input2():
+    """(I|q),S2n"""
     motif = np.array([3, 0, 1])
     generators = np.array([S2n(6)])
     cyclic = {"T_Q": [1, 3]}
@@ -36,6 +38,7 @@ def input2():
 
 
 def input3():
+    """(I|q),Cn,sigmaH"""
     motif = np.array([2.5, 0, 1])
     generators = np.array([Cn(6), sigmaH()])
     cyclic = {"T_Q": [1, 3]}
@@ -44,6 +47,7 @@ def input3():
 
 
 def input4():
+    """(C2n|f/2),Cn,sigmaH"""
     motif = np.array([3, 0, 0.6])
     generators = np.array([Cn(6), sigmaH()])
     cyclic = {"T_Q": [12, 4]}
@@ -52,6 +56,7 @@ def input4():
 
 
 def input5():
+    """(Cq|f),Cn,U"""
     motif = np.array([3, np.pi / 9, 0.5])
     generators = np.array([Cn(6), U()])
     cyclic = {"T_Q": [4, 4]}
@@ -60,6 +65,7 @@ def input5():
 
 
 def input6():
+    """(I|a),Cn,sigmaV"""
     motif = np.array([3, np.pi / 24, 1])
     generators = np.array([Cn(6), sigmaV()])
     cyclic = {"T_Q": [1, 3]}
@@ -68,6 +74,7 @@ def input6():
 
 
 def input7():
+    """(sigmaV|a/2),Cn"""
     motif = np.array([3, np.pi / 24, 1])
     generators = np.array([Cn(6)])
     cyclic = {"T_V": 1.5}
@@ -76,6 +83,7 @@ def input7():
 
 
 def input8():
+    """(C2n|a/2),Cn,sigmaV"""
     motif = np.array([3, np.pi / 24, 0])
     generators = np.array([Cn(6), sigmaV()])
     cyclic = {"T_Q": [12, 1.5]}
@@ -84,6 +92,7 @@ def input8():
 
 
 def input9():
+    """(I|a),Cn,Ud,sigmaV"""
     motif = np.array([3, np.pi / 24, 0.6])
     generators = np.array([Cn(6), U_d(np.pi / 12), sigmaV()])
     cyclic = {"T_Q": [1, 4]}
@@ -92,6 +101,7 @@ def input9():
 
 
 def input10():
+    """(sigmaV|a/2),S2n"""
     motif = np.array([3, np.pi / 18, 0.4])
     generators = np.array([S2n(6)])
     cyclic = {"T_V": 4}
@@ -100,6 +110,7 @@ def input10():
 
 
 def input11():
+    """(I|a),Cn,sigmaV"""
     motif = np.array([3, np.pi / 18, 0.6])
     generators = np.array([Cn(6), U(), sigmaV()])
     cyclic = {"T_Q": [1, 4]}
@@ -108,6 +119,7 @@ def input11():
 
 
 def input12():
+    """(sigmaV|a),Cn,U,sigmaV"""
     motif = np.array([3, np.pi / 24, 0.5])
     generators = np.array([Cn(6), sigmaH()])
     cyclic = {"T_V": 2.5}
@@ -116,6 +128,7 @@ def input12():
 
 
 def input13():
+    """(C2n|a/2),Cn,U,sigmaV"""
     motif = np.array([3, np.pi / 16, 0.6])
     generators = np.array([Cn(6), U(), sigmaV()])
     cyclic = {"T_Q": [12, 3]}

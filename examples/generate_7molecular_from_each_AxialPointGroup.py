@@ -20,11 +20,7 @@ from pulgon_tools_wip.generate_structures import (
 
 
 def input1():
-    """
-
-    Returns: Cn
-
-    """
+    """Cn"""
     motif = np.array([3, 0, 1.5])
     generators = np.array([Cn(6)])
     cyclic = {"T_Q": [1, 3]}
@@ -33,11 +29,7 @@ def input1():
 
 
 def input2():
-    """
-
-    Returns: S2n
-
-    """
+    """S2n"""
     motif = np.array([3, 0, 1.5])
     generators = np.array([S2n(6)])
     cyclic = {"T_Q": [1, 4]}
@@ -46,11 +38,7 @@ def input2():
 
 
 def input3():
-    """
-
-    Returns: Cnh
-
-    """
+    """Cnh"""
     motif = np.array([3, 0, 1.5])
     generators = np.array([Cn(6), sigmaH()])
     cyclic = {"T_Q": [1, 4]}
@@ -59,11 +47,7 @@ def input3():
 
 
 def input4():
-    """
-
-    Returns: Dn
-
-    """
+    """Dn"""
     motif = np.array([3, np.pi / 24, 1.5])
     generators = np.array([Cn(6), U()])
     cyclic = {"T_Q": [1, 4]}
@@ -72,11 +56,7 @@ def input4():
 
 
 def input5():
-    """
-
-    Returns: Cnv
-
-    """
+    """Cnv"""
     motif = np.array([3, np.pi / 24, 1.5])
     generators = np.array([Cn(6), sigmaV()])
     cyclic = {"T_Q": [1, 3]}
@@ -85,11 +65,7 @@ def input5():
 
 
 def input6():
-    """
-
-    Returns: Dnd
-
-    """
+    """Dnd"""
     motif = np.array([3, np.pi / 24, 1.5])
     generators = np.array([S2n(6), U_d(np.pi / 12)])
     cyclic = {"T_Q": [1, 4]}
@@ -98,11 +74,7 @@ def input6():
 
 
 def input7():
-    """
-
-    Returns: Dnh
-
-    """
+    """Dnh"""
     motif = np.array([3, np.pi / 24, 1.5])
     generators = np.array([Cn(6), U(), sigmaV()])
     cyclic = {"T_Q": [1, 4]}
