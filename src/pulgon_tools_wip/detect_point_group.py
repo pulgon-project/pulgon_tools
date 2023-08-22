@@ -47,7 +47,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
 
     def _analyze(self):
         """Rewrite the _analyze method, calculate the axial point group elements."""
-        inertia_tensor = _inertia_tensor(self)
+        inertia_tensor = self._inertia_tensor()
         _, eigvecs = np.linalg.eigh(inertia_tensor)
         self.principal_axes = eigvecs.T  # only be used in _proc_no_rot_sym
 
@@ -67,47 +67,47 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         else:
             self._proc_no_rot_sym()
 
+    def _inertia_tensor(self):
+        """
 
-def _inertia_tensor(self):
-    """
+        Returns: inertia_tensor of the molecular
 
-    Returns: inertia_tensor of the molecular
+        """
+        weights = np.array([site.species.weight for site in self.centered_mol])
+        Ixx = np.sum(
+            weights * np.sum(self.centered_mol.cart_coords[:, 1:] ** 2, axis=1)
+        )
+        Iyy = np.sum(
+            weights
+            * np.sum(self.centered_mol.cart_coords[:, [0, 2]] ** 2, axis=1)
+        )
+        Izz = np.sum(
+            weights * np.sum(self.centered_mol.cart_coords[:, :2] ** 2, axis=1)
+        )
+        Ixy = -1 * np.sum(
+            weights
+            * self.centered_mol.cart_coords[:, 0]
+            * self.centered_mol.cart_coords[:, 1]
+        )
+        Ixz = -1 * np.sum(
+            weights
+            * self.centered_mol.cart_coords[:, 0]
+            * self.centered_mol.cart_coords[:, 2]
+        )
+        Iyz = -1 * np.sum(
+            weights
+            * self.centered_mol.cart_coords[:, 1]
+            * self.centered_mol.cart_coords[:, 2]
+        )
+        inertia_tensor = np.array(
+            [[Ixx, Ixy, Izz], [Ixy, Iyy, Iyz], [Ixz, Iyz, Izz]]
+        )
 
-    """
-    weights = np.array([site.species.weight for site in self.centered_mol])
-    Ixx = np.sum(
-        weights * np.sum(self.centered_mol.cart_coords[:, 1:] ** 2, axis=1)
-    )
-    Iyy = np.sum(
-        weights * np.sum(self.centered_mol.cart_coords[:, [0, 2]] ** 2, axis=1)
-    )
-    Izz = np.sum(
-        weights * np.sum(self.centered_mol.cart_coords[:, :2] ** 2, axis=1)
-    )
-    Ixy = -1 * np.sum(
-        weights
-        * self.centered_mol.cart_coords[:, 0]
-        * self.centered_mol.cart_coords[:, 1]
-    )
-    Ixz = -1 * np.sum(
-        weights
-        * self.centered_mol.cart_coords[:, 0]
-        * self.centered_mol.cart_coords[:, 2]
-    )
-    Iyz = -1 * np.sum(
-        weights
-        * self.centered_mol.cart_coords[:, 1]
-        * self.centered_mol.cart_coords[:, 2]
-    )
-    inertia_tensor = np.array(
-        [[Ixx, Ixy, Izz], [Ixy, Iyy, Iyz], [Ixz, Iyz, Izz]]
-    )
-
-    total_inertia = np.sum(
-        weights * np.sum(self.centered_mol.cart_coords**2, axis=1)
-    )
-    inertia_tensor = inertia_tensor / total_inertia
-    return inertia_tensor
+        total_inertia = np.sum(
+            weights * np.sum(self.centered_mol.cart_coords**2, axis=1)
+        )
+        inertia_tensor = inertia_tensor / total_inertia
+        return inertia_tensor
 
 
 def main():

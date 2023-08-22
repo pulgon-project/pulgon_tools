@@ -83,7 +83,7 @@ def input7():
 
 
 def main():
-    pos_cylin, generators, cg, st_name = input6()
+    pos_cylin, generators, cg, st_name = input7()
 
     if pos_cylin.ndim == 1:
         pos = np.array(
