@@ -11,12 +11,19 @@ def sortrows(a):
     return a[np.lexsort(np.rot90(a))]
 
 
-def refine_cell(scale_pos, cell, numbers, symprec=4):
-    # scale_pos = np.dot(pos, np.linalg.inv(cell))
+def refine_cell(scale_pos, numbers, symprec=4):
+    """refine the scale position between 0-1, and remove duplicates
+
+    Args:
+        scale_pos: scale position of the structure
+        numbers: atom_type
+        symprec: system precise
+
+    Returns: scale position after refine, the correspond atom type
+
+    """
     scale_pos, _ = np.round(np.modf(scale_pos), symprec)
     scale_pos[scale_pos < 0] = scale_pos[scale_pos < 0] + 1
-    # set_trace()
     pos, index = np.unique(scale_pos, axis=0, return_index=True)
     numbers = numbers[index]
-    # set_trace()
     return pos, numbers
