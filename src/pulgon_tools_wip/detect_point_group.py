@@ -74,39 +74,28 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
 
         """
         weights = np.array([site.species.weight for site in self.centered_mol])
-        Ixx = np.sum(
-            weights * np.sum(self.centered_mol.cart_coords[:, 1:] ** 2, axis=1)
-        )
-        Iyy = np.sum(
-            weights
-            * np.sum(self.centered_mol.cart_coords[:, [0, 2]] ** 2, axis=1)
-        )
-        Izz = np.sum(
-            weights * np.sum(self.centered_mol.cart_coords[:, :2] ** 2, axis=1)
-        )
-        Ixy = -1 * np.sum(
-            weights
-            * self.centered_mol.cart_coords[:, 0]
-            * self.centered_mol.cart_coords[:, 1]
-        )
-        Ixz = -1 * np.sum(
-            weights
-            * self.centered_mol.cart_coords[:, 0]
-            * self.centered_mol.cart_coords[:, 2]
-        )
-        Iyz = -1 * np.sum(
-            weights
-            * self.centered_mol.cart_coords[:, 1]
-            * self.centered_mol.cart_coords[:, 2]
-        )
-        inertia_tensor = np.array(
-            [[Ixx, Ixy, Izz], [Ixy, Iyy, Iyz], [Ixz, Iyz, Izz]]
-        )
+        coords = self.centered_mol.cart_coords
+        total_inertia = np.sum(weights * np.sum(coords**2, axis=1))
+        itp1 = np.tile([[0], [1], [2]], (1, 3))
+        itp2 = np.tile([0, 1, 2], (3, 1))
 
-        total_inertia = np.sum(
-            weights * np.sum(self.centered_mol.cart_coords**2, axis=1)
-        )
-        inertia_tensor = inertia_tensor / total_inertia
+        # nondiagonal terms
+        tmp1 = (np.ones((3, 3)) - np.eye(3)) * (
+            np.swapaxes(np.tile(weights, (3, 3, 1)), 0, 2)
+            * coords[:, itp1]
+            * coords[:, itp2]
+        ).sum(axis=0)
+
+        # diagonal terms
+        tmp2 = (
+            ((coords**2).sum(axis=1) * weights).sum()
+            - (
+                (coords**2)
+                * np.tile(weights.reshape(weights.shape[0], 1), 3)
+            ).sum(axis=0)
+        ) * np.eye(3)
+        inertia_tensor = (tmp1 + tmp2) / total_inertia
+
         return inertia_tensor
 
 
@@ -123,9 +112,7 @@ def main():
         help="open the detection of point group",
     )
     args = parser.parse_args()
-
     point_group_ind = args.enable_pg
-    # set_trace()
 
     st_name = args.filename
     st = read(st_name)
