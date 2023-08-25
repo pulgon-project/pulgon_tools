@@ -137,7 +137,7 @@ def input13():
 
 
 def main():
-    pos_cylin, generators, cg, st_name = input13()
+    pos_cylin, generators, cg, st_name = input7()
 
     if pos_cylin.ndim == 1:
         pos = np.array(
@@ -156,7 +156,7 @@ def main():
             ]
         )
         pos = pos.T
-    rot_sym = dimino(generators, symec=4)
+    rot_sym = dimino(generators, symec=5)
     monomer_pos = []
     for sym in rot_sym:
         if pos.ndim == 1:
@@ -167,7 +167,7 @@ def main():
 
     st = generate_line_group_structure(monomer_pos, cg)
     # set_trace()
-    write_vasp("%s" % st_name, st, direct=True, sort=True)
+    write_vasp("%s" % st_name, st, direct=True, sort=True, long_format=False)
 
 
 if __name__ == "__main__":

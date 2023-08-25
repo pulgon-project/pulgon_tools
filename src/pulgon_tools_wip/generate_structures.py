@@ -256,7 +256,7 @@ def generate_line_group_structure(monomer_pos, cyclic_group):
     st1 = Atoms(symbols="C" + str(len(all_pos)), positions=all_pos, cell=cell)
 
     refine_pos, refine_num = refine_cell(
-        st1.get_scaled_positions(), cell, st1.numbers
+        st1.get_scaled_positions(), st1.numbers
     )
     # set_trace()
     st2 = Atoms(numbers=refine_num, scaled_positions=refine_pos, cell=cell)
