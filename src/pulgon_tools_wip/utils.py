@@ -22,11 +22,16 @@ def refine_cell(scale_pos, numbers, symprec=5):
     Returns: scale position after refine, the correspond atom type
 
     """
-    scale_pos = np.modf(scale_pos)[0]
-    scale_pos[scale_pos < 0] = scale_pos[scale_pos < 0] + 1
-    # set_trace()
-    scale_pos = np.round(scale_pos, symprec)
+    if scale_pos.ndim == 1:
+        scale_pos = np.modf(scale_pos)[0]
+        scale_pos[scale_pos < 0] = scale_pos[scale_pos < 0] + 1
+        pos = np.round(scale_pos, symprec)
+    else:
+        scale_pos = np.modf(scale_pos)[0]
+        scale_pos[scale_pos < 0] = scale_pos[scale_pos < 0] + 1
+        # set_trace()
+        scale_pos = np.round(scale_pos, symprec)
 
-    pos, index = np.unique(scale_pos, axis=0, return_index=True)
-    numbers = numbers[index]
+        pos, index = np.unique(scale_pos, axis=0, return_index=True)
+        numbers = numbers[index]
     return pos, numbers
