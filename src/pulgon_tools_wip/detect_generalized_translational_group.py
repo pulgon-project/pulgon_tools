@@ -23,98 +23,152 @@ from spglib import get_symmetry, get_symmetry_dataset
 from pulgon_tools_wip.utils import refine_cell
 
 
-class CyclicGroupAnalyzer(SpacegroupAnalyzer):
+class CyclicGroupAnalyzer:
     def __init__(self, atom, spmprec=0.01, angle_tolerance=5):
         self._symprec = spmprec
         self._angle_tol = angle_tolerance
+        self._zaxis = np.array([0, 0, 1])
         self._atom = atom
+        self._primitive = self._find_primitive()
+        self._pure_trans = self._primitive.cell[2, 2]
+        self._primitive = self._center_of_atom(self._primitive)
 
         self._analyze()
 
     def _analyze(self):
-        primitive = self._find_primitive()
-        # pure_trans = primitive.cell[2, 2]
-        # potential_trans = self._potential_translation()
         # symmops = self.get_symmetry_operations()
         # tmp = self.is_valid_op(symmops[1])
+        # diff_ind = np.setdiff1d(range(len(primitive)), monomer_ind)
+        # diff_st = primitive[diff_ind]
 
-        monomer_ind = self._detect_monomer()
-        monomer = primitive[monomer_ind]
+        monomer, potential_trans = self._potential_translation()
 
-        diff_ind = np.setdiff1d(range(len(primitive)), monomer_ind)
-        diff_st = primitive[diff_ind]
-
-        translations = self.get_translations(diff_st, monomer)
+        cyclic_group, _ = self._get_translations(monomer, potential_trans)
         set_trace()
 
-    def get_translations(self, atoms, monomer_atoms):
-        """
-        获取给定monomer在结构中所有可能的广义平移位置。
+    def _center_of_atom(self, atom):
+        n_st = atom.copy()
+        vector = atom.get_center_of_mass()
+        n_st.positions = n_st.positions - vector
 
-        :param structure: ase的Atoms对象
-        :param monomer_atoms: 结构中定义的monomer的atoms对象
-        :return: 一个列表，包含monomer所有可能的广义平移位置
-        """
-        translations = []
+        return n_st
 
-        # 对每一个原子，找出与monomer中第一个原子的最小映像规定的位移
-        for atom in atoms:
-            # set_trace()
-            displacement, distance = find_mic(
-                [atom.position - monomer_atoms[0].position], atoms.cell
+    def _get_translations(self, monomer_atoms, potential_tans):
+        """
+
+        Args:
+            atoms:
+            monomer_atoms:
+            trans:
+
+        Returns:
+
+        """
+
+        cyclic_group, mono = [], []
+        for ii, monomer in enumerate(monomer_atoms):
+            tran = potential_tans[ii]
+
+            ind = int(1 / tran) + 1
+            if ind - 1 / tran - 1 > self._symprec:
+                print("selecting wrong translation vector")
+                continue
+
+            if len(monomer) == len(self._primitive):
+                cyclic_group.append("T")
+                mono.append(monomer)
+            else:
+                # detect rotation
+                rotation = self._detect_rotation(
+                    monomer, tran * self._pure_trans, ind
+                )
+
+                if rotation:
+                    cyclic_group.append(
+                        "T%s(%s)" % (ind, tran * self._pure_trans)
+                    )
+                    mono.append(monomer)
+                if ind == 2:
+                    # detect mirror
+                    mirror = self._detect_mirror(
+                        monomer, tran * self._pure_trans
+                    )
+                    if mirror:
+                        cyclic_group.append("T'(%s)" % tran * self._pure_trans)
+                        mono.append(monomer)
+        return cyclic_group, mono
+
+    def _detect_rotation(self, monomer, tran, ind):
+        ind = 12
+        op1 = SymmOp.from_axis_angle_and_translation(
+            self._zaxis, 360 / ind, translation_vec=(0, 0, tran)
+        )
+        op2 = SymmOp.from_axis_angle_and_translation(
+            self._zaxis, -360 / ind, translation_vec=(0, 0, tran)
+        )
+
+        coords = self._primitive.positions
+
+        itp1, itp2 = [], []
+        for site in monomer:
+            coord1 = op1.operate(site.position)
+            coord2 = op2.operate(site.position)
+
+            tmp1 = find_in_coord_list(coords, coord1, self._symprec)
+            tmp2 = find_in_coord_list(coords, coord2, self._symprec)
+            itp1.append(
+                len(tmp1) == 1
+                and self._primitive.numbers[tmp1[0]] == site.number
             )
-            if distance < 0.01:  # 使用小于0.01作为两原子相同的判据
-                translations.append(displacement)
+            itp2.append(
+                len(tmp2) == 1
+                and self._primitive.numbers[tmp2[0]] == site.number
+            )
+        np.array(itp1)
+        set_trace()
 
-        # detect rotation
-        rotation = self._detect_rotation()
-        # detect mirror
-        mirror = self._detect_mirror()
+        if not (
+            len(itp1) == 1
+            and self.centered_mol[itp1[0]].species == site.species
+        ):
+            return False
 
-        return {
-            "translation": translations,
-            "rotation": rotation,
-            "mirror": mirror,
-        }
-
-    def _detect_rotation(self):
-        pass
+        return True
 
     def _detect_mirror(self):
         pass
 
-    def is_valid_op(self, symmop) -> bool:
-        """Check if a particular symmetry operation is a valid symmetry operation for,
-         i.e., the operation maps all atoms to another equivalent atom.
-
-        Args:
-            symmop (SymmOp): Symmetry operation to test.
+    def _potential_translation(self):
+        """generate the potential monomer and the scaled translational distance in z axis
 
         Returns:
-            (bool): Whether SymmOp is valid.
+
         """
-        coords = self._atom.get_scaled_positions()
-        for ii, site in enumerate(coords):
-            coord = symmop.operate(site)
-            ref_coord, _ = refine_cell(coord, self._atom.numbers[ii])
 
-            set_trace()
-            ind = find_in_coord_list(coords, ref_coord, self._symprec)
-            if not (
-                len(ind) == 1 and self._atom.number[ind[0]] == site.species
+        z = self._primitive.get_scaled_positions()[:, 2]
+        z_uniq, counts = np.unique(z, return_counts=True)
+        potential_trans = (z_uniq - z_uniq[0])[1:]
+        monomer_ind = [np.where(z == tmp)[0] for tmp in z_uniq]
+
+        translation, monomer = [], []
+        for ii in range(len(z_uniq)):
+            monomer_num = counts[: ii + 1].sum()
+            # check the atomic number and layer number of potential monomer
+            # can't identify all the situations but exception can be handle in next step
+            if (
+                len(self._primitive) % monomer_num == 0
+                and len(z_uniq) % (ii + 1) == 0
             ):
-                return False
-        return True
 
-    def _detect_monomer(self):
-        monomer_ind = np.array([0, 1, 6, 7])
+                if len(self._primitive) == monomer_num:
+                    # if the monomer is the whole structure
+                    monomer.append(self._primitive)
+                    translation.append(1)
+                else:
+                    monomer.append(self._primitive[monomer_ind[ii]])
+                    translation.append(potential_trans[ii])
 
-        return monomer_ind
-
-    def _potential_translation(self):
-        translation = []
-
-        return translation
+        return monomer, translation
 
     def _find_primitive(self):
         lattice, scaled_positions, numbers = spglib.find_primitive(
@@ -152,9 +206,7 @@ class CyclicGroupAnalyzer(SpacegroupAnalyzer):
 def main():
     poscar = "st1.vasp"
     atom = read_vasp(poscar)
-
     # dataset = get_symmetry_dataset(st, symprec=1e-5, angle_tolerance=-1.0, hall_number=0)
-
     # res1 = spglib.find_primitive(st)
     res = CyclicGroupAnalyzer(atom)
 

@@ -73,6 +73,11 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         Returns: inertia_tensor of the molecular
 
         """
+        # tensor_of_inertia = sum(
+        #     m * (np.dot(r, r) * np.eye(3) - np.outer(r, r))
+        #     for m, r in zip(monomer_atoms.get_masses(), centered_positions)
+        # )
+
         weights = np.array([site.species.weight for site in self.centered_mol])
         coords = self.centered_mol.cart_coords
         total_inertia = np.sum(weights * np.sum(coords**2, axis=1))
