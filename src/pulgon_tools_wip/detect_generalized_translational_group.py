@@ -69,8 +69,8 @@ class CyclicGroupAnalyzer:
         for ii, monomer in enumerate(monomer_atoms):
             tran = potential_tans[ii]
 
-            ind = int(1 / tran) + 1
-            if ind - 1 / tran - 1 > self._symprec:
+            ind = int(1 / tran)
+            if ind - 1 / tran > self._symprec:
                 print("selecting wrong translation vector")
                 continue
 
@@ -79,13 +79,13 @@ class CyclicGroupAnalyzer:
                 mono.append(monomer)
             else:
                 # detect rotation
-                rotation = self._detect_rotation(
+                rotation, Q = self._detect_rotation(
                     monomer, tran * self._pure_trans, ind
                 )
 
                 if rotation:
                     cyclic_group.append(
-                        "T%s(%s)" % (ind, tran * self._pure_trans)
+                        "T%s(%s)" % (Q, tran * self._pure_trans)
                     )
                     mono.append(monomer)
                 if ind == 2:
@@ -99,43 +99,60 @@ class CyclicGroupAnalyzer:
         return cyclic_group, mono
 
     def _detect_rotation(self, monomer, tran, ind):
-        ind = 12
-        op1 = SymmOp.from_axis_angle_and_translation(
-            self._zaxis, 360 / ind, translation_vec=(0, 0, tran)
-        )
-        op2 = SymmOp.from_axis_angle_and_translation(
-            self._zaxis, -360 / ind, translation_vec=(0, 0, tran)
-        )
 
-        coords = self._primitive.positions
+        # detect the monomer's rotational symmetry for specifying therotation
+        mol = Molecule(species=monomer.numbers, coords=monomer.positions)
+        monomer_rot_ind = PointGroupAnalyzer(mol)._check_rot_sym(self._zaxis)
 
-        itp1, itp2 = [], []
-        for site in monomer:
-            coord1 = op1.operate(site.position)
-            coord2 = op2.operate(site.position)
-
-            tmp1 = find_in_coord_list(coords, coord1, self._symprec)
-            tmp2 = find_in_coord_list(coords, coord2, self._symprec)
-            itp1.append(
-                len(tmp1) == 1
-                and self._primitive.numbers[tmp1[0]] == site.number
+        # possible rotational angle in cyclic group
+        ind1 = (
+            np.array(
+                [
+                    360 * ii / monomer_rot_ind
+                    for ii in range(1, monomer_rot_ind + 1)
+                ]
             )
-            itp2.append(
-                len(tmp2) == 1
-                and self._primitive.numbers[tmp2[0]] == site.number
+            / ind
+        )
+
+        for test_ind in ind1:
+            op1 = SymmOp.from_axis_angle_and_translation(
+                self._zaxis, test_ind, translation_vec=(0, 0, tran)
             )
-        np.array(itp1)
-        set_trace()
+            op2 = SymmOp.from_axis_angle_and_translation(
+                self._zaxis, -test_ind, translation_vec=(0, 0, tran)
+            )
+
+            coords = self._primitive.positions
+
+            itp1, itp2 = [], []
+            for site in monomer:
+                coord1 = op1.operate(site.position)
+                coord2 = op2.operate(site.position)
+
+                tmp1 = find_in_coord_list(coords, coord1, self._symprec)
+                tmp2 = find_in_coord_list(coords, coord2, self._symprec)
+                itp1.append(
+                    len(tmp1) == 1
+                    and self._primitive.numbers[tmp1[0]] == site.number
+                )
+                itp2.append(
+                    len(tmp2) == 1
+                    and self._primitive.numbers[tmp2[0]] == site.number
+                )
+            itp1 = np.array(itp1)
+            itp2 = np.array(itp2)
+            set_trace()
 
         if not (
             len(itp1) == 1
             and self.centered_mol[itp1[0]].species == site.species
         ):
-            return False
+            return False, 1
 
-        return True
+        return True, Q
 
-    def _detect_mirror(self):
+    def _detect_mirror(self, monomer, tran):
         pass
 
     def _potential_translation(self):
