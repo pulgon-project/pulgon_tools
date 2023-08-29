@@ -59,7 +59,7 @@ def input5():
     """(Cq|f),Cn,U"""
     motif = np.array([3, np.pi / 9, 0.5])
     generators = np.array([Cn(6), U()])
-    cyclic = {"T_Q": [4, 4]}
+    cyclic = {"T_Q": [12, 4]}
     st_name = "st5.vasp"
     return motif, generators, cyclic, st_name
 
@@ -137,7 +137,7 @@ def input13():
 
 
 def main():
-    pos_cylin, generators, cg, st_name = input7()
+    pos_cylin, generators, cg, st_name = input12()
 
     if pos_cylin.ndim == 1:
         pos = np.array(
@@ -156,7 +156,7 @@ def main():
             ]
         )
         pos = pos.T
-    rot_sym = dimino(generators, symec=5)
+    rot_sym = dimino(generators, symec=3)
     monomer_pos = []
     for sym in rot_sym:
         if pos.ndim == 1:
@@ -165,7 +165,7 @@ def main():
             monomer_pos.extend([np.dot(sym, line) for line in pos])
     monomer_pos = np.array(monomer_pos)
 
-    st = generate_line_group_structure(monomer_pos, cg)
+    st = generate_line_group_structure(monomer_pos, cg, symprec=3)
     # set_trace()
     write_vasp("%s" % st_name, st, direct=True, sort=True, long_format=False)
 

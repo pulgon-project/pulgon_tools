@@ -11,7 +11,7 @@ def sortrows(a):
     return a[np.lexsort(np.rot90(a))]
 
 
-def refine_cell(scale_pos, numbers, symprec=5):
+def refine_cell(scale_pos, numbers, symprec=3):
     """refine the scale position between 0-1, and remove duplicates
 
     Args:

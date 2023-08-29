@@ -166,7 +166,7 @@ def dimino(generators, symec=4):
             more = False
             for g in list(C):
                 for s in G[: ii + 1]:
-                    sg = np.round(np.dot(s, g), 4)
+                    sg = np.round(np.dot(s, g), symec)
                     itp = (sg == L).all(axis=1).all(axis=1).any()
                     if not itp:
                         if C.ndim == 3:
@@ -205,7 +205,7 @@ def change_center(st1):
     return st2
 
 
-def generate_line_group_structure(monomer_pos, cyclic_group):
+def generate_line_group_structure(monomer_pos, cyclic_group, symprec):
     """
 
     Args:
@@ -228,8 +228,8 @@ def generate_line_group_structure(monomer_pos, cyclic_group):
                 all_pos = np.vstack((all_pos, tmp_monomer_pos))
                 judge = np.sum(
                     (
-                        sortrows(np.round(monomer_pos[:, :2], 2))
-                        - sortrows(np.round(tmp_monomer_pos[:, :2], 2))
+                        sortrows(np.round(monomer_pos[:, :2], symprec))
+                        - sortrows(np.round(tmp_monomer_pos[:, :2], symprec))
                     )
                     ** 2
                 )
@@ -238,14 +238,14 @@ def generate_line_group_structure(monomer_pos, cyclic_group):
                     Q = ii + 1
                     break
                 # set_trace()
-        all_pos = np.unique(np.round(all_pos, 4), axis=0)
+        all_pos = np.unique(np.round(all_pos, symprec), axis=0)
         A = Q * f
 
     elif list(cyclic_group.keys())[0] == "T_V":
         f = cyclic_group["T_V"]
         for ii in range(2):
             all_pos = np.vstack((all_pos, T_v(f, all_pos)))
-        all_pos = np.unique(np.round(all_pos, 4), axis=0)
+        all_pos = np.unique(np.round(all_pos, symprec), axis=0)
         A = 2 * f
     else:
         print("A error input about cyclic_group")
@@ -323,7 +323,7 @@ def main():
     cg = eval(args.cyclic)
     st_name = args.st_name
 
-    rot_sym = dimino(generators, symec=4)
+    rot_sym = dimino(generators, symec=3)
     monomer_pos = []
     for sym in rot_sym:
         # set_trace()
@@ -334,7 +334,7 @@ def main():
             monomer_pos.extend([np.dot(sym, line) for line in pos])
     monomer_pos = np.array(monomer_pos)
 
-    st = generate_line_group_structure(monomer_pos, cg)
+    st = generate_line_group_structure(monomer_pos, cg, symprec=3)
     write_vasp("%s" % st_name, st, direct=True, sort=True, long_format=False)
 
 
