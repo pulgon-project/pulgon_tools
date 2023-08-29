@@ -32,7 +32,7 @@ class CyclicGroupAnalyzer:
         self._atom = atom
         # Todo: pure translations and primitive cell
 
-        self._primitive = atom
+        self._primitive = self._find_primitive()
         self._pure_trans = self._primitive.cell[2, 2]
 
         # Todo: find out the x-y center, mass center may not locate in circle center
@@ -252,12 +252,7 @@ class CyclicGroupAnalyzer:
         return monomer, translation
 
     def _find_primitive(self):
-        lattice, scaled_positions, numbers = spglib.find_primitive(
-            self._atom, symprec=self._symprec
-        )
-        primitive = Atoms(
-            cell=lattice, scaled_positions=scaled_positions, numbers=numbers
-        )
+
         return primitive
 
 
