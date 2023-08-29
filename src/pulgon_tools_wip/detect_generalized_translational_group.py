@@ -35,7 +35,7 @@ class CyclicGroupAnalyzer:
         self._primitive = atom
         self._pure_trans = self._primitive.cell[2, 2]
 
-        # Todo: find out the x-y center
+        # Todo: find out the x-y center, mass center may not locate in circle center
         self._primitive = self._center_of_xy(self._primitive)
 
         self._analyze()
@@ -260,36 +260,24 @@ class CyclicGroupAnalyzer:
         )
         return primitive
 
-    def get_symmetry_operations(self, cartesian=False):
-        """Return symmetry operations as a list of SymmOp objects. By default returns
-        fractional coord symmops. But Cartesian can be returned too.
-
-        Returns:
-            ([SymmOp]): List of symmetry operations.
-        """
-        sym = spglib.get_symmetry(
-            self._atom, symprec=self._symprec, angle_tolerance=self._angle_tol
-        )
-        rotation, translation = sym["rotations"], sym["translations"]
-        symmops = []
-        # mat = self._structure.lattice.matrix.T
-        mat = np.array(self._atom.cell)
-        invmat = np.linalg.inv(mat)
-        for rot, trans in zip(rotation, translation):
-            if cartesian:
-                rot = np.dot(mat, np.dot(rot, invmat))
-                trans = np.dot(trans, self._structure.lattice.matrix)
-            op = SymmOp.from_rotation_and_translation(rot, trans)
-            symmops.append(op)
-        return symmops
-
 
 def main():
-    poscar = "st13.vasp"
+    poscar = "st10.vasp"
     atom = read_vasp(poscar)
-    # dataset = get_symmetry_dataset(st, symprec=1e-5, angle_tolerance=-1.0, hall_number=0)
-    # res1 = spglib.find_primitive(st)
-    res = CyclicGroupAnalyzer(atom)
+
+    parser = argparse.ArgumentParser(
+        description="Try to detect the generalized translational group of a line group structure"
+    )
+    parser.add_argument(
+        "filename", help="path to the file from which coordinates will be read"
+    )
+
+    args = parser.parse_args()
+
+    st_name = args.filename
+    st = read(st_name)
+
+    res = CyclicGroupAnalyzer(st)
 
     # set_trace()
 
