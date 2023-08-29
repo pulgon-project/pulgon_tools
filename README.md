@@ -32,3 +32,10 @@ pulgon-detect-AxialPointGroup poscar.vasp --enable_pg
 ```
 
 --enable_pg : detecting point group
+
+### 3. detect cyclic group (generalized translational group)
+```
+pulgon-detect-CyclicGroup poscar.vasp
+```
+
+
