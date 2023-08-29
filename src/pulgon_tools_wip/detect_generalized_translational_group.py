@@ -7,18 +7,12 @@ import numpy as np
 import pretty_errors
 import spglib
 from ase import Atoms
-from ase.data import atomic_masses
-from ase.geometry import find_mic
 from ase.io import read
 from ase.io.vasp import read_vasp
 from pymatgen.core import Molecule
 from pymatgen.core.operations import SymmOp
-from pymatgen.core.periodic_table import Element, Species
-from pymatgen.core.structure import Structure
-from pymatgen.io.vasp import Poscar
-from pymatgen.symmetry.analyzer import PointGroupAnalyzer, SpacegroupAnalyzer
+from pymatgen.symmetry.analyzer import PointGroupAnalyzer
 from pymatgen.util.coord import find_in_coord_list
-from spglib import get_symmetry, get_symmetry_dataset
 
 from pulgon_tools_wip.utils import refine_cell
 
@@ -252,6 +246,20 @@ class CyclicGroupAnalyzer:
         return monomer, translation
 
     def _find_primitive(self):
+        x_y = self._atom.get_scaled_positions()[:, :2]
+        z = self._atom.get_scaled_positions()[:, 2]
+        z_uniq, counts = np.unique(z, return_counts=True)
+        potential_trans = (z_uniq - z_uniq[0])[1:]
+        monomer_ind = [np.where(z == tmp)[0] for tmp in z_uniq]
+
+        ind1 = abs(1 / potential_trans % 1) < self._symprec
+
+        potential_z = z_uniq[1:][ind1]
+
+        for tmp_z in potential_z:
+            tmp_T = tmp_z - z_uniq[0]
+
+        set_trace()
 
         return primitive
 
