@@ -28,7 +28,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         """The default settings are usually sufficient. (Totally the same with PointGroupAnalyzer)
 
         Args:
-            mol (Molecule): Molecule to determine point group for.
+            mol (Molecule): Molecule to determine point group.
             tolerance (float): Distance tolerance to consider sites as
                 symmetrically equivalent. Defaults to 0.3 Angstrom.
             eigen_tolerance (float): Tolerance to compare eigen values of

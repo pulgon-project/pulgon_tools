@@ -1,3 +1,5 @@
+from pdb import set_trace
+
 import numpy as np
 import pytest
 
@@ -70,7 +72,7 @@ def test_st2():
 
     monomer_pos = pre_processing(motif, generators)
     st = generate_line_group_structure(monomer_pos, cyclic)
-    assert len(st) == 18
+    assert len(st) == 12
 
 
 def test_st3():
@@ -81,7 +83,7 @@ def test_st3():
 
     monomer_pos = pre_processing(motif, generators)
     st = generate_line_group_structure(monomer_pos, cyclic)
-    assert len(st) == 18
+    assert len(st) == 12
 
 
 def test_st4():

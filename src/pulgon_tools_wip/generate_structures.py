@@ -205,7 +205,7 @@ def change_center(st1):
     return st2
 
 
-def generate_line_group_structure(monomer_pos, cyclic_group, symprec):
+def generate_line_group_structure(monomer_pos, cyclic_group, symec=4):
     """
 
     Args:
@@ -228,8 +228,8 @@ def generate_line_group_structure(monomer_pos, cyclic_group, symprec):
                 all_pos = np.vstack((all_pos, tmp_monomer_pos))
                 judge = np.sum(
                     (
-                        sortrows(np.round(monomer_pos[:, :2], symprec))
-                        - sortrows(np.round(tmp_monomer_pos[:, :2], symprec))
+                        sortrows(np.round(monomer_pos[:, :2], symec))
+                        - sortrows(np.round(tmp_monomer_pos[:, :2], symec))
                     )
                     ** 2
                 )
@@ -238,14 +238,14 @@ def generate_line_group_structure(monomer_pos, cyclic_group, symprec):
                     Q = ii + 1
                     break
                 # set_trace()
-        all_pos = np.unique(np.round(all_pos, symprec), axis=0)
+        all_pos = np.unique(np.round(all_pos, symec), axis=0)
         A = Q * f
 
     elif list(cyclic_group.keys())[0] == "T_V":
         f = cyclic_group["T_V"]
         for ii in range(2):
             all_pos = np.vstack((all_pos, T_v(f, all_pos)))
-        all_pos = np.unique(np.round(all_pos, symprec), axis=0)
+        all_pos = np.unique(np.round(all_pos, symec), axis=0)
         A = 2 * f
     else:
         print("A error input about cyclic_group")
@@ -334,7 +334,7 @@ def main():
             monomer_pos.extend([np.dot(sym, line) for line in pos])
     monomer_pos = np.array(monomer_pos)
 
-    st = generate_line_group_structure(monomer_pos, cg, symprec=3)
+    st = generate_line_group_structure(monomer_pos, cg, symec=3)
     write_vasp("%s" % st_name, st, direct=True, sort=True, long_format=False)
 
 
