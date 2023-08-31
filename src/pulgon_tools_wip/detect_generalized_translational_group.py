@@ -2,6 +2,7 @@ import argparse
 import itertools
 from pdb import set_trace
 
+import ase.io.vasp
 import numpy as np
 import pretty_errors
 from ase import Atoms
@@ -29,7 +30,13 @@ class CyclicGroupAnalyzer:
 
     """
 
-    def __init__(self, atom, spmprec=0.01, angle_tolerance=5, round_symprec=3):
+    def __init__(
+        self,
+        atom: ase.atoms.Atoms,
+        spmprec: float = 0.01,
+        angle_tolerance: int | float = 5,
+        round_symprec: int = 3,
+    ) -> None:
         """
 
         Args:
@@ -51,14 +58,14 @@ class CyclicGroupAnalyzer:
         self._primitive = self._center_of_xy(self._primitive)
         self._analyze()
 
-    def _analyze(self):
+    def _analyze(self) -> None:
         """print all possible monomers and their cyclic group"""
         monomer, potential_trans = self._potential_translation()
         self.cyclic_group, self.monomers = self._get_translations(
             monomer, potential_trans
         )
 
-    def _center_of_xy(self, atom):
+    def _center_of_xy(self, atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
         """remove the center of structure to (x,y):(0,0)
 
         Args:
@@ -72,7 +79,9 @@ class CyclicGroupAnalyzer:
         n_st.positions = n_st.positions - [vector[0], vector[1], 0]
         return n_st
 
-    def _get_translations(self, monomer_atoms, potential_tans):
+    def _get_translations(
+        self, monomer_atoms: ase.atoms.Atoms, potential_tans: list
+    ) -> [list, list]:
         """
 
         Args:
@@ -134,7 +143,9 @@ class CyclicGroupAnalyzer:
                         mono.append(monomer)
         return cyclic_group, mono
 
-    def _detect_rotation(self, monomer, tran, ind):
+    def _detect_rotation(
+        self, monomer: ase.atoms.Atoms, tran: np.float64, ind: int
+    ) -> [bool, int | float]:
         """
 
         Args:
@@ -206,7 +217,12 @@ class CyclicGroupAnalyzer:
                 return True, Q
         return False, 1
 
-    def _detect_mirror(self, monomer, diff_st, tran):
+    def _detect_mirror(
+        self,
+        monomer: ase.atoms.Atoms,
+        diff_st: ase.atoms.Atoms,
+        tran: np.float64,
+    ) -> bool:
         """
 
         Args:
@@ -229,7 +245,6 @@ class CyclicGroupAnalyzer:
                 normal = s1.position - s2.position
                 normal[2] = 0
                 op = SymmOp.reflection(normal)
-                # set_trace()
 
                 itp = []
                 for site in monomer:
@@ -245,7 +260,9 @@ class CyclicGroupAnalyzer:
                     return True
         return False
 
-    def _get_monomer_ind(self, z, z_uniq):
+    def _get_monomer_ind(
+        self, z: np.ndarray, z_uniq: np.ndarray
+    ) -> [list, list]:
         monomer_ind = [np.where(z == tmp)[0] for tmp in z_uniq]
         monomer_ind_sum = []
         tmp1 = np.array([])
@@ -254,7 +271,7 @@ class CyclicGroupAnalyzer:
             monomer_ind_sum.append(tmp1)
         return monomer_ind, monomer_ind_sum
 
-    def _potential_translation(self):
+    def _potential_translation(self) -> [list, list]:
         """generate the potential monomer and the scaled translational distance in z axis
 
         Returns: possible monomers and translational distances
@@ -284,10 +301,9 @@ class CyclicGroupAnalyzer:
                 else:
                     monomer.append(self._primitive[monomer_ind_sum[ii]])
                     translation.append(potential_trans[ii])
-        # set_trace()
         return monomer, translation
 
-    def _find_primitive(self):
+    def _find_primitive(self) -> ase.atoms.Atoms:
         """fine the primitive cell of line group structure
 
         Returns: primitive cell
@@ -337,15 +353,12 @@ class CyclicGroupAnalyzer:
                 atom = Atoms(cell=cell, numbers=numbers, positions=pos)
                 return atom
 
-    def get_cyclic_group(self):
+    def get_cyclic_group(self) -> [list, list]:
         """Returns a PointGroup object for the molecule."""
         return self.cyclic_group, self.monomers
 
 
 def main():
-    poscar = "st10.vasp"
-    atom = read_vasp(poscar)
-
     parser = argparse.ArgumentParser(
         description="Try to detect the generalized translational group of a line group structure"
     )
@@ -357,6 +370,7 @@ def main():
 
     st_name = args.filename
     st = read(st_name)
+
     cyclic = CyclicGroupAnalyzer(st)
     cy, mon = cyclic.get_cyclic_group()
 

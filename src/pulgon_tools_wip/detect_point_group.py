@@ -23,7 +23,11 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
     """
 
     def __init__(
-        self, mol, tolerance=0.3, eigen_tolerance=0.01, matrix_tolerance=0.1
+        self,
+        mol: Molecule,
+        tolerance: float = 0.3,
+        eigen_tolerance: float = 0.01,
+        matrix_tolerance: float = 0.1,
     ):
         """The default settings are usually sufficient. (Totally the same with PointGroupAnalyzer)
 
@@ -67,7 +71,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         else:
             self._proc_no_rot_sym()
 
-    def _inertia_tensor(self):
+    def _inertia_tensor(self) -> np.ndarray:
         """
 
         Returns: inertia_tensor of the molecular
@@ -100,7 +104,6 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
             ).sum(axis=0)
         ) * np.eye(3)
         inertia_tensor = (tmp1 + tmp2) / total_inertia
-
         return inertia_tensor
 
 
