@@ -3,7 +3,7 @@ from pdb import set_trace
 import numpy as np
 
 
-def sortrows(a):
+def sortrows(a: np.ndarray) -> np.ndarray:
     """
     :param a:
     :return: Compare each row in ascending order
@@ -11,7 +11,9 @@ def sortrows(a):
     return a[np.lexsort(np.rot90(a))]
 
 
-def refine_cell(scale_pos, numbers, symprec=4):
+def refine_cell(
+    scale_pos: np.ndarray, numbers: np.ndarray, symprec: int = 4
+) -> [np.ndarray, np.ndarray]:
     """refine the scale position between 0-1, and remove duplicates
 
     Args:
