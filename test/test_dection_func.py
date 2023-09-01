@@ -14,6 +14,14 @@ from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
 MODULE_DIR = Path(__file__).absolute().parent
 
 
+class TestLineGroupAnalyzer:
+    pass
+
+
+class TestCyclicGroupAnalyzer:
+    pass
+
+
 def test_axial_pg_m1():
     st_name = os.path.join(MODULE_DIR, "data", "m1")
     st = read_vasp(st_name)
