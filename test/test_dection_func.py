@@ -15,11 +15,49 @@ MODULE_DIR = Path(__file__).absolute().parent
 
 
 class TestLineGroupAnalyzer:
+
     pass
 
 
 class TestCyclicGroupAnalyzer:
-    pass
+    def test_find_axis_center_of_nanotube(self):
+        st_name = os.path.join(MODULE_DIR, "data", "9-9-AM.vasp")
+        st = read_vasp(st_name)
+        res = CyclicGroupAnalyzer(st)
+        n_st = res._find_axis_center_of_nanotube(st)
+
+    def test_generate_monomer(self):
+        st_name = os.path.join(MODULE_DIR, "data", "st1")
+        st = read_vasp(st_name)
+
+        res = CyclicGroupAnalyzer(st)
+
+        res._potential_translation()
+        set_trace()
+
+    def test_rotation(self):
+        st_name = os.path.join(MODULE_DIR, "data", "st1")
+        st = read_vasp(st_name)
+
+        res = CyclicGroupAnalyzer(st)
+        res._detect_rotation()
+
+        set_trace()
+
+    def test_rotational_tolerance(self):
+        pass
+
+    def test_mirror(self):
+        st_name = os.path.join(MODULE_DIR, "data", "st1")
+        st = read_vasp(st_name)
+
+        res = CyclicGroupAnalyzer(st)
+        res._detect_rotation()
+
+        set_trace()
+
+    def test_mirror_tolerance(self):
+        pass
 
 
 def test_axial_pg_m1():

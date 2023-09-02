@@ -34,7 +34,6 @@ class CyclicGroupAnalyzer:
         self,
         atom: ase.atoms.Atoms,
         spmprec: float = 0.01,
-        angle_tolerance: int | float = 5,
         round_symprec: int = 3,
     ) -> None:
         """
@@ -42,12 +41,10 @@ class CyclicGroupAnalyzer:
         Args:
             atom: Line group structure to determine the generalized translational group
             spmprec: system precise tolerance
-            angle_tolerance: angle precise tolerance
             round_symprec: system precise tolerance when take "np.round"
         """
         self._symprec = spmprec
         self._round_symprec = round_symprec
-        self._angle_tol = angle_tolerance
         self._zaxis = np.array([0, 0, 1])
         self._atom = atom
 
@@ -55,7 +52,7 @@ class CyclicGroupAnalyzer:
         self._pure_trans = self._primitive.cell[2, 2]
 
         # Todo: find out the x-y center, if mass center may not locate in circle center
-        self._primitive = self._center_of_xy(self._primitive)
+        self._primitive = self._find_axis_center_of_nanotube(self._primitive)
         self._analyze()
 
     def _analyze(self) -> None:
@@ -65,7 +62,9 @@ class CyclicGroupAnalyzer:
             monomer, potential_trans
         )
 
-    def _center_of_xy(self, atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
+    def _find_axis_center_of_nanotube(
+        self, atom: ase.atoms.Atoms
+    ) -> ase.atoms.Atoms:
         """remove the center of structure to (x,y):(0,0)
 
         Args:
@@ -76,8 +75,13 @@ class CyclicGroupAnalyzer:
         """
         n_st = atom.copy()
         vector = atom.get_center_of_mass()
-        n_st.positions = n_st.positions - [vector[0], vector[1], 0]
-        return n_st
+        atoms = Atoms(
+            cell=n_st.cell,
+            numbers=n_st.numbers,
+            positions=n_st.positions - [vector[0], vector[1], 0],
+        )
+
+        return atoms
 
     def _get_translations(
         self, monomer_atoms: ase.atoms.Atoms, potential_tans: list
