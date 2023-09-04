@@ -7,7 +7,7 @@ import numpy as np
 import pretty_errors
 from ase import Atoms
 from ase.io import read
-from ase.io.vasp import read_vasp
+from ase.io.vasp import read_vasp, write_vasp
 from pymatgen.core import Molecule
 from pymatgen.core.operations import SymmOp
 from pymatgen.symmetry.analyzer import PointGroupAnalyzer
@@ -33,7 +33,8 @@ class CyclicGroupAnalyzer:
     def __init__(
         self,
         atom: ase.atoms.Atoms,
-        spmprec: float = 0.01,
+        symprec: float = 0.001,
+        layer_symprec: float = 0.01,
         round_symprec: int = 3,
     ) -> None:
         """
@@ -42,8 +43,10 @@ class CyclicGroupAnalyzer:
             atom: Line group structure to determine the generalized translational group
             spmprec: system precise tolerance
             round_symprec: system precise tolerance when take "np.round"
+
         """
-        self._symprec = spmprec
+        self._symprec = symprec
+        self._layer_symprec = layer_symprec
         self._round_symprec = round_symprec
         self._zaxis = np.array([0, 0, 1])
         self._atom = atom
@@ -51,8 +54,8 @@ class CyclicGroupAnalyzer:
         self._primitive = self._find_primitive()
         self._pure_trans = self._primitive.cell[2, 2]
 
-        # Todo: find out the x-y center, if mass center may not locate in circle center
         self._primitive = self._find_axis_center_of_nanotube(self._primitive)
+
         self._analyze()
 
     def _analyze(self) -> None:
@@ -80,7 +83,6 @@ class CyclicGroupAnalyzer:
             numbers=n_st.numbers,
             positions=n_st.positions - [vector[0], vector[1], 0],
         )
-
         return atoms
 
     def _get_translations(
@@ -120,26 +122,11 @@ class CyclicGroupAnalyzer:
                     )
                     mono.append(monomer)
                 if (
-                    ind == 2 and abs(tran - 0.5) < self._symprec
+                    ind == 2 and abs(tran - 0.5) < self._layer_symprec
                 ):  # only 2 layer in primitive cell
                     # detect mirror
-                    coords = self._primitive.positions
-                    diff_st_ind = np.array(
-                        [
-                            find_in_coord_list(coords, coord, self._symprec)
-                            for coord in monomer.positions
-                        ]
-                    )
-                    if diff_st_ind.ndim > 1:
-                        diff_st_ind = diff_st_ind.T[0]
 
-                    diff_st = self._primitive[
-                        np.setdiff1d(range(len(coords)), diff_st_ind)
-                    ]
-
-                    mirror = self._detect_mirror(
-                        monomer, diff_st, self._pure_trans / 2
-                    )
+                    mirror = self._detect_mirror(monomer, self._pure_trans / 2)
                     if mirror:
                         cyclic_group.append(
                             "T'(%s)" % np.round(self._pure_trans / 2, 3)
@@ -176,6 +163,7 @@ class CyclicGroupAnalyzer:
             )
             / ind
         )
+
         for test_ind in ind1:
 
             itp1, itp2 = (
@@ -213,6 +201,7 @@ class CyclicGroupAnalyzer:
                     )
                 itp1 = itp1 and np.array(itp3).all()
                 itp2 = itp2 and np.array(itp4).all()
+
                 if not (itp1 or itp2):
                     break
 
@@ -224,19 +213,31 @@ class CyclicGroupAnalyzer:
     def _detect_mirror(
         self,
         monomer: ase.atoms.Atoms,
-        diff_st: ase.atoms.Atoms,
         tran: np.float64,
     ) -> bool:
         """
 
         Args:
             monomer: monomer candidates
-            diff_st: diff_st + monomer = primitive cell
             tran: the translational distance of monomer candidates
 
         Returns: judge if the mirror symmetry exist
 
         """
+        coords = self._primitive.positions
+        diff_st_ind = np.array(
+            [
+                find_in_coord_list(coords, coord, self._symprec)
+                for coord in monomer.positions
+            ]
+        )
+        if diff_st_ind.ndim > 1:
+            diff_st_ind = diff_st_ind.T[0]
+        # diff_st: diff_st + monomer = primitive cell
+        diff_st = self._primitive[
+            np.setdiff1d(range(len(coords)), diff_st_ind)
+        ]
+
         for itp1, itp2 in itertools.combinations_with_replacement(
             range(len(monomer)), 2
         ):
@@ -295,7 +296,7 @@ class CyclicGroupAnalyzer:
                 len(self._primitive) % monomer_num == 0
                 and len(z_uniq) % (ii + 1) == 0
                 and abs(len(z_uniq) / (ii + 1) - 1 / potential_trans[ii])
-                < self._symprec
+                < self._layer_symprec
             ):
 
                 if len(self._primitive) == monomer_num:

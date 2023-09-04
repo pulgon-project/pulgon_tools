@@ -3,7 +3,6 @@ from pdb import set_trace
 
 import numpy as np
 import pretty_errors
-from ase.data import atomic_masses
 from ase.io import read
 from pymatgen.core import Molecule
 from pymatgen.core.operations import SymmOp
@@ -77,33 +76,28 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         Returns: inertia_tensor of the molecular
 
         """
-        # tensor_of_inertia = sum(
-        #     m * (np.dot(r, r) * np.eye(3) - np.outer(r, r))
-        #     for m, r in zip(monomer_atoms.get_masses(), centered_positions)
-        # )
 
         weights = np.array([site.species.weight for site in self.centered_mol])
         coords = self.centered_mol.cart_coords
         total_inertia = np.sum(weights * np.sum(coords**2, axis=1))
-        itp1 = np.tile([[0], [1], [2]], (1, 3))
-        itp2 = np.tile([0, 1, 2], (3, 1))
 
-        # nondiagonal terms
-        tmp1 = (np.ones((3, 3)) - np.eye(3)) * (
-            np.swapaxes(np.tile(weights, (3, 3, 1)), 0, 2)
-            * coords[:, itp1]
-            * coords[:, itp2]
-        ).sum(axis=0)
-
-        # diagonal terms
-        tmp2 = (
-            ((coords**2).sum(axis=1) * weights).sum()
-            - (
-                (coords**2)
-                * np.tile(weights.reshape(weights.shape[0], 1), 3)
+        # nondiagonal terms + diagonal terms
+        inertia_tensor = (
+            (np.ones((3, 3)) - np.eye(3))
+            * (
+                np.swapaxes(np.tile(weights, (3, 3, 1)), 0, 2)
+                * coords[:, np.tile([[0], [1], [2]], (1, 3))]
+                * coords[:, np.tile([0, 1, 2], (3, 1))]
             ).sum(axis=0)
-        ) * np.eye(3)
-        inertia_tensor = (tmp1 + tmp2) / total_inertia
+            + (
+                ((coords**2).sum(axis=1) * weights).sum()
+                - (
+                    (coords**2)
+                    * np.tile(weights.reshape(weights.shape[0], 1), 3)
+                ).sum(axis=0)
+            )
+            * np.eye(3)
+        ) / total_inertia
         return inertia_tensor
 
 
