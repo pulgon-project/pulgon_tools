@@ -1,12 +1,16 @@
 import argparse
 import copy
+from pdb import set_trace
 
+import ase
 import numpy as np
 from ase import Atoms
 from ase.io.vasp import write_vasp
 
+from pulgon_tools_wip.utils import refine_cell, sortrows
 
-def e():
+
+def e() -> np.ndarray:
     """
     Returns: identity matrix
     """
@@ -14,7 +18,7 @@ def e():
     return mat
 
 
-def Cn(n):
+def Cn(n: int | float) -> np.ndarray:
     """
     Args:
         n: rotate 2*pi/n
@@ -31,7 +35,7 @@ def Cn(n):
     return mat
 
 
-def sigmaV():
+def sigmaV() -> np.ndarray:
     """
 
     Returns: mirror symmetric matrix
@@ -41,7 +45,7 @@ def sigmaV():
     return mat
 
 
-def sigmaH():
+def sigmaH() -> np.ndarray:
     """
 
     Returns: mirror symmetric matrix about x-y plane
@@ -51,7 +55,7 @@ def sigmaH():
     return mat
 
 
-def U():
+def U() -> np.ndarray:
     """
 
     Returns: A symmetric matrix about the x-axis
@@ -61,7 +65,7 @@ def U():
     return mat
 
 
-def U_d(fid):
+def U_d(fid: float | int) -> np.ndarray:
     """
 
     Args:
@@ -80,7 +84,7 @@ def U_d(fid):
     return mat
 
 
-def S2n(n):
+def S2n(n: int | float) -> np.ndarray:
     """
     Args:
         n: dihedral group, rotate 2*pi/n
@@ -90,15 +94,15 @@ def S2n(n):
     """
     mat = np.array(
         [
-            [np.cos(np.pi / n), -np.sin(np.pi / n), 0],
-            [np.sin(np.pi / n), np.cos(np.pi / n), 0],
+            [np.cos(np.pi / n), np.sin(np.pi / n), 0],
+            [-np.sin(np.pi / n), np.cos(np.pi / n), 0],
             [0, 0, -1],
         ]
     )
     return mat
 
 
-def T_Q(Q, f, pos):
+def T_Q(Q: float | int, f: float | int, pos: np.ndarray) -> np.ndarray:
     """
 
     Args:
@@ -118,7 +122,7 @@ def T_Q(Q, f, pos):
     return pos
 
 
-def T_v(f, pos):
+def T_v(f: float | int, pos: np.ndarray) -> np.ndarray:
     """
 
     Args:
@@ -137,7 +141,7 @@ def T_v(f, pos):
     return pos
 
 
-def dimino(generators, symec=4):
+def dimino(generators: np.ndarray, symec: int = 4) -> np.ndarray:
     """
 
     Args:
@@ -163,7 +167,7 @@ def dimino(generators, symec=4):
             more = False
             for g in list(C):
                 for s in G[: ii + 1]:
-                    sg = np.round(np.dot(s, g), 4)
+                    sg = np.round(np.dot(s, g), symec)
                     itp = (sg == L).all(axis=1).all(axis=1).any()
                     if not itp:
                         if C.ndim == 3:
@@ -182,7 +186,7 @@ def dimino(generators, symec=4):
     return L
 
 
-def change_center(st1):
+def change_center(st1: ase.atoms.Atoms) -> ase.atoms.Atoms:
     """
 
     Args:
@@ -202,15 +206,9 @@ def change_center(st1):
     return st2
 
 
-def sortrows(a):
-    """
-    :param a:
-    :return: Compare each row in ascending order
-    """
-    return a[np.lexsort(np.rot90(a))]
-
-
-def generate_line_group_structure(monomer_pos, cyclic_group):
+def generate_line_group_structure(
+    monomer_pos: np.ndarray, cyclic_group: dict, symec: int = 4
+) -> ase.atoms.Atoms:
     """
 
     Args:
@@ -233,24 +231,22 @@ def generate_line_group_structure(monomer_pos, cyclic_group):
                 all_pos = np.vstack((all_pos, tmp_monomer_pos))
                 judge = np.sum(
                     (
-                        sortrows(np.round(monomer_pos[:, :2], 2))
-                        - sortrows(np.round(tmp_monomer_pos[:, :2], 2))
+                        sortrows(np.round(monomer_pos[:, :2], symec))
+                        - sortrows(np.round(tmp_monomer_pos[:, :2], symec))
                     )
                     ** 2
                 )
-                # set_trace()
                 if judge < 0.1:
                     Q = ii + 1
                     break
-                # set_trace()
-        all_pos = np.unique(np.round(all_pos, 4), axis=0)
+        all_pos = np.unique(np.round(all_pos, symec), axis=0)
         A = Q * f
 
     elif list(cyclic_group.keys())[0] == "T_V":
         f = cyclic_group["T_V"]
         for ii in range(2):
             all_pos = np.vstack((all_pos, T_v(f, all_pos)))
-        all_pos = np.unique(np.round(all_pos, 4), axis=0)
+        all_pos = np.unique(np.round(all_pos, symec), axis=0)
         A = 2 * f
     else:
         print("A error input about cyclic_group")
@@ -259,8 +255,13 @@ def generate_line_group_structure(monomer_pos, cyclic_group):
     cell = np.array([[p0 * 3, 0, 0], [0, p0 * 3, 0], [0, 0, A]])
 
     st1 = Atoms(symbols="C" + str(len(all_pos)), positions=all_pos, cell=cell)
-    st2 = change_center(st1)  # change the axis center to cell center
-    return st2
+
+    refine_pos, refine_num = refine_cell(
+        st1.get_scaled_positions(), st1.numbers
+    )
+    st2 = Atoms(numbers=refine_num, scaled_positions=refine_pos, cell=cell)
+    st3 = change_center(st2)  # change the axis center to cell center
+    return st3
 
 
 def main():
@@ -322,19 +323,17 @@ def main():
     cg = eval(args.cyclic)
     st_name = args.st_name
 
-    rot_sym = dimino(generators, symec=4)
+    rot_sym = dimino(generators, symec=3)
     monomer_pos = []
     for sym in rot_sym:
-        # set_trace()
         if pos.ndim == 1:
             monomer_pos.append(np.dot(sym, pos.reshape(pos.shape[0], 1)).T[0])
         else:
-            # set_trace()
             monomer_pos.extend([np.dot(sym, line) for line in pos])
     monomer_pos = np.array(monomer_pos)
 
-    st = generate_line_group_structure(monomer_pos, cg)
-    write_vasp("%s" % st_name, st, direct=True, sort=True)
+    st = generate_line_group_structure(monomer_pos, cg, symec=3)
+    write_vasp("%s" % st_name, st, direct=True, sort=True, long_format=False)
 
 
 if __name__ == "__main__":
