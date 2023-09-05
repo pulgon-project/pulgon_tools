@@ -17,8 +17,11 @@ classifiers = [
 ]
 dependencies = [
     "numpy",
-    "ase"
+    "ase",
+    "pymatgen",
+    "pretty_errors"
 ]
+
 dynamic = ["version"]
 
 [tool.setuptools.packages.find]
