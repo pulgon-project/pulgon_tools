@@ -39,3 +39,34 @@ def refine_cell(
     return pos, numbers
 
 
+def frac_range(
+    start: float,
+    end: float,
+    left: bool = True,
+    right: bool = True,
+    symprec: float = 0.01,
+) -> list:
+    """return the integer within the specified range
+
+    Args:
+        start: left boundary
+        end: right boundary
+        left: False mean delete the left boundary element if it is an integer
+        right: False mean delete the right boundary element if it is an integer
+        symprec: system precise
+
+    Returns:
+
+    """
+    close = list(
+        range(
+            np.ceil(start).astype(np.int32), np.floor(end).astype(np.int32) + 1
+        )
+    )
+    if left == False:
+        if close[0] - start < symprec:
+            close.pop(0)  # delete the left boundary
+    if right == False:
+        if close[-1] - end < symprec:
+            close.pop()  # delete the right boundary
+    return close
