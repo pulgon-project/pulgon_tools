@@ -37,5 +37,3 @@ pulgon-detect-AxialPointGroup poscar.vasp --enable_pg
 ```
 pulgon-detect-CyclicGroup poscar.vasp
 ```
-
-

@@ -751,19 +751,18 @@ def line_group_9(
         judge = False
         message.append("k3 not belong to 0 or pi/a")
 
-    if k4 <=0 or k4 >= np.pi / a:
+    if k4 <= 0 or k4 >= np.pi / a:
         judge = False
         message.append("k4 not belong to (0,pi/a)")
 
-    if k5 <=0 or k5 >= np.pi / a:
+    if k5 <= 0 or k5 >= np.pi / a:
         judge = False
         message.append("k5 not belong to (0,pi/a)")
 
-
     m1 = [0]
     m2 = frac_range(0, n / 2, left=False, right=False)
-    m3 = [n/2]
-    m4 = [0, n/2]
+    m3 = [n / 2]
+    m4 = [0, n / 2]
     m5 = frac_range(0, n / 2, left=False, right=False)
     sigmaU = [-1, 1]
     sigmaV = [-1, 1]
@@ -789,7 +788,7 @@ def line_group_9(
                                                     np.exp(1j * k1 * a),
                                                     1,
                                                     tmp_sigmaU,
-                                                    tmp_sigmaV
+                                                    tmp_sigmaV,
                                                 ],
                                                 round_symprec,
                                             )
@@ -797,16 +796,61 @@ def line_group_9(
                                             irrep2 = np.round(
                                                 [
                                                     [
-                                                        [np.exp(1j*k2*a), 0],
-                                                        [0, np.exp(1j*k2*a)],
+                                                        [
+                                                            np.exp(
+                                                                1j * k2 * a
+                                                            ),
+                                                            0,
+                                                        ],
+                                                        [
+                                                            0,
+                                                            np.exp(
+                                                                1j * k2 * a
+                                                            ),
+                                                        ],
                                                     ],
                                                     [
-                                                        [np.exp(1j * tmp_m2 * 2 * np.pi / n), 0],
-                                                        [0, np.exp(-1j * tmp_m2 * 2 * np.pi / n)],
+                                                        [
+                                                            np.exp(
+                                                                1j
+                                                                * tmp_m2
+                                                                * 2
+                                                                * np.pi
+                                                                / n
+                                                            ),
+                                                            0,
+                                                        ],
+                                                        [
+                                                            0,
+                                                            np.exp(
+                                                                -1j
+                                                                * tmp_m2
+                                                                * 2
+                                                                * np.pi
+                                                                / n
+                                                            ),
+                                                        ],
                                                     ],
-                                                    tmp_sigmaH*[
-                                                        [0, np.exp(1j * tmp_m2 * np.pi / n)],
-                                                        [np.exp(-1j * tmp_m2 * np.pi / n), 0],
+                                                    tmp_sigmaH
+                                                    * [
+                                                        [
+                                                            0,
+                                                            np.exp(
+                                                                1j
+                                                                * tmp_m2
+                                                                * np.pi
+                                                                / n
+                                                            ),
+                                                        ],
+                                                        [
+                                                            np.exp(
+                                                                -1j
+                                                                * tmp_m2
+                                                                * np.pi
+                                                                / n
+                                                            ),
+                                                            0,
+                                                        ],
                                                     ],
                                                     [
                                                         [0, 1],
@@ -817,7 +861,8 @@ def line_group_9(
                                             )
                                             irrep3 = np.round(
                                                 [
-                                                    np.exp(1j*k3*a)*[
+                                                    np.exp(1j * k3 * a)
+                                                    * [
                                                         [1, 0],
                                                         [0, 1],
                                                     ],
@@ -839,10 +884,27 @@ def line_group_9(
                                             irrep4 = np.round(
                                                 [
                                                     [
-                                                        [np.exp(1j*k2*a), 0],
-                                                        [0, np.exp(-1j*k2*a)],
+                                                        [
+                                                            np.exp(
+                                                                1j * k2 * a
+                                                            ),
+                                                            0,
+                                                        ],
+                                                        [
+                                                            0,
+                                                            np.exp(
+                                                                -1j * k2 * a
+                                                            ),
+                                                        ],
                                                     ],
-                                                    np.exp(1j * tmp_m4 * 2 * np.pi / n)*[
+                                                    np.exp(
+                                                        1j
+                                                        * tmp_m4
+                                                        * 2
+                                                        * np.pi
+                                                        / n
+                                                    )
+                                                    * [
                                                         [1, 0],
                                                         [0, 1],
                                                     ],
@@ -850,9 +912,19 @@ def line_group_9(
                                                         [0, 1],
                                                         [1, 0],
                                                     ],
-                                                    tmp_sigmaV*[
+                                                    tmp_sigmaV
+                                                    * [
                                                         [1, 0],
-                                                        [0, np.exp(1j * tmp_m4 * 2 * np.pi / n)],
+                                                        [
+                                                            0,
+                                                            np.exp(
+                                                                1j
+                                                                * tmp_m4
+                                                                * 2
+                                                                * np.pi
+                                                                / n
+                                                            ),
+                                                        ],
                                                     ],
                                                 ],
                                                 round_symprec,
@@ -860,16 +932,88 @@ def line_group_9(
                                             irrep5 = np.round(
                                                 [
                                                     [
-                                                        [np.exp(1j*k5*a), 0, 0, 0],
-                                                        [0, np.exp(1j*k5*a), 0, 0],
-                                                        [0, 0, np.exp(-1j*k5*a), 0],
-                                                        [0, 0, 0, np.exp(-1j*k5*a)],
+                                                        [
+                                                            np.exp(
+                                                                1j * k5 * a
+                                                            ),
+                                                            0,
+                                                            0,
+                                                            0,
+                                                        ],
+                                                        [
+                                                            0,
+                                                            np.exp(
+                                                                1j * k5 * a
+                                                            ),
+                                                            0,
+                                                            0,
+                                                        ],
+                                                        [
+                                                            0,
+                                                            0,
+                                                            np.exp(
+                                                                -1j * k5 * a
+                                                            ),
+                                                            0,
+                                                        ],
+                                                        [
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            np.exp(
+                                                                -1j * k5 * a
+                                                            ),
+                                                        ],
                                                     ],
                                                     [
-                                                        [np.exp(1j*tmp_m5*2*np.pi/n), 0, 0, 0],
-                                                        [0, np.exp(-1j*tmp_m5*2*np.pi/n), 0, 0],
-                                                        [0, 0, np.exp(-1j*tmp_m5*2*np.pi/n), 0],
-                                                        [0, 0, 0, np.exp(1j*tmp_m5*2*np.pi/n)],
+                                                        [
+                                                            np.exp(
+                                                                1j
+                                                                * tmp_m5
+                                                                * 2
+                                                                * np.pi
+                                                                / n
+                                                            ),
+                                                            0,
+                                                            0,
+                                                            0,
+                                                        ],
+                                                        [
+                                                            0,
+                                                            np.exp(
+                                                                -1j
+                                                                * tmp_m5
+                                                                * 2
+                                                                * np.pi
+                                                                / n
+                                                            ),
+                                                            0,
+                                                            0,
+                                                        ],
+                                                        [
+                                                            0,
+                                                            0,
+                                                            np.exp(
+                                                                -1j
+                                                                * tmp_m5
+                                                                * 2
+                                                                * np.pi
+                                                                / n
+                                                            ),
+                                                            0,
+                                                        ],
+                                                        [
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            np.exp(
+                                                                1j
+                                                                * tmp_m5
+                                                                * 2
+                                                                * np.pi
+                                                                / n
+                                                            ),
+                                                        ],
                                                     ],
                                                     [
                                                         [0, 0, 1, 0],
@@ -880,17 +1024,52 @@ def line_group_9(
                                                     [
                                                         [0, 1, 0, 0],
                                                         [1, 0, 0, 0],
-                                                        [0, 0, 0, np.exp(1j*tmp_m5*2*np.pi/n)],
-                                                        [0, 0, np.exp(-1j*tmp_m5*2*np.pi/n), 0],
+                                                        [
+                                                            0,
+                                                            0,
+                                                            0,
+                                                            np.exp(
+                                                                1j
+                                                                * tmp_m5
+                                                                * 2
+                                                                * np.pi
+                                                                / n
+                                                            ),
+                                                        ],
+                                                        [
+                                                            0,
+                                                            0,
+                                                            np.exp(
+                                                                -1j
+                                                                * tmp_m5
+                                                                * 2
+                                                                * np.pi
+                                                                / n
+                                                            ),
+                                                            0,
+                                                        ],
                                                     ],
                                                 ],
                                                 round_symprec,
                                             )
 
-                                            irreps = [irrep1, irrep2, irrep3, irrep4, irrep5]
-                                            character_table.append(_cal_irrep_trace(irreps, symprec))
+                                            irreps = [
+                                                irrep1,
+                                                irrep2,
+                                                irrep3,
+                                                irrep4,
+                                                irrep5,
+                                            ]
+                                            character_table.append(
+                                                _cal_irrep_trace(
+                                                    irreps, symprec
+                                                )
+                                            )
                                             quantum_number.append(
-                                                ((k1, tmp_m1, tmp_piV), (k2, tmp_m2))
+                                                (
+                                                    (k1, tmp_m1, tmp_piV),
+                                                    (k2, tmp_m2),
+                                                )
                                             )
                                             index.append(ind)
                                             ind = ind + 1
@@ -899,8 +1078,6 @@ def line_group_9(
         print("error of input:")
         for tmp in message:
             print(tmp)
-
-
 
 
 def plot_character_table(character, row, column):
@@ -955,7 +1132,7 @@ def main():
 
     # dataset = line_group_1(q, r, a, f, n, k1, k2)
     # dataset = line_group_2(a, n, k1, k2)
-    dataset = line_group_9(a, n, k1, k2,k3,k4, k5)
+    dataset = line_group_9(a, n, k1, k2, k3, k4, k5)
 
     set_trace()
     # character_tabel, row_labels, column_labels = line_group_4(a, n, k1, m1, k2, m2, k3, m3, k4, m4, sigmah)
