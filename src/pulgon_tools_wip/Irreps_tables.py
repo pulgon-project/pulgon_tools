@@ -593,10 +593,9 @@ def line_group_9(
     # m3 = [n / 2]
     m4 = [0, n / 2]
     m5 = frac_range(0, n / 2, left=False, right=False)
-    sigmaU = [-1, 1]
-    sigmaV = [-1, 1]
-    sigmaH = [-1, 1]
+    piU = [-1, 1]
     piV = [-1, 1]
+    piH = [-1, 1]
 
     if judge:
         ind = 0
@@ -604,27 +603,24 @@ def line_group_9(
         character_table = []
         index = []
 
-        combs = list(
-            itertools.product(*[m1, m2, m4, m5, sigmaU, sigmaV, sigmaH, piV])
-        )
+        combs = list(itertools.product(*[m1, m2, m4, m5, piU, piV, piH]))
         for comb in combs:
             (
                 tmp_m1,
                 tmp_m2,
                 tmp_m4,
                 tmp_m5,
-                tmp_sigmaU,
-                tmp_sigmaV,
-                tmp_sigmaH,
+                tmp_piU,
                 tmp_piV,
+                tmp_piH,
             ) = comb
 
             irrep1 = np.round(
                 [
                     np.exp(1j * k1 * a),
                     1,
-                    tmp_sigmaU,
-                    tmp_sigmaV,
+                    tmp_piU,
+                    tmp_piV,
                 ],
                 round_symprec,
             )
@@ -651,14 +647,13 @@ def line_group_9(
                             np.exp(-1j * tmp_m2 * 2 * np.pi / n),
                         ],
                     ],
-                    tmp_sigmaH
-                    * [
+                    [
                         [
                             0,
-                            np.exp(1j * tmp_m2 * np.pi / n),
+                            tmp_piH * np.exp(1j * tmp_m2 * np.pi / n),
                         ],
                         [
-                            np.exp(-1j * tmp_m2 * np.pi / n),
+                            tmp_piH * np.exp(-1j * tmp_m2 * np.pi / n),
                             0,
                         ],
                     ],
@@ -671,10 +666,9 @@ def line_group_9(
             )
             irrep3 = np.round(
                 [
-                    np.exp(1j * k3 * a)
-                    * [
-                        [1, 0],
-                        [0, 1],
+                    [
+                        [np.exp(1j * k3 * a), 0],
+                        [0, np.exp(1j * k3 * a)],
                     ],
                     [
                         [-1, 0],
@@ -703,21 +697,19 @@ def line_group_9(
                             np.exp(-1j * k2 * a),
                         ],
                     ],
-                    np.exp(1j * tmp_m4 * 2 * np.pi / n)
-                    * [
-                        [1, 0],
-                        [0, 1],
+                    [
+                        [np.exp(1j * tmp_m4 * 2 * np.pi / n), 0],
+                        [0, np.exp(1j * tmp_m4 * 2 * np.pi / n)],
                     ],
                     [
                         [0, 1],
                         [1, 0],
                     ],
-                    tmp_sigmaV
-                    * [
-                        [1, 0],
+                    [
+                        [tmp_piV, 0],
                         [
                             0,
-                            np.exp(1j * tmp_m4 * 2 * np.pi / n),
+                            tmp_piV * np.exp(1j * tmp_m4 * 2 * np.pi / n),
                         ],
                     ],
                 ],
@@ -813,8 +805,678 @@ def line_group_9(
             character_table.append(_cal_irrep_trace(irreps, symprec))
             quantum_number.append(
                 (
-                    (k1, tmp_m1, tmp_piV),
-                    (k2, tmp_m2),
+                    (k1, tmp_piU, tmp_piV),
+                    (k2, tmp_m2, tmp_piH),
+                    (k3, tmp_piH),
+                )
+            )
+            index.append(ind)
+            ind = ind + 1
+        return CharacterDataset(index, quantum_number, character_table)
+    else:
+        print("error of input:")
+        for tmp in message:
+            print(tmp)
+
+
+def line_group_10(
+    a: float,
+    n: int,
+    k1: float,
+    k2: float,
+    k3: float,
+    k4: float,
+    k5: float,
+    symprec: float = 1e-4,
+    round_symprec: int = 3,
+) -> CharacterDataset:
+    """T'(a/2)S2n"""
+    # label for line group family
+    # row_labels = [r"$(C_{Q}|f)$", r"$C_{n}$"]
+    # column_labels = [r"$_{k}A_{m}$", r"$_{\widetilde{k}}A_{\widetilde{m}}$"]
+
+    # whether the input satisfy the requirements
+    judge = True
+    message = []
+    if k1 != 0 and k1 != np.pi / a:
+        judge = False
+        message.append("k1 not belong to 0 or pi/a")
+
+    if k2 != 0 and k2 != np.pi / a:
+        judge = False
+        message.append("k2 not belong to 0 or pi/a")
+
+    if k3 != 0 and k3 != np.pi / a:
+        judge = False
+        message.append("k3 not belong to 0 or pi/a")
+
+    if k4 <= 0 or k4 >= np.pi / a:
+        judge = False
+        message.append("k4 not belong to (0,pi/a)")
+
+    if k5 <= 0 or k5 >= np.pi / a:
+        judge = False
+        message.append("k5 not belong to (0,pi/a)")
+
+    if k1 == 0:
+        m1 = [0]
+    elif k1 == np.pi / a:
+        m1 = [n / 2]
+    if k2 == 0:
+        m2 = [n / 2]
+    elif k2 == np.pi / a:
+        m2 = [0]
+
+    m3 = frac_range(0, n / 2, left=False, right=False)
+    m4 = [0, n / 2]
+    m5 = frac_range(0, n / 2, left=False, right=False)
+    piU = [-1, 1]
+    piV = [-1, 1]
+    piH = [-1, 1]
+
+    if judge:
+        ind = 0
+        quantum_number = []
+        character_table = []
+        index = []
+
+        combs = list(itertools.product(*[m1, m2, m3, m4, m5, piU, piV, piH]))
+        for comb in combs:
+            (
+                tmp_m1,
+                tmp_m2,
+                tmp_m3,
+                tmp_m4,
+                tmp_m5,
+                tmp_piU,
+                tmp_piV,
+                tmp_piH,
+            ) = comb
+
+            irrep1 = np.round(
+                [
+                    tmp_piV * np.exp(1j * k1 * a / 2),
+                    tmp_piV * tmp_piU * np.exp(1j * tmp_m1 * np.pi / n),
+                ],
+                round_symprec,
+            )
+            irrep2 = np.round(
+                [
+                    [
+                        [np.exp(1j * k2 * a / 2), 0],
+                        [0, -np.exp(1j * k2 * a / 2)],
+                    ],
+                    [
+                        [0, -np.exp(1j * k2 * np.pi / n)],
+                        [1, 0],
+                    ],
+                ],
+                round_symprec,
+            )
+            irrep3 = np.round(
+                [
+                    [
+                        [0, np.exp(1j * k3 * a / 2)],
+                        [np.exp(1j * k3 * a / 2), 0],
+                    ],
+                    [
+                        [tmp_piH * np.exp(1j * tmp_m3 * np.pi / n), 0],
+                        [
+                            0,
+                            tmp_piH
+                            * np.exp(1j * (k3 * a - tmp_m3 * np.pi / n)),
+                        ],
+                    ],
+                ],
+                round_symprec,
+            )
+            irrep4 = np.round(
+                [
+                    [
+                        [tmp_piV * np.exp(1j * k4 * a / 2), 0],
+                        [
+                            0,
+                            tmp_piV
+                            * np.exp(
+                                1j * (tmp_m4 * 2 * np.pi / n - k4 * a / 2)
+                            ),
+                        ],
+                    ],
+                    [
+                        [0, np.exp(1j * tmp_m4 * 2 * np.pi / n)],
+                        [1, 0],
+                    ],
+                ],
+                round_symprec,
+            )
+            irrep5 = np.round(
+                [
+                    [
+                        [0, np.exp(1j * k5 * a / 2), 0, 0],
+                        [np.exp(1j * k5 * a / 2), 0, 0, 0],
+                        [
+                            0,
+                            0,
+                            0,
+                            np.exp(
+                                -1j * (tmp_m5 * 2 * np.pi / n + k5 * a / 2)
+                            ),
+                        ],
+                        [
+                            0,
+                            0,
+                            np.exp(1j * (tmp_m5 * 2 * np.pi / n - k5 * a / 2)),
+                            0,
+                        ],
+                    ],
+                    [
+                        [0, 0, np.exp(1j * tmp_m5 * 2 * np.pi / n), 0],
+                        [0, 0, 0, np.exp(-1j * tmp_m5 * 2 * np.pi / n)],
+                        [1, 0, 0, 0],
+                        [0, 1, 0, 0],
+                    ],
+                ],
+                round_symprec,
+            )
+
+            irreps = [irrep1, irrep2, irrep3, irrep4, irrep5]
+            character_table.append(_cal_irrep_trace(irreps, symprec))
+            quantum_number.append(
+                (
+                    (k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH),
+                    (k2),
+                    (k3, tmp_m3, tmp_piH),
+                    (k4, tmp_m4, tmp_piV),
+                    (k5, tmp_m5),
+                )
+            )
+            index.append(ind)
+            ind = ind + 1
+        return CharacterDataset(index, quantum_number, character_table)
+    else:
+        print("error of input:")
+        for tmp in message:
+            print(tmp)
+
+
+def line_group_11(
+    a: float,
+    n: int,
+    k1: float,
+    k2: float,
+    k3: float,
+    k4: float,
+    symprec: float = 1e-4,
+    round_symprec: int = 3,
+) -> CharacterDataset:
+    """TDnh"""
+    # label for line group family
+    # row_labels = [r"$(C_{Q}|f)$", r"$C_{n}$"]
+    # column_labels = [r"$_{k}A_{m}$", r"$_{\widetilde{k}}A_{\widetilde{m}}$"]
+
+    # whether the input satisfy the requirements
+    judge = True
+    message = []
+    if k1 != 0 and k1 != np.pi:
+        judge = False
+        message.append("k1 not belong to 0 or pi")
+
+    if k2 != 0 and k2 != np.pi:
+        judge = False
+        message.append("k2 not belong to 0 or pi")
+
+    if k3 <= 0 or k3 >= np.pi:
+        judge = False
+        message.append("k3 not belong to (0,pi)")
+
+    if k4 <= 0 or k4 >= np.pi:
+        judge = False
+        message.append("k4 not belong to (0,pi)")
+
+    m1 = [0, n / 2]
+    m2 = frac_range(0, n / 2, left=False, right=False)
+    m3 = frac_range(0, n / 2, left=False, right=False)
+    m4 = frac_range(0, n / 2, left=False, right=False)
+    piV = [-1, 1]
+    piH = [-1, 1]
+
+    if judge:
+        ind = 0
+        quantum_number = []
+        character_table = []
+        index = []
+
+        combs = list(itertools.product(*[m1, m2, m3, m4, piV, piH]))
+        for comb in combs:
+            tmp_m1, tmp_m2, tmp_m3, tmp_m4, tmp_piV, tmp_piH = comb
+
+            irrep1 = np.round(
+                [
+                    np.exp(1j * k1 * a),
+                    np.exp(1j * tmp_m1 * 2 * np.pi / n),
+                    tmp_piV,
+                    tmp_piH,
+                ],
+                round_symprec,
+            )
+            irrep2 = np.round(
+                [
+                    [
+                        [np.exp(1j * k2 * a), 0],
+                        [0, -np.exp(1j * k2 * a)],
+                    ],
+                    [
+                        [np.exp(1j * tmp_m2 * 2 * np.pi / n), 0],
+                        [0, np.exp(-1j * tmp_m2 * 2 * np.pi / n)],
+                    ],
+                    [
+                        [0, 1],
+                        [1, 0],
+                    ],
+                    [
+                        [tmp_piH, 0],
+                        [0, tmp_piH],
+                    ],
+                ],
+                round_symprec,
+            )
+            irrep3 = np.round(
+                [
+                    [
+                        [np.exp(1j * k3 * a), 0],
+                        [0, np.exp(-1j * k3 * a)],
+                    ],
+                    [
+                        [np.exp(1j * tmp_m3 * 2 * np.pi / n), 0],
+                        [0, np.exp(1j * tmp_m3 * 2 * np.pi / n)],
+                    ],
+                    [
+                        [tmp_piV, 0],
+                        [0, tmp_piV],
+                    ],
+                    [
+                        [0, 1],
+                        [1, 0],
+                    ],
+                ],
+                round_symprec,
+            )
+            irrep4 = np.round(
+                [
+                    [
+                        [np.exp(1j * k4 * a), 0, 0, 0],
+                        [0, np.exp(1j * k4 * a), 0, 0],
+                        [0, 0, np.exp(-1j * k4 * a), 0],
+                        [0, 0, 0, np.exp(-1j * k4 * a)],
+                    ],
+                    [
+                        [np.exp(1j * tmp_m4 * 2 * np.pi / n), 0, 0, 0],
+                        [0, np.exp(-1j * tmp_m4 * 2 * np.pi / n), 0, 0],
+                        [0, 0, np.exp(1j * tmp_m4 * 2 * np.pi / n), 0],
+                        [0, 0, 0, np.exp(-1j * tmp_m4 * 2 * np.pi / n)],
+                    ],
+                    [
+                        [0, 1, 0, 0],
+                        [1, 0, 0, 0],
+                        [0, 0, 0, 1],
+                        [0, 0, 1, 0],
+                    ],
+                    [
+                        [0, 0, 1, 0],
+                        [0, 0, 0, 1],
+                        [1, 0, 0, 0],
+                        [0, 1, 0, 0],
+                    ],
+                ],
+                round_symprec,
+            )
+
+            irreps = [irrep1, irrep2, irrep3, irrep4]
+            character_table.append(_cal_irrep_trace(irreps, symprec))
+            quantum_number.append(
+                (
+                    (k1, tmp_m1, tmp_piV, tmp_piH),
+                    (k2, tmp_m2, tmp_piH),
+                    (k3, tmp_m3, tmp_piV),
+                    (k4, tmp_m4),
+                )
+            )
+            index.append(ind)
+            ind = ind + 1
+        return CharacterDataset(index, quantum_number, character_table)
+    else:
+        print("error of input:")
+        for tmp in message:
+            print(tmp)
+
+
+def line_group_12(
+    a: float,
+    n: int,
+    k1: float,
+    k2: float,
+    k3: float,
+    k4: float,
+    k5: float,
+    symprec: float = 1e-4,
+    round_symprec: int = 3,
+) -> CharacterDataset:
+    """T'(a/2)Cnh"""
+    # label for line group family
+    # row_labels = [r"$(C_{Q}|f)$", r"$C_{n}$"]
+    # column_labels = [r"$_{k}A_{m}$", r"$_{\widetilde{k}}A_{\widetilde{m}}$"]
+
+    # whether the input satisfy the requirements
+    judge = True
+    message = []
+    if k1 != 0:
+        judge = False
+        message.append("k1 not belong to 0")
+
+    if k2 != 0 and k2 != np.pi:
+        judge = False
+        message.append("k2 not belong to 0 or pi/a")
+
+    if k3 <= 0 or k3 >= np.pi:
+        judge = False
+        message.append("k3 not belong to (0,pi)")
+
+    if k4 != np.pi:
+        judge = False
+        message.append("k4 not belong to pi")
+
+    if k5 <= 0 or k5 >= np.pi:
+        judge = False
+        message.append("k5 not belong to (0,pi)")
+
+    m1 = [0, n / 2]
+    m2 = frac_range(0, n / 2, left=False, right=False)
+    m3 = [0, n / 2]
+    m4 = [0, n / 2]
+    m5 = frac_range(0, n / 2, left=False, right=False)
+    piU = [-1, 1]
+    piV = [-1, 1]
+    piH = [-1, 1]
+
+    if judge:
+        ind = 0
+        quantum_number = []
+        character_table = []
+        index = []
+
+        combs = list(itertools.product(*[m1, m2, m3, m4, m5, piU, piV, piH]))
+        for comb in combs:
+            (
+                tmp_m1,
+                tmp_m2,
+                tmp_m3,
+                tmp_m4,
+                tmp_m5,
+                tmp_piU,
+                tmp_piV,
+                tmp_piH,
+            ) = comb
+
+            irrep1 = np.round(
+                [tmp_piV, np.exp(1j * tmp_m1 * 2 * np.pi / n), tmp_piH],
+                round_symprec,
+            )
+            irrep2 = np.round(
+                [
+                    [
+                        [0, np.exp(1j * k2 * a / 2)],
+                        [np.exp(1j * k2 * a / 2), 0],
+                    ],
+                    [
+                        [np.exp(1j * tmp_m2 * 2 * np.pi / n), 0],
+                        [0, np.exp(-1j * tmp_m2 * 2 * np.pi / n)],
+                    ],
+                    [
+                        [tmp_piH, 0],
+                        [0, tmp_piH],
+                    ],
+                ],
+                round_symprec,
+            )
+            irrep3 = np.round(
+                [
+                    [
+                        [tmp_piV * np.exp(1j * k3 * a / 2), 0],
+                        [0, tmp_piV * np.exp(-1j * k3 * a / 2)],
+                    ],
+                    [
+                        [np.exp(1j * tmp_m3 * 2 * np.pi / n), 0],
+                        [0, np.exp(1j * tmp_m3 * 2 * np.pi / n)],
+                    ],
+                    [
+                        [0, 1],
+                        [1, 0],
+                    ],
+                ],
+                round_symprec,
+            )
+            irrep4 = np.round(
+                [
+                    [
+                        [1j, 0],
+                        [0, -1j],
+                    ],
+                    [
+                        [np.exp(1j * tmp_m4 * 2 * np.pi / n), 0],
+                        [0, np.exp(1j * tmp_m4 * 2 * np.pi / n)],
+                    ],
+                    [
+                        [0, 1],
+                        [1, 0],
+                    ],
+                ],
+                round_symprec,
+            )
+            irrep5 = np.round(
+                [
+                    [
+                        [0, np.exp(1j * k5 * a / 2), 0, 0],
+                        [np.exp(1j * k5 * a / 2), 0, 0, 0],
+                        [0, 0, 0, np.exp(-1j * k5 * a / 2)],
+                        [0, 0, np.exp(-1j * k5 * a / 2), 0],
+                    ],
+                    [
+                        [np.exp(1j * tmp_m5 * 2 * np.pi / n), 0, 0, 0],
+                        [0, np.exp(-1j * tmp_m5 * 2 * np.pi / n), 0, 0],
+                        [0, 0, np.exp(1j * tmp_m5 * 2 * np.pi / n), 0],
+                        [0, 0, 0, np.exp(-1j * tmp_m5 * 2 * np.pi / n)],
+                    ],
+                    [
+                        [0, 0, 1, 0],
+                        [0, 0, 0, 1],
+                        [1, 0, 0, 0],
+                        [0, 1, 0, 0],
+                    ],
+                ],
+                round_symprec,
+            )
+
+            irreps = [irrep1, irrep2, irrep3, irrep4, irrep5]
+            character_table.append(_cal_irrep_trace(irreps, symprec))
+            quantum_number.append(
+                (
+                    (k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH),
+                    (k2),
+                    (k3, tmp_m3, tmp_piH),
+                    (k4, tmp_m4, tmp_piV),
+                    (k5, tmp_m5),
+                )
+            )
+            index.append(ind)
+            ind = ind + 1
+        return CharacterDataset(index, quantum_number, character_table)
+    else:
+        print("error of input:")
+        for tmp in message:
+            print(tmp)
+
+
+# Todo: unfinish
+def line_group_13(
+    a: float,
+    n: int,
+    k1: float,
+    k2: float,
+    k3: float,
+    k4: float,
+    k5: float,
+    k6: float,
+    k7: float,
+    k8: float,
+    k9: float,
+    k10: float,
+    symprec: float = 1e-4,
+    round_symprec: int = 3,
+) -> CharacterDataset:
+    """T_{2n}^{1}Dnh"""
+    # label for line group family
+    # row_labels = [r"$(C_{Q}|f)$", r"$C_{n}$"]
+    # column_labels = [r"$_{k}A_{m}$", r"$_{\widetilde{k}}A_{\widetilde{m}}$"]
+
+    # whether the input satisfy the requirements
+    judge = True
+    message = []
+    if k1 != 0:
+        judge = False
+        message.append("k1 not belong to 0")
+
+    if k2 != 0:
+        judge = False
+        message.append("k2 not belong to 0")
+
+    if k3 <= 0 or k3 > np.pi / a:
+        judge = False
+        message.append("k3 not belong to (0,pi/a]")
+
+    if k4 != np.pi / a:
+        judge = False
+        message.append("k4 not belong to pi/a")
+
+    if k5 <= 0 or k5 > np.pi / a:
+        judge = False
+        message.append("k5 not belong to (0,pi/a]")
+
+    m1 = [0, n / 2]
+    m2 = frac_range(0, n / 2, left=False, right=False)
+    m3 = [0, n / 2]
+    m4 = [0, n / 2]
+    m5 = frac_range(0, n / 2, left=False, right=False)
+    piU = [-1, 1]
+    piV = [-1, 1]
+    piH = [-1, 1]
+
+    if judge:
+        ind = 0
+        quantum_number = []
+        character_table = []
+        index = []
+
+        combs = list(itertools.product(*[m1, m2, m3, m4, m5, piU, piV, piH]))
+        for comb in combs:
+            (
+                tmp_m1,
+                tmp_m2,
+                tmp_m3,
+                tmp_m4,
+                tmp_m5,
+                tmp_piU,
+                tmp_piV,
+                tmp_piH,
+            ) = comb
+
+            irrep1 = np.round(
+                [tmp_piV, np.exp(1j * tmp_m1 * 2 * np.pi / n), tmp_piH],
+                round_symprec,
+            )
+            irrep2 = np.round(
+                [
+                    [
+                        [0, np.exp(1j * k2 * a / 2)],
+                        [np.exp(1j * k2 * a / 2), 0],
+                    ],
+                    [
+                        [np.exp(1j * tmp_m2 * 2 * np.pi / n), 0],
+                        [0, np.exp(-1j * tmp_m2 * 2 * np.pi / n)],
+                    ],
+                    [
+                        [tmp_piH, 0],
+                        [0, tmp_piH],
+                    ],
+                ],
+                round_symprec,
+            )
+            irrep3 = np.round(
+                [
+                    [
+                        [tmp_piV * np.exp(1j * k3 * a / 2), 0],
+                        [0, tmp_piV * np.exp(-1j * k3 * a / 2)],
+                    ],
+                    [
+                        [np.exp(1j * tmp_m3 * 2 * np.pi / n), 0],
+                        [0, np.exp(1j * tmp_m3 * 2 * np.pi / n)],
+                    ],
+                    [
+                        [0, 1],
+                        [1, 0],
+                    ],
+                ],
+                round_symprec,
+            )
+            irrep4 = np.round(
+                [
+                    [
+                        [1j, 0],
+                        [0, -1j],
+                    ],
+                    [
+                        [np.exp(1j * tmp_m4 * 2 * np.pi / n), 0],
+                        [0, np.exp(1j * tmp_m4 * 2 * np.pi / n)],
+                    ],
+                    [
+                        [0, 1],
+                        [1, 0],
+                    ],
+                ],
+                round_symprec,
+            )
+            irrep5 = np.round(
+                [
+                    [
+                        [0, np.exp(1j * k5 * a / 2), 0, 0],
+                        [np.exp(1j * k5 * a / 2), 0, 0, 0],
+                        [0, 0, 0, np.exp(-1j * k5 * a / 2)],
+                        [0, 0, np.exp(-1j * k5 * a / 2), 0],
+                    ],
+                    [
+                        [np.exp(1j * tmp_m5 * 2 * np.pi / n), 0, 0, 0],
+                        [0, np.exp(-1j * tmp_m5 * 2 * np.pi / n), 0, 0],
+                        [0, 0, np.exp(1j * tmp_m5 * 2 * np.pi / n), 0],
+                        [0, 0, 0, np.exp(-1j * tmp_m5 * 2 * np.pi / n)],
+                    ],
+                    [
+                        [0, 0, 1, 0],
+                        [0, 0, 0, 1],
+                        [1, 0, 0, 0],
+                        [0, 1, 0, 0],
+                    ],
+                ],
+                round_symprec,
+            )
+
+            irreps = [irrep1, irrep2, irrep3, irrep4, irrep5]
+            character_table.append(_cal_irrep_trace(irreps, symprec))
+            quantum_number.append(
+                (
+                    (k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH),
+                    (k2),
+                    (k3, tmp_m3, tmp_piH),
+                    (k4, tmp_m4, tmp_piV),
+                    (k5, tmp_m5),
                 )
             )
             index.append(ind)
@@ -849,11 +1511,11 @@ def plot_character_table(character, row, column):
 
 
 def main():
-    # line 1
-    q, r, f, n = 3, 1, 3, 5
-    Q = q / r
-    a = Q * f
-    k1, k2 = 0, 0
+    # # line 1
+    # q, r, f, n = 3, 1, 3, 5
+    # Q = q / r
+    # a = Q * f
+    # k1, k2 = 0, 0
 
     # # line 2
     # a = 3
@@ -867,18 +1529,18 @@ def main():
     # k1 = np.pi/a
     # k2 = np.pi/3
 
-    # # line 4
-    # a = 3
-    # n = 6
-    # k1 = 0
-    # k2 = np.pi / a
-    # k3 = 0
-    # k4 = np.pi / 2 / a
-    # k5 = np.pi / 3 / a
+    # line 4
+    a = 3
+    n = 6
+    k1 = 0
+    k2 = np.pi
+    k3 = np.pi / 3
+    k4 = np.pi
+    k5 = np.pi / 3
 
-    dataset = line_group_1(q, r, a, f, n, k1, k2)
+    # dataset = line_group_1(q, r, a, f, n, k1, k2)
     # dataset = line_group_2(a, n, k1, k2)
-    # dataset = line_group_9(a, n, k1, k2, k3, k4, k5)
+    dataset = line_group_12(a, n, k1, k2, k3, k4, k5)
 
     set_trace()
     # character_tabel, row_labels, column_labels = line_group_4(a, n, k1, m1, k2, m2, k3, m3, k4, m4, sigmah)
