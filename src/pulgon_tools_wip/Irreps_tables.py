@@ -44,7 +44,7 @@ class CharacterDataset(typing.NamedTuple):
     """
 
     index: list[int]
-    quantum_number: list[dict]
+    quantum_number: list[tuple]
     character_table: list
 
 
@@ -714,6 +714,195 @@ def line_group_7(
             print(tmp)
 
 
+# Todo
+def line_group_8():
+    pass
+
+
+# Todo: m must be integer?
+def line_group_9(
+    a: float,
+    n: int,
+    k1: float,
+    k2: float,
+    k3: float,
+    k4: float,
+    k5: float,
+    symprec: float = 1e-4,
+    round_symprec: int = 3,
+) -> CharacterDataset:
+    """T(a)Dnd"""
+    # label for line group family
+    # row_labels = [r"$(C_{Q}|f)$", r"$C_{n}$"]
+    # column_labels = [r"$_{k}A_{m}$", r"$_{\widetilde{k}}A_{\widetilde{m}}$"]
+
+    # whether the input satisfy the requirements
+    judge = True
+    message = []
+    if k1 != 0 and k1 != np.pi / a:
+        judge = False
+        message.append("k1 not belong to 0 or pi/a")
+
+    if k2 != 0 and k2 != np.pi / a:
+        judge = False
+        message.append("k2 not belong to 0 or pi/a")
+
+    if k3 != 0 and k3 != np.pi / a:
+        judge = False
+        message.append("k3 not belong to 0 or pi/a")
+
+    if k4 <=0 or k4 >= np.pi / a:
+        judge = False
+        message.append("k4 not belong to (0,pi/a)")
+
+    if k5 <=0 or k5 >= np.pi / a:
+        judge = False
+        message.append("k5 not belong to (0,pi/a)")
+
+
+    m1 = [0]
+    m2 = frac_range(0, n / 2, left=False, right=False)
+    m3 = [n/2]
+    m4 = [0, n/2]
+    m5 = frac_range(0, n / 2, left=False, right=False)
+    sigmaU = [-1, 1]
+    sigmaV = [-1, 1]
+    sigmaH = [-1, 1]
+    piV = [-1, 1]
+
+    if judge:
+        ind = 0
+        quantum_number = []
+        character_table = []
+        index = []
+        for tmp_m1 in m1:
+            for tmp_m2 in m2:
+                for tmp_m3 in m3:
+                    for tmp_m4 in m4:
+                        for tmp_m5 in m5:
+                            for tmp_piV in piV:
+                                for tmp_sigmaH in sigmaH:
+                                    for tmp_sigmaU in sigmaU:
+                                        for tmp_sigmaV in sigmaV:
+                                            irrep1 = np.round(
+                                                [
+                                                    np.exp(1j * k1 * a),
+                                                    1,
+                                                    tmp_sigmaU,
+                                                    tmp_sigmaV
+                                                ],
+                                                round_symprec,
+                                            )
+                                            # set_trace()
+                                            irrep2 = np.round(
+                                                [
+                                                    [
+                                                        [np.exp(1j*k2*a), 0],
+                                                        [0, np.exp(1j*k2*a)],
+                                                    ],
+                                                    [
+                                                        [np.exp(1j * tmp_m2 * 2 * np.pi / n), 0],
+                                                        [0, np.exp(-1j * tmp_m2 * 2 * np.pi / n)],
+                                                    ],
+                                                    tmp_sigmaH*[
+                                                        [0, np.exp(1j * tmp_m2 * np.pi / n)],
+                                                        [np.exp(-1j * tmp_m2 * np.pi / n), 0],
+                                                    ],
+                                                    [
+                                                        [0, 1],
+                                                        [1, 0],
+                                                    ],
+                                                ],
+                                                round_symprec,
+                                            )
+                                            irrep3 = np.round(
+                                                [
+                                                    np.exp(1j*k3*a)*[
+                                                        [1, 0],
+                                                        [0, 1],
+                                                    ],
+                                                    [
+                                                        [-1, 0],
+                                                        [0, -1],
+                                                    ],
+                                                    [
+                                                        [0, 1],
+                                                        [1, 0],
+                                                    ],
+                                                    [
+                                                        [1, 0],
+                                                        [0, -1],
+                                                    ],
+                                                ],
+                                                round_symprec,
+                                            )
+                                            irrep4 = np.round(
+                                                [
+                                                    [
+                                                        [np.exp(1j*k2*a), 0],
+                                                        [0, np.exp(-1j*k2*a)],
+                                                    ],
+                                                    np.exp(1j * tmp_m4 * 2 * np.pi / n)*[
+                                                        [1, 0],
+                                                        [0, 1],
+                                                    ],
+                                                    [
+                                                        [0, 1],
+                                                        [1, 0],
+                                                    ],
+                                                    tmp_sigmaV*[
+                                                        [1, 0],
+                                                        [0, np.exp(1j * tmp_m4 * 2 * np.pi / n)],
+                                                    ],
+                                                ],
+                                                round_symprec,
+                                            )
+                                            irrep5 = np.round(
+                                                [
+                                                    [
+                                                        [np.exp(1j*k5*a), 0, 0, 0],
+                                                        [0, np.exp(1j*k5*a), 0, 0],
+                                                        [0, 0, np.exp(-1j*k5*a), 0],
+                                                        [0, 0, 0, np.exp(-1j*k5*a)],
+                                                    ],
+                                                    [
+                                                        [np.exp(1j*tmp_m5*2*np.pi/n), 0, 0, 0],
+                                                        [0, np.exp(-1j*tmp_m5*2*np.pi/n), 0, 0],
+                                                        [0, 0, np.exp(-1j*tmp_m5*2*np.pi/n), 0],
+                                                        [0, 0, 0, np.exp(1j*tmp_m5*2*np.pi/n)],
+                                                    ],
+                                                    [
+                                                        [0, 0, 1, 0],
+                                                        [0, 0, 0, 1],
+                                                        [1, 0, 0, 0],
+                                                        [0, 1, 0, 0],
+                                                    ],
+                                                    [
+                                                        [0, 1, 0, 0],
+                                                        [1, 0, 0, 0],
+                                                        [0, 0, 0, np.exp(1j*tmp_m5*2*np.pi/n)],
+                                                        [0, 0, np.exp(-1j*tmp_m5*2*np.pi/n), 0],
+                                                    ],
+                                                ],
+                                                round_symprec,
+                                            )
+
+                                            irreps = [irrep1, irrep2, irrep3, irrep4, irrep5]
+                                            character_table.append(_cal_irrep_trace(irreps, symprec))
+                                            quantum_number.append(
+                                                ((k1, tmp_m1, tmp_piV), (k2, tmp_m2))
+                                            )
+                                            index.append(ind)
+                                            ind = ind + 1
+        return CharacterDataset(index, quantum_number, character_table)
+    else:
+        print("error of input:")
+        for tmp in message:
+            print(tmp)
+
+
+
+
 def plot_character_table(character, row, column):
     plt.figure(dpi=200)
     # fig,ax = plt.subplots(1,2)
@@ -759,18 +948,14 @@ def main():
     a = 3
     n = 6
     k1 = 0
-    m1 = 0
     k2 = np.pi / a
-    m2 = 0
-    k3 = np.pi / a
-    m3 = 1
-    k4 = np.pi / a
-    m4 = -1
-    sigmah = -1
+    k3 = 0
+    k4 = np.pi / 2 / a
+    k5 = np.pi / 3 / a
 
     # dataset = line_group_1(q, r, a, f, n, k1, k2)
     # dataset = line_group_2(a, n, k1, k2)
-    dataset = line_group_7(a, n, k1, k2)
+    dataset = line_group_9(a, n, k1, k2,k3,k4, k5)
 
     set_trace()
     # character_tabel, row_labels, column_labels = line_group_4(a, n, k1, m1, k2, m2, k3, m3, k4, m4, sigmah)
