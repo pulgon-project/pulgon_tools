@@ -52,7 +52,7 @@ pulgon-generate-CharacterTable -F 1 -q 6 -r 2 -a 9 -f 3 -n 5 -k "[0,0]" -s test
 -f: a = f*Q   
 -n: rotational point group Cn   
 -k: Brillouin zone k vector   
--s: saved file name   
+-s: saved "filename", save as filename.npy
   
 For each family, the specific parameters required:   
 line group 1: -q -r -a -f -n -k [k1,k2] -s  
