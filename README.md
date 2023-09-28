@@ -54,7 +54,7 @@ pulgon-generate-CharacterTable -F 1 -q 6 -r 2 -a 9 -f 3 -n 5 -k "[0,0]" -s test
 -k: Brillouin zone k vector   
 -s: saved file name   
   
-For each family the concrete parameter you need:   
+For each family, the specific parameters required:   
 line group 1: -q -r -a -f -n -k [k1,k2] -s  
 line group 2: -a -n -k [k1] -s  
 line group 3: -a -n -k [k1] -s  
