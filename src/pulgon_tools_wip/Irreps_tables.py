@@ -1,9 +1,10 @@
 import argparse
 import itertools
+import json
+import pickle
 import typing
 from pdb import set_trace
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pretty_errors
 from utils import frac_range
@@ -59,6 +60,22 @@ class CharacterDataset(typing.NamedTuple):
     character_table: list
 
 
+def save_CharacterDataset2json(obj, filename):
+    dict1 = {
+        "character_table": obj.character_table,
+        "quantum_number": obj.quantum_number,
+    }
+    np.save(filename, dict1)
+
+
+available = {}
+
+
+def register_func(f):
+    available[f.__name__] = f
+
+
+@register_func
 def line_group_1(
     q: int,
     r: int,
@@ -119,6 +136,7 @@ def line_group_1(
             print(tmp)
 
 
+@register_func
 def line_group_2(
     a: float,
     n: float,
@@ -182,6 +200,7 @@ def line_group_2(
             print(tmp)
 
 
+@register_func
 def line_group_3(
     a: float,
     n: float,
@@ -253,6 +272,7 @@ def line_group_3(
             print(tmp)
 
 
+@register_func
 def line_group_4(
     a: float,
     n: float,
@@ -386,6 +406,7 @@ def line_group_4(
 
 
 # Todo: k1/m1? p?
+@register_func
 def line_group_5(
     q: int,
     r: int,
@@ -534,6 +555,7 @@ def line_group_5(
             print(tmp)
 
 
+@register_func
 def line_group_6(
     a: float,
     n: int,
@@ -607,6 +629,7 @@ def line_group_6(
             print(tmp)
 
 
+@register_func
 def line_group_7(
     a: float,
     n: int,
@@ -676,6 +699,7 @@ def line_group_7(
             print(tmp)
 
 
+@register_func
 def line_group_8(
     a: float,
     n: int,
@@ -800,6 +824,7 @@ def line_group_8(
             print(tmp)
 
 
+@register_func
 def line_group_9(
     a: float,
     n: int,
@@ -1072,6 +1097,7 @@ def line_group_9(
             print(tmp)
 
 
+@register_func
 def line_group_10(
     a: float,
     n: int,
@@ -1257,6 +1283,7 @@ def line_group_10(
             print(tmp)
 
 
+@register_func
 def line_group_11(
     a: float,
     n: int,
@@ -1413,6 +1440,7 @@ def line_group_11(
             print(tmp)
 
 
+@register_func
 def line_group_12(
     a: float,
     n: int,
@@ -1575,7 +1603,7 @@ def line_group_12(
             print(tmp)
 
 
-# Todo: unfinish
+@register_func
 def line_group_13(
     a: float,
     f: float,
@@ -2058,70 +2086,84 @@ def main():
     parser = argparse.ArgumentParser(
         description="Generate the character table dataset of line group"
     )
-    parser.add_argument("-F", "--family", type=int, default=1, help="")
+    parser.add_argument(
+        "-F",
+        "--family",
+        type=int,
+        default=1,
+        help="which line group family between 1-13",
+    )
     parser.add_argument(
         "-q",
         type=int,
         default=6,
-        help="123",
+        help="helical group rotation number Q=q/r",
     )
     parser.add_argument(
         "-r",
         type=int,
         default=2,
-        help="",
+        help="helical group rotation number Q=q/r",
     )
     parser.add_argument(
         "-a",
         type=float,
         default=9,
-        help="",
+        help="translation period in z direction",
     )
     parser.add_argument(
         "-f",
         type=float,
         default=3,
-        help="",
+        help="a = f*Q",
     )
     parser.add_argument(
         "-n",
         type=int,
         default=5,
-        help="",
+        help="rotational point group Cn",
     )
     parser.add_argument(
         "-k",
-        type=list,
         default=[0, 0],
-        help="",
+        help="Brillouin zone k vector",
     )
 
     parser.add_argument(
         "-s",
-        "--s_name",
         type=str,
-        default="poscar.vasp",
+        default="CharacterTable",
         help="the saved file name",
     )
     args = parser.parse_args()
-
+    s_name = args.s + ".npy"
     family = args.family
     if family in [1, 5]:
         q = args.q
         r = args.r
         a = args.a
         f = args.f
+        n = args.n
+        k = eval(args.k)
+
+        parameter = [q, r, a, f, n, *k]
     elif family == 13:
         a = args.a
         f = args.f
         n = args.n
+        k = eval(args.k)
+
+        parameter = [a, f, n, *k]
     else:
         a = args.a
         n = args.n
+        k = eval(args.k)
 
-    dataset = line_group_13(a, f, n, k1, k2, k3, k4)
+        parameter = [a, n, *k]
 
-    set_trace()
+    func = "line_group_%s" % family
+    dataset = available[func](*parameter)
+    save_CharacterDataset2json(dataset, filename=s_name)
 
 
 if __name__ == "__main__":
