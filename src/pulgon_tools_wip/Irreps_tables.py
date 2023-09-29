@@ -1,10 +1,12 @@
 import argparse
 import itertools
+import math
 import typing
 from pdb import set_trace
 
 import numpy as np
 import pretty_errors
+from sympy.ntheory.factor_ import totient
 
 
 def _cal_irrep_trace(irreps: list, symprec: float = 1e-3) -> list:
@@ -109,7 +111,6 @@ def register_func(f):
 def line_group_1(
     q: int,
     r: int,
-    a: float,
     f: float,
     n: int,
     k1: float,
@@ -118,6 +119,15 @@ def line_group_1(
     round_symprec: int = 3,
 ) -> CharacterDataset:
     """TQ(f)Cn"""
+
+    # calculate the z period a
+    if math.gcd(q, r) == 1:
+        pass
+    else:
+        q = int(q / math.gcd(q, r))
+        r = int(r / math.gcd(q, r))
+    q_tilde = int(math.lcm(q, n) / n)
+    a = f * q_tilde
 
     # if the input satisfy the requirements
     judge = True
@@ -435,23 +445,28 @@ def line_group_4(
             print(tmp)
 
 
-# Todo: k1/m1? p?
 @register_func
 def line_group_5(
     q: int,
     r: int,
-    a: float,
     f: float,
-    p: int,
-    n: float,
+    n: int,
     k1: float,
     k2: float,
     symprec: float = 1e-4,
     round_symprec: int = 3,
 ) -> CharacterDataset:
     """TQ(f)Dn"""
-    # row_labels = [r"$(C_{2n}|1/2)$", r"$C_{n}$", r"$\sigma_{h}$"]
-    # column_labels = [r"$_{0}A_{m}^{\Pi_{h}}$", r"$_{k}E_{m}$", r"$_{\widetilde{k}_{\widetilde{M}}(\widetilde{m})}A_{\widetilde{m}}^{\Pi_{h}}$", r"$_{\widetilde{k}}E_{\widetilde{m}}$"]
+
+    if math.gcd(q, r) == 1:
+        pass
+    else:
+        q = int(q / math.gcd(q, r))
+        r = int(r / math.gcd(q, r))
+    q_tilde = int(math.lcm(q, n) / n)
+    a = f * q_tilde
+    p = n * (r ** totient(q_tilde) - 1)
+    Q = q / r
 
     # whether the input satisfy the requirements
     judge = True
@@ -466,14 +481,17 @@ def line_group_5(
         message.append("k2 not belong to [0,pi/f]")
 
     if k1 == 0:
-        m1 = [0, q / 2]
+        m1 = frac_range(0, q / 2)
     elif k1 == np.pi / a:
-        m1 = [-p / 2, (q - p) / 2]
+        m1 = frac_range(-p / 2, (q - p) / 2)
     else:
         m1 = frac_range(-q / 2, q / 2, left=False)
 
-    m2 = frac_range(-n, n, left=False)
-    piH = [-1, 1]
+    if k2 == 0 or k2 == np.pi / f:
+        m2 = frac_range(0, n / 2)
+    else:
+        m2 = frac_range(-n / 2, n / 2, left=False)
+    piU = [-1, 1]
 
     if judge:
         ind = 0
@@ -481,97 +499,86 @@ def line_group_5(
         character_table = []
         index = []
 
-        combs = list(itertools.product(*[m1, m2, piH]))
+        combs = list(itertools.product(*[m1, m2, piU]))
         for comb in combs:
-            tmp_m1, tmp_m2, tmp_piH = comb
-
-            if k2 < 2 * np.pi * tmp_m2 / n / a or k2 > (
-                2 * np.pi / a + 2 * np.pi * tmp_m2 / n / a
-            ):
-                continue
+            tmp_m1, tmp_m2, tmp_piU = comb
 
             tmp_qn = []
-            if k1 == 0:
-                irrep1 = np.round(
-                    [
-                        np.exp(1j * tmp_m1 * np.pi / n),
-                        np.exp(1j * tmp_m1 * 2 * np.pi / n),
-                        tmp_piH,
-                    ],
-                    round_symprec,
-                )
-                tmp_qn.append((k1, tmp_m1, tmp_piH))
-            else:
-                irrep1 = np.round(
-                    [
-                        [
-                            [
-                                np.exp(1j * (tmp_m1 * np.pi / n + k1 * a / 2)),
-                                0,
-                            ],
-                            [
-                                0,
-                                np.exp(1j * (tmp_m1 * np.pi / n - k1 * a / 2)),
-                            ],
-                        ],
-                        [
-                            [
-                                np.exp(1j * tmp_m1 * 2 * np.pi / n),
-                                0,
-                            ],
-                            [
-                                0,
-                                np.exp(1j * tmp_m1 * 2 * np.pi / n),
-                            ],
-                        ],
-                        [[0, 1], [1, 0]],
-                    ],
-                    round_symprec,
-                )
-                tmp_qn.append(((k1, tmp_m1), (-k1, tmp_m1)))
-
-            if (
-                k2 == 2 * np.pi * tmp_m2 / n / a
-                or k2 == 2 * np.pi * tmp_m2 / n / a + 2 * np.pi / a
+            if (k1 == 0 and (tmp_m1 in [0, q / 2])) or (
+                k1 == np.pi / a and tmp_m1 in [-p / 2, (q - p) / 2]
             ):
-                irrep2 = np.round(
+                irrep1 = np.round(
                     [
-                        np.exp(1j * k2 * a / 2),
-                        np.exp(1j * tmp_m2 * 2 * np.pi / n),
-                        tmp_piH,
+                        np.exp(1j * (k1 * f + tmp_m1 * 2 * np.pi / Q)),
+                        np.exp(1j * tmp_m1 * 2 * np.pi / n),
+                        tmp_piU,
                     ],
                     round_symprec,
                 )
-                tmp_qn.append((k2, tmp_m2, tmp_piH))
+                tmp_qn.append((k1, tmp_m1, tmp_piU))
             else:
-                irrep2 = np.round(
+                irrep1 = np.round(
                     [
                         [
-                            [np.exp(1j * k2 * a / 2), 0],
+                            [
+                                np.exp(1j * (k1 * f + tmp_m1 * 2 * np.pi / Q)),
+                                0,
+                            ],
                             [
                                 0,
                                 np.exp(
-                                    1j * (tmp_m2 * 2 * np.pi / n - k2 * a / 2)
+                                    -1j * (k1 * f + tmp_m1 * 2 * np.pi / Q)
                                 ),
                             ],
                         ],
                         [
                             [
-                                np.exp(1j * tmp_m2 * 2 * np.pi / n),
+                                np.exp(1j * tmp_m1 * 2 * np.pi / n),
                                 0,
                             ],
                             [
                                 0,
-                                np.exp(1j * tmp_m2 * 2 * np.pi / n),
+                                np.exp(-1j * tmp_m1 * 2 * np.pi / n),
                             ],
                         ],
                         [[0, 1], [1, 0]],
                     ],
                     round_symprec,
                 )
-                tmp_qn.append(
-                    ((k2, tmp_m2), (-k2 + 4 * tmp_m2 * np.pi / n / a, tmp_m2))
+                tmp_qn.append(((k1, tmp_m1), (-k1, -tmp_m1)))
+
+            if (k2 == 0 or k2 == np.pi / f) and (tmp_m2 in [0, n / 2]):
+                irrep2 = np.round(
+                    [
+                        np.exp(1j * k2 * f),
+                        np.exp(1j * tmp_m2 * 2 * np.pi / n),
+                        tmp_piU,
+                    ],
+                    round_symprec,
                 )
+                tmp_qn.append((k2, tmp_m2, tmp_piU))
+            else:
+                irrep2 = np.round(
+                    [
+                        [
+                            [np.exp(1j * k2 * f), 0],
+                            [0, np.exp(-1j * k2 * f)],
+                        ],
+                        [
+                            [
+                                np.exp(1j * tmp_m2 * 2 * np.pi / n),
+                                0,
+                            ],
+                            [
+                                0,
+                                np.exp(-1j * tmp_m2 * 2 * np.pi / n),
+                            ],
+                        ],
+                        [[0, 1], [1, 0]],
+                    ],
+                    round_symprec,
+                )
+                tmp_qn.append(((k2, tmp_m2), (-k2, -tmp_m2)))
 
             irreps = [irrep1, irrep2]
             character_table.append(_cal_irrep_trace(irreps, symprec))
@@ -1636,7 +1643,6 @@ def line_group_12(
 @register_func
 def line_group_13(
     a: float,
-    f: float,
     n: int,
     k1: float,
     k2: float,
@@ -1649,6 +1655,8 @@ def line_group_13(
     # label for line group family
     # row_labels = [r"$(C_{Q}|f)$", r"$C_{n}$"]
     # column_labels = [r"$_{k}A_{m}$", r"$_{\widetilde{k}}A_{\widetilde{m}}$"]
+
+    f = a/2
 
     # whether the input satisfy the requirements
     judge = True
@@ -2135,17 +2143,18 @@ def main():
         default=2,
         help="helical group rotation number Q=q/r",
     )
-    parser.add_argument(
-        "-a",
-        type=float,
-        default=9,
-        help="translation period in z direction",
-    )
+
     parser.add_argument(
         "-f",
         type=float,
         default=3,
         help="a = f*Q",
+    )
+    parser.add_argument(
+        "-a",
+        type=float,
+        default=9,
+        help="the period of translation",
     )
     parser.add_argument(
         "-n",
@@ -2171,19 +2180,10 @@ def main():
     if family in [1, 5]:
         q = args.q
         r = args.r
-        a = args.a
         f = args.f
         n = args.n
         k = eval(args.k)
-
-        parameter = [q, r, a, f, n, *k]
-    elif family == 13:
-        a = args.a
-        f = args.f
-        n = args.n
-        k = eval(args.k)
-
-        parameter = [a, f, n, *k]
+        parameter = [q, r, f, n, *k]
     else:
         a = args.a
         n = args.n
@@ -2193,6 +2193,7 @@ def main():
 
     func = "line_group_%s" % family
     dataset = available[func](*parameter)
+    set_trace()
     save_CharacterDataset2json(dataset, filename=s_name)
 
 
