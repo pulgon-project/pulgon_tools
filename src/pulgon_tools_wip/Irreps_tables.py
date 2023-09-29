@@ -2148,7 +2148,7 @@ def main():
         "-f",
         type=float,
         default=3,
-        help="a = f*Q",
+        help="translational group T(f)",
     )
     parser.add_argument(
         "-a",
