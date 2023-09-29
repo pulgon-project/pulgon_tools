@@ -49,7 +49,7 @@ pulgon-generate-CharacterTable -F 1 -q 6 -r 2 -a 9 -f 3 -n 5 -k "[0,0]" -s test
 -q: helical group rotation number Q=q/r  
 -r: helical group rotation number Q=q/r  
 -a: translation period in z direction  
--f: a = f*Q   
+-f: a = f*$\tilde{q}$   
 -n: rotational point group Cn   
 -k: Brillouin zone k vector   
 -s: saved "filename", save as filename.npy
