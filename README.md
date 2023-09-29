@@ -55,11 +55,11 @@ pulgon-generate-CharacterTable -F 1 -q 6 -r 2 -a 9 -f 3 -n 5 -k "[0,0]" -s test
 -s: saved "filename", save as filename.npy
   
 For each family, the specific parameters required:   
-line group 1: -q -r -a -f -n -k [k1,k2] -s  
+line group 1: -q -r -f -n -k [k1,k2] -s  
 line group 2: -a -n -k [k1] -s  
 line group 3: -a -n -k [k1] -s  
 line group 4: -a -n -k [k1, k2] -s  
-line group 5:   
+line group 5: -q -r -f -n -k [k1,k2] -s  
 line group 6: -a -n -k [k1,k2] -s   
 line group 7: -a -n -k [k1,k2] -s      
 line group 8: -a -n -k [k1,k2] -s     
@@ -67,12 +67,4 @@ line group 9: -a -n -k [k1,k2] -s
 line group 10: -a -n -k [k1,k2] -s   
 line group 11: -a -n -k [k1,k2] -s   
 line group 12: -a -n -k [k1,k2] -s   
-line group 13: -a -f -n -k [k1,k2,k3,k4] -s   
-
-
-
-
-
-
-
-
+line group 13: -a -n -k [k1,k2,k3,k4] -s   
