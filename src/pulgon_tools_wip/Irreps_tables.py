@@ -101,6 +101,8 @@ def frac_range(
 
 
 available = {}
+
+
 def register_func(f):
     available[f.__name__] = f
 
@@ -607,7 +609,6 @@ def line_group_6(
         judge = False
         message.append("k1 not belong to (-pi/a,pi/a]")
 
-
     m1 = frac_range(0, n / 2)
     piV = [-1, 1]
 
@@ -623,7 +624,7 @@ def line_group_6(
         for comb in combs:
             tmp_m1, tmp_piV = comb
 
-            if tmp_m1==0 or tmp_m1==n/2:
+            if tmp_m1 == 0 or tmp_m1 == n / 2:
                 irrep1 = np.round(
                     [
                         np.exp(1j * k1 * a),
@@ -632,9 +633,7 @@ def line_group_6(
                     ],
                     round_symprec,
                 )
-                quantum_number.append(
-                    (k1, tmp_m1, tmp_piV)
-                )
+                quantum_number.append((k1, tmp_m1, tmp_piV))
             else:
                 irrep1 = np.round(
                     [
@@ -650,9 +649,7 @@ def line_group_6(
                     ],
                     round_symprec,
                 )
-                quantum_number.append(
-                    ((k1, -tmp_m1), (k1, tmp_m1))
-                )
+                quantum_number.append(((k1, -tmp_m1), (k1, tmp_m1)))
             irreps = [irrep1]
             character_table.append(_cal_irrep_trace(irreps, symprec))
 
@@ -695,7 +692,7 @@ def line_group_7(
         for comb in combs:
             tmp_m1, tmp_piV = comb
 
-            if tmp_m1==0 or tmp_m1==n/2:
+            if tmp_m1 == 0 or tmp_m1 == n / 2:
 
                 irrep1 = np.round(
                     [
@@ -704,9 +701,7 @@ def line_group_7(
                     ],
                     round_symprec,
                 )
-                quantum_number.append(
-                    (k1, tmp_m1, tmp_piV)
-                )
+                quantum_number.append((k1, tmp_m1, tmp_piV))
             else:
 
                 irrep2 = np.round(
@@ -722,9 +717,7 @@ def line_group_7(
                     ],
                     round_symprec,
                 )
-                quantum_number.append(
-                     ((k1, tmp_m1), (k1, -tmp_m1))
-                )
+                quantum_number.append(((k1, tmp_m1), (k1, -tmp_m1)))
             irreps = [irrep1]
             character_table.append(_cal_irrep_trace(irreps, symprec))
 
@@ -983,7 +976,7 @@ def line_group_9(
                         )
                     )
             else:
-                if tmp_m1==0 or tmp_m1==n/2:
+                if tmp_m1 == 0 or tmp_m1 == n / 2:
                     irrep1 = np.round(
                         [
                             [
@@ -1008,7 +1001,8 @@ def line_group_9(
                                 [tmp_piV, 0],
                                 [
                                     0,
-                                    tmp_piV * np.exp(1j * tmp_m1 * 2 * np.pi / n),
+                                    tmp_piV
+                                    * np.exp(1j * tmp_m1 * 2 * np.pi / n),
                                 ],
                             ],
                         ],
@@ -1144,7 +1138,6 @@ def line_group_10(
         judge = False
         message.append("k1 not belong to [0,pi/a]")
 
-
     m1 = frac_range(0, n / 2)
     piU = [-1, 1]
     piV = [-1, 1]
@@ -1223,7 +1216,7 @@ def line_group_10(
                 )
 
             else:
-                if tmp_m1==0 or tmp_m1==n/2:
+                if tmp_m1 == 0 or tmp_m1 == n / 2:
                     irrep1 = np.round(
                         [
                             [
@@ -1232,7 +1225,8 @@ def line_group_10(
                                     0,
                                     tmp_piV
                                     * np.exp(
-                                        1j * (tmp_m1 * 2 * np.pi / n - k1 * a / 2)
+                                        1j
+                                        * (tmp_m1 * 2 * np.pi / n - k1 * a / 2)
                                     ),
                                 ],
                             ],
@@ -1266,21 +1260,28 @@ def line_group_10(
                                     0,
                                     0,
                                     np.exp(
-                                        -1j * (tmp_m1 * 2 * np.pi / n + k1 * a / 2)
+                                        -1j
+                                        * (tmp_m1 * 2 * np.pi / n + k1 * a / 2)
                                     ),
                                 ],
                                 [
                                     0,
                                     0,
                                     np.exp(
-                                        1j * (tmp_m1 * 2 * np.pi / n - k1 * a / 2)
+                                        1j
+                                        * (tmp_m1 * 2 * np.pi / n - k1 * a / 2)
                                     ),
                                     0,
                                 ],
                             ],
                             [
                                 [0, 0, np.exp(1j * tmp_m1 * 2 * np.pi / n), 0],
-                                [0, 0, 0, np.exp(-1j * tmp_m1 * 2 * np.pi / n)],
+                                [
+                                    0,
+                                    0,
+                                    0,
+                                    np.exp(-1j * tmp_m1 * 2 * np.pi / n),
+                                ],
                                 [1, 0, 0, 0],
                                 [0, 1, 0, 0],
                             ],
@@ -1340,7 +1341,7 @@ def line_group_11(
 
             tmp_qm = []
             if k1 == 0 or k1 == np.pi:
-                if tmp_m1==0 or tmp_m1==n/2:
+                if tmp_m1 == 0 or tmp_m1 == n / 2:
                     irrep1 = np.round(
                         [
                             np.exp(1j * k1 * a),
@@ -1374,10 +1375,13 @@ def line_group_11(
                         round_symprec,
                     )
                     tmp_qm.append(
-                        ((k1, tmp_m1, 0, 0, tmp_piH), (k1, -tmp_m1, 0, 0, tmp_piH))
+                        (
+                            (k1, tmp_m1, 0, 0, tmp_piH),
+                            (k1, -tmp_m1, 0, 0, tmp_piH),
+                        )
                     )
             else:
-                if tmp_m1==0 or tmp_m1==n/2:
+                if tmp_m1 == 0 or tmp_m1 == n / 2:
                     irrep1 = np.round(
                         [
                             [
@@ -1400,7 +1404,10 @@ def line_group_11(
                         round_symprec,
                     )
                     tmp_qm.append(
-                        ((k1, tmp_m1, 0, tmp_piV, 0), (-k1, tmp_m1, 0, tmp_piV, 0))
+                        (
+                            (k1, tmp_m1, 0, tmp_piV, 0),
+                            (-k1, tmp_m1, 0, tmp_piV, 0),
+                        )
                     )
                 else:
                     irrep1 = np.round(
@@ -1413,9 +1420,19 @@ def line_group_11(
                             ],
                             [
                                 [np.exp(1j * tmp_m1 * 2 * np.pi / n), 0, 0, 0],
-                                [0, np.exp(-1j * tmp_m1 * 2 * np.pi / n), 0, 0],
+                                [
+                                    0,
+                                    np.exp(-1j * tmp_m1 * 2 * np.pi / n),
+                                    0,
+                                    0,
+                                ],
                                 [0, 0, np.exp(1j * tmp_m1 * 2 * np.pi / n), 0],
-                                [0, 0, 0, np.exp(-1j * tmp_m1 * 2 * np.pi / n)],
+                                [
+                                    0,
+                                    0,
+                                    0,
+                                    np.exp(-1j * tmp_m1 * 2 * np.pi / n),
+                                ],
                             ],
                             [
                                 [0, 1, 0, 0],
@@ -1492,14 +1509,14 @@ def line_group_12(
             ) = comb
 
             tmp_qn = []
-            if k1 == 0 and (tmp_m1==0 or tmp_m1==n/2):
+            if k1 == 0 and (tmp_m1 == 0 or tmp_m1 == n / 2):
                 irrep1 = np.round(
                     [tmp_piV, np.exp(1j * tmp_m1 * 2 * np.pi / n), tmp_piH],
                     round_symprec,
                 )
                 tmp_qn.append((k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH))
 
-            elif k1 == np.pi and (tmp_m1==0 or tmp_m1==n/2):
+            elif k1 == np.pi and (tmp_m1 == 0 or tmp_m1 == n / 2):
                 irrep1 = np.round(
                     [
                         [
@@ -1520,7 +1537,7 @@ def line_group_12(
                 tmp_qn.append(
                     ((np.pi, tmp_m1, 0, "A", 0), (np.pi, tmp_m1, 0, "B", 0))
                 )
-            elif k1==0 or k1==np.pi:
+            elif k1 == 0 or k1 == np.pi:
                 irrep1 = np.round(
                     [
                         [
@@ -1542,7 +1559,7 @@ def line_group_12(
                     ((k1, tmp_m1, 0, 0, tmp_piH), (k1, -tmp_m1, 0, 0, tmp_piH))
                 )
             else:
-                if tmp_m1==0 or tmp_m1==n/2:
+                if tmp_m1 == 0 or tmp_m1 == n / 2:
                     irrep1 = np.round(
                         [
                             [
@@ -1561,7 +1578,10 @@ def line_group_12(
                         round_symprec,
                     )
                     tmp_qn.append(
-                        ((k1, tmp_m1, 0, tmp_piV, 0), (-k1, tmp_m1, 0, tmp_piV, 0))
+                        (
+                            (k1, tmp_m1, 0, tmp_piV, 0),
+                            (-k1, tmp_m1, 0, tmp_piV, 0),
+                        )
                     )
 
                 else:
@@ -1575,9 +1595,19 @@ def line_group_12(
                             ],
                             [
                                 [np.exp(1j * tmp_m1 * 2 * np.pi / n), 0, 0, 0],
-                                [0, np.exp(-1j * tmp_m1 * 2 * np.pi / n), 0, 0],
+                                [
+                                    0,
+                                    np.exp(-1j * tmp_m1 * 2 * np.pi / n),
+                                    0,
+                                    0,
+                                ],
                                 [0, 0, np.exp(1j * tmp_m1 * 2 * np.pi / n), 0],
-                                [0, 0, 0, np.exp(-1j * tmp_m1 * 2 * np.pi / n)],
+                                [
+                                    0,
+                                    0,
+                                    0,
+                                    np.exp(-1j * tmp_m1 * 2 * np.pi / n),
+                                ],
                             ],
                             [
                                 [0, 0, 1, 0],
@@ -1618,7 +1648,7 @@ def line_group_13(
     round_symprec: int = 3,
 ) -> CharacterDataset:
     """T_{2n}^{1}Dnh"""
-    f = a/2
+    f = a / 2
 
     # whether the input satisfy the requirements
     judge = True
@@ -1656,7 +1686,7 @@ def line_group_13(
 
             tmp_qn = []
             if k1 == 0:
-                if tmp_m1==0 or tmp_m1==n:
+                if tmp_m1 == 0 or tmp_m1 == n:
                     irrep1 = np.round(
                         [np.exp(1j * tmp_m1 * np.pi / n), 1, tmp_piU, tmp_piV],
                         round_symprec,
@@ -1685,11 +1715,14 @@ def line_group_13(
                         round_symprec,
                     )
                     tmp_qn.append(
-                        ((0, tmp_m1, 0, 0, tmp_piH), (0, -tmp_m1, 0, 0, tmp_piH))
+                        (
+                            (0, tmp_m1, 0, 0, tmp_piH),
+                            (0, -tmp_m1, 0, 0, tmp_piH),
+                        )
                     )
 
             elif k1 == np.pi / a:
-                if tmp_m1==0:
+                if tmp_m1 == 0:
                     irrep1 = np.round(
                         [
                             [
@@ -1720,9 +1753,12 @@ def line_group_13(
                         round_symprec,
                     )
                     tmp_qn.append(
-                        ((k1, tmp_m1, 0, tmp_piV, 0), (-k1, tmp_m1, 0, tmp_piV, 0))
+                        (
+                            (k1, tmp_m1, 0, tmp_piV, 0),
+                            (-k1, tmp_m1, 0, tmp_piV, 0),
+                        )
                     )
-                elif tmp_m1==n/2:
+                elif tmp_m1 == n / 2:
                     irrep1 = np.round(
                         [
                             [
@@ -1750,7 +1786,7 @@ def line_group_13(
                             (np.pi / a, -n / 2, tmp_piU, 0, 0),
                         )
                     )
-                elif 0<tmp_m1<n/2:
+                elif 0 < tmp_m1 < n / 2:
                     irrep1 = np.round(
                         [
                             [
@@ -1769,14 +1805,18 @@ def line_group_13(
                                 [
                                     0,
                                     0,
-                                    np.exp(1j * (-k1 * f + tmp_m1 * np.pi / n)),
+                                    np.exp(
+                                        1j * (-k1 * f + tmp_m1 * np.pi / n)
+                                    ),
                                     0,
                                 ],
                                 [
                                     0,
                                     0,
                                     0,
-                                    np.exp(-1j * (k1 * f + tmp_m1 * np.pi / n)),
+                                    np.exp(
+                                        -1j * (k1 * f + tmp_m1 * np.pi / n)
+                                    ),
                                 ],
                             ],
                             [
@@ -1809,7 +1849,7 @@ def line_group_13(
                 else:
                     continue
             else:
-                if tmp_m1==0 or tmp_m1==n:
+                if tmp_m1 == 0 or tmp_m1 == n:
                     irrep1 = np.round(
                         [
                             [
@@ -1840,7 +1880,10 @@ def line_group_13(
                         round_symprec,
                     )
                     tmp_qn.append(
-                        ((k1, tmp_m1, 0, tmp_piV, 0), (-k1, tmp_m1, 0, tmp_piV, 0))
+                        (
+                            (k1, tmp_m1, 0, tmp_piV, 0),
+                            (-k1, tmp_m1, 0, tmp_piV, 0),
+                        )
                     )
                 else:
                     irrep1 = np.round(
@@ -1861,14 +1904,18 @@ def line_group_13(
                                 [
                                     0,
                                     0,
-                                    np.exp(1j * (-k1 * f + tmp_m1 * np.pi / n)),
+                                    np.exp(
+                                        1j * (-k1 * f + tmp_m1 * np.pi / n)
+                                    ),
                                     0,
                                 ],
                                 [
                                     0,
                                     0,
                                     0,
-                                    np.exp(-1j * (k1 * f + tmp_m1 * np.pi / n)),
+                                    np.exp(
+                                        -1j * (k1 * f + tmp_m1 * np.pi / n)
+                                    ),
                                 ],
                             ],
                             [
@@ -1899,101 +1946,76 @@ def line_group_13(
                         )
                     )
 
-            if k2 == 0:
-
-
-
-            if k3 == 0 or k3 == 2 * np.pi / a:
-                irrep3 = np.round(
-                    [np.exp(1j * k3 * a / 2), 1, tmp_piH * tmp_piV, tmp_piV],
-                    round_symprec,
-                )
-                tmp_qn.append((k3, 0, tmp_piH, tmp_piV))
-            else:
-                irrep3 = np.round(
-                    [
+            if tmp_m2 == 0:
+                if k2 == 0 or k2 == 2 * np.pi / a:
+                    irrep2 = np.round(
                         [
-                            [np.exp(1j * k3 * f), 0],
-                            [0, np.exp(-1j * k3 * f)],
+                            np.exp(1j * k2 * a / 2),
+                            1,
+                            tmp_piH * tmp_piV,
+                            tmp_piV,
                         ],
-                        [
-                            [1, 0],
-                            [0, 1],
-                        ],
-                        [
-                            [0, tmp_piV],
-                            [tmp_piV, 0],
-                        ],
-                        [
-                            [tmp_piV, 0],
-                            [0, tmp_piV],
-                        ],
-                    ],
-                    round_symprec,
-                )
-                tmp_qn.append(((k3, 0, tmp_piV), (-k3, 0, tmp_piV)))
-
-            if tmp_m4 == n / 2:
-                if k4 == np.pi / a:
-                    irrep4 = np.round(
+                        round_symprec,
+                    )
+                    tmp_qn.append((k2, 0, tmp_piH, tmp_piV))
+                else:
+                    irrep2 = np.round(
                         [
                             [
-                                [np.exp(1j * tmp_m4 * np.pi / n), 0],
-                                [0, np.exp(-1j * tmp_m4 * np.pi / n)],
+                                [np.exp(1j * k2 * f), 0],
+                                [0, np.exp(-1j * k2 * f)],
+                            ],
+                            [[1, 0], [0, 1]],
+                            [[0, tmp_piV], [tmp_piV, 0]],
+                            [[tmp_piV, 0], [0, tmp_piV]],
+                        ],
+                        round_symprec,
+                    )
+                    tmp_qn.append(((k2, 0, tmp_piV), (-k2, 0, tmp_piV)))
+            elif tmp_m2 == n / 2:
+                if k2 == np.pi / a:
+                    irrep2 = np.round(
+                        [
+                            [
+                                [np.exp(1j * tmp_m2 * np.pi / n), 0],
+                                [0, np.exp(-1j * tmp_m2 * np.pi / n)],
                             ],
                             [
-                                [np.exp(1j * 2 * tmp_m4 * np.pi / n), 0],
-                                [0, np.exp(-1j * 2 * tmp_m4 * np.pi / n)],
+                                [np.exp(1j * 2 * tmp_m2 * np.pi / n), 0],
+                                [0, np.exp(-1j * 2 * tmp_m2 * np.pi / n)],
                             ],
-                            [
-                                [0, tmp_piH],
-                                [tmp_piH, 0],
-                            ],
-                            [
-                                [0, 1],
-                                [1, 0],
-                            ],
+                            [[0, tmp_piH], [tmp_piH, 0]],
+                            [[0, 1], [1, 0]],
                         ],
                         round_symprec,
                     )
                     tmp_qn.append(
-                        ((k4, tmp_m4, tmp_piH), (k4, -tmp_m4, tmp_piH))
+                        ((k2, tmp_m2, tmp_piH), (k2, -tmp_m2, tmp_piH))
                     )
-                elif k4 == 2 * np.pi / a:
-                    irrep4 = np.round(
+
+                elif k2 == 2 * np.pi / a:
+                    irrep2 = np.round(
                         [
-                            [
-                                [-1, 0],
-                                [0, 1],
-                            ],
-                            [
-                                [tmp_piU, 0],
-                                [0, tmp_piU],
-                            ],
-                            [
-                                [0, 1],
-                                [1, 0],
-                            ],
-                            [
-                                [0, 1],
-                                [1, 0],  # Todo: missed this value
-                            ],
+                            [[-1, 0], [0, 1]],
+                            [[-1, 0], [0, -1]],
+                            [[tmp_piU, 0], [0, tmp_piU]],
+                            [[0, 1], [1, 0]],
                         ],
                         round_symprec,
                     )
                     tmp_qn.append(
                         ((2 * np.pi / a, n / 2, tmp_piU), (0, n / 2, tmp_piU))
                     )
-                elif 0 < k4 < np.pi / a:
-                    irrep4 = np.round(
+                elif 0 < k2 < np.pi / a:
+                    irrep2 = np.round(
                         [
                             [
-                                [np.exp(1j * k4 * a / 2), 0, 0, 0],
+                                [np.exp(1j * k2 * a / 2), 0, 0, 0],
                                 [
                                     0,
                                     np.exp(
                                         1j
-                                        * (k4 * a - 2 * tmp_m4 * 2 * np.pi / n)
+                                        * (k2 * a - 2 * tmp_m2 * 2 * np.pi / n)
                                         / 2
                                     ),
                                     0,
@@ -2004,27 +2026,27 @@ def line_group_13(
                                     0,
                                     np.exp(
                                         -1j
-                                        * (k4 * a - 2 * tmp_m4 * 2 * np.pi / n)
+                                        * (k2 * a - 2 * tmp_m2 * 2 * np.pi / n)
                                         / 2
                                     ),
                                     0,
                                 ],
-                                [0, 0, 0, np.exp(-1j * k4 * a / 2)],
+                                [0, 0, 0, np.exp(-1j * k2 * a / 2)],
                             ],
                             [
-                                [np.exp(1j * tmp_m4 * 2 * np.pi / n), 0, 0, 0],
+                                [np.exp(1j * tmp_m2 * 2 * np.pi / n), 0, 0, 0],
                                 [
                                     0,
-                                    np.exp(-1j * tmp_m4 * 2 * np.pi / n),
+                                    np.exp(-1j * tmp_m2 * 2 * np.pi / n),
                                     0,
                                     0,
                                 ],
-                                [0, 0, np.exp(1j * tmp_m4 * 2 * np.pi / n), 0],
+                                [0, 0, np.exp(1j * tmp_m2 * 2 * np.pi / n), 0],
                                 [
                                     0,
                                     0,
                                     0,
-                                    np.exp(-1j * tmp_m4 * 2 * np.pi / n),
+                                    np.exp(-1j * tmp_m2 * 2 * np.pi / n),
                                 ],
                             ],
                             [
@@ -2044,54 +2066,67 @@ def line_group_13(
                     )
                     tmp_qn.append(
                         (
-                            (k4, tmp_m4),
-                            (k4 - 4 * tmp_m4 * np.pi / n / a, -tmp_m4),
-                            (-k4 + 4 * tmp_m4 * np.pi / n / a, tmp_m4),
-                            (-k4, -tmp_m4),
+                            (k2, tmp_m2),
+                            (k2 - 4 * tmp_m2 * np.pi / n / a, -tmp_m2),
+                            (-k2 + 4 * tmp_m2 * np.pi / n / a, tmp_m2),
+                            (-k2, -tmp_m2),
                         )
                     )
+                else:
+                    continue
             else:
-                if k4 == tmp_m4 * 2 * np.pi / n / a or k4 == (
-                    tmp_m4 * 2 * np.pi / n / a + 2 * np.pi / a
-                ):
-                    irrep4 = np.round(
+                if k2 == tmp_m2 * 2 * np.pi / n / a:
+                    irrep2 = np.round(
                         [
                             [
-                                [np.exp(1j * tmp_m4 * np.pi / n), 0],
-                                [0, np.exp(-1j * tmp_m4 * np.pi / n)],
+                                [np.exp(1j * tmp_m2 * np.pi / n), 0],
+                                [0, np.exp(-1j * tmp_m2 * np.pi / n)],
                             ],
                             [
-                                [np.exp(1j * 2 * tmp_m4 * np.pi / n), 0],
-                                [0, np.exp(-1j * 2 * tmp_m4 * np.pi / n)],
+                                [np.exp(1j * 2 * tmp_m2 * np.pi / n), 0],
+                                [0, np.exp(-1j * 2 * tmp_m2 * np.pi / n)],
                             ],
-                            [
-                                [0, tmp_piH],
-                                [tmp_piH, 0],
-                            ],
-                            [
-                                [0, 1],
-                                [1, 0],
-                            ],
+                            [[0, tmp_piH], [tmp_piH, 0]],
+                            [[0, 1], [1, 0]],
                         ],
                         round_symprec,
                     )
                     tmp_qn.append(
-                        ((k4, tmp_m4, tmp_piH), (k4, -tmp_m4, tmp_piH))
+                        ((k2, tmp_m2, tmp_piH), (k2, -tmp_m2, tmp_piH))
                     )
-                elif (
-                    tmp_m4 * 2 * np.pi / n / a
-                    <= k4
-                    <= (tmp_m4 * 2 * np.pi / n / a + 2 * np.pi / a)
-                ):
-                    irrep4 = np.round(
+                elif k2 == tmp_m2 * 2 * np.pi / n / a + 2 * np.pi / a:
+                    irrep2 = np.round(
                         [
                             [
-                                [np.exp(1j * k4 * a / 2), 0, 0, 0],
+                                [-np.exp(1j * tmp_m2 * np.pi / n), 0],
+                                [0, -np.exp(-1j * tmp_m2 * np.pi / n)],
+                            ],
+                            [
+                                [np.exp(1j * 2 * tmp_m2 * np.pi / n), 0],
+                                [0, np.exp(-1j * 2 * tmp_m2 * np.pi / n)],
+                            ],
+                            [[0, tmp_piH], [tmp_piH, 0]],
+                            [[0, 1], [1, 0]],
+                        ],
+                        round_symprec,
+                    )
+                    tmp_qn.append(
+                        ((k2, tmp_m2, tmp_piH), (k2, -tmp_m2, tmp_piH))
+                    )
+                elif (
+                    tmp_m2 * 2 * np.pi / n / a
+                    < k2
+                    < tmp_m2 * 2 * np.pi / n / a + 2 * np.pi / a
+                ):
+                    irrep2 = np.round(
+                        [
+                            [
+                                [np.exp(1j * k2 * a / 2), 0, 0, 0],
                                 [
                                     0,
                                     np.exp(
                                         1j
-                                        * (k4 * a - 2 * tmp_m4 * 2 * np.pi / n)
+                                        * (k2 * a - 2 * tmp_m2 * 2 * np.pi / n)
                                         / 2
                                     ),
                                     0,
@@ -2102,27 +2137,27 @@ def line_group_13(
                                     0,
                                     np.exp(
                                         -1j
-                                        * (k4 * a - 2 * tmp_m4 * 2 * np.pi / n)
+                                        * (k2 * a - 2 * tmp_m2 * 2 * np.pi / n)
                                         / 2
                                     ),
                                     0,
                                 ],
-                                [0, 0, 0, np.exp(-1j * k4 * a / 2)],
+                                [0, 0, 0, np.exp(-1j * k2 * a / 2)],
                             ],
                             [
-                                [np.exp(1j * tmp_m4 * 2 * np.pi / n), 0, 0, 0],
+                                [np.exp(1j * tmp_m2 * 2 * np.pi / n), 0, 0, 0],
                                 [
                                     0,
-                                    np.exp(-1j * tmp_m4 * 2 * np.pi / n),
+                                    np.exp(-1j * tmp_m2 * 2 * np.pi / n),
                                     0,
                                     0,
                                 ],
-                                [0, 0, np.exp(1j * tmp_m4 * 2 * np.pi / n), 0],
+                                [0, 0, np.exp(1j * tmp_m2 * 2 * np.pi / n), 0],
                                 [
                                     0,
                                     0,
                                     0,
-                                    np.exp(-1j * tmp_m4 * 2 * np.pi / n),
+                                    np.exp(-1j * tmp_m2 * 2 * np.pi / n),
                                 ],
                             ],
                             [
@@ -2142,16 +2177,16 @@ def line_group_13(
                     )
                     tmp_qn.append(
                         (
-                            (k4, tmp_m4),
-                            (k4 - 4 * tmp_m4 * np.pi / n / a, -tmp_m4),
-                            (-k4 + 4 * tmp_m4 * np.pi / n / a, tmp_m4),
-                            (-k4, -tmp_m4),
+                            (k2, tmp_m2),
+                            (k2 - 4 * tmp_m2 * np.pi / n / a, -tmp_m2),
+                            (-k2 + 4 * tmp_m2 * np.pi / n / a, tmp_m2),
+                            (-k2, -tmp_m2),
                         )
                     )
                 else:
                     continue
 
-            irreps = [irrep1, irrep2, irrep3, irrep4]
+            irreps = [irrep1, irrep2]
             character_table.append(_cal_irrep_trace(irreps, symprec))
             quantum_number.append(tuple(tmp_qn))
             index.append(ind)
@@ -2238,6 +2273,7 @@ def main():
     dataset = available[func](*parameter)
     save_CharacterDataset2json(dataset, filename=s_name)
     set_trace()
+
 
 if __name__ == "__main__":
     main()
