@@ -2272,7 +2272,6 @@ def main():
     func = "line_group_%s" % family
     dataset = available[func](*parameter)
     save_CharacterDataset2json(dataset, filename=s_name)
-    set_trace()
 
 
 if __name__ == "__main__":
