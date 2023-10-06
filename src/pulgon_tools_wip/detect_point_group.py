@@ -15,10 +15,10 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
     The general outline of the algorithm is as follows:
 
     1. Specify z axis as the rotation axis, detect the rotational symmetry.
-    2. If the rotational symmetry exist, detect the R2 axes perpendicular to z axis.
-       - If R2 axes exist, it's a dihedral group (Dnh, Dnd).
-       - If R2 axes does not exist, it's a dihedral group (Cnh, Cnv, S2n).
-    3. If the rotational symmetry does not exist, only possible point groups are C1, Cs and Ci.
+    2. If the rotational symmetry about z-axis exist, detect U (a two-fold horizontal axis).
+       - If U exist, it's a dihedral group (Dnh, Dnd).
+       - If U does not exist, the group is not dihedral, leaving Cnh, Cnv and S2n as candidates.
+    3. If the rotational symmetry about z-axis does not exist, only possible point groups are C1, Cs and Ci.
     """
 
     def __init__(
