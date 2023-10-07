@@ -31,3 +31,4 @@ where = ["src"]
 pulgon-generate-structures = "pulgon_tools_wip:generate_structures.main"
 pulgon-detect-AxialPointGroup = "pulgon_tools_wip:detect_point_group.main"
 pulgon-detect-CyclicGroup = "pulgon_tools_wip:detect_generalized_translational_group.main"
+pulgon-generate-CharacterTable = "pulgon_tools_wip:Irreps_tables.main"
