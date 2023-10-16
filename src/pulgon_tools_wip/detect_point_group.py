@@ -4,6 +4,7 @@ from pdb import set_trace
 import numpy as np
 import pretty_errors
 from ase.io import read
+from ase.io.vasp import write_vasp
 from pymatgen.core import Molecule
 from pymatgen.core.operations import SymmOp
 from pymatgen.symmetry.analyzer import PointGroupAnalyzer
@@ -24,9 +25,9 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
     def __init__(
         self,
         mol: Molecule,
-        tolerance: float = 0.3,
+        tolerance: float = 0.01,
         eigen_tolerance: float = 0.01,
-        matrix_tolerance: float = 0.1,
+        matrix_tolerance: float = 0.01,
     ):
         """The default settings are usually sufficient. (Totally the same with PointGroupAnalyzer)
 
@@ -40,7 +41,9 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
                 symmetry operations of the point group.
         """
         self.mol = mol
-        self.centered_mol = mol.get_centered_molecule()
+        self.centered_mol = mol.get_centered_molecule()  # Todo:   check
+        # self.centered_mol = self._find_axis_center_of_nanotube()    #Todo:   check
+
         self.tol = tolerance
         self.eig_tol = eigen_tolerance
         self.mat_tol = matrix_tolerance
@@ -58,8 +61,10 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self.symmops = [SymmOp(np.eye(4))]
 
         z_axis = np.array([0, 0, 1])
+
         self._check_rot_sym(z_axis)
 
+        self.rot_num_zaxis = len(self.rot_sym)
         if len(self.rot_sym) > 0:
             self._check_perpendicular_r2_axis(z_axis)
 
@@ -99,6 +104,33 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
             * np.eye(3)
         ) / total_inertia
         return inertia_tensor
+
+    def _find_axis_center_of_nanotube(self) -> Molecule:
+        """remove the center of structure to (x,y):(0,0)
+
+        Args:
+            atom: initial structure
+
+        Returns: centralized structure
+
+        """
+        mol = self.mol.copy()
+
+        species = np.unique(mol.species)
+        center = np.zeros((len(species), 3))
+        for site in mol:
+            idx = np.where(species, site.specie)[0]
+            center[idx] = center[idx] + site.coords
+
+            set_trace()
+
+        vector = atom.get_center_of_mass()
+        atoms = Atoms(
+            cell=n_st.cell,
+            numbers=n_st.numbers,
+            positions=n_st.positions - [vector[0], vector[1], 0],
+        )
+        return atoms
 
 
 def main():
