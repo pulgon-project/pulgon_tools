@@ -33,7 +33,7 @@ class CyclicGroupAnalyzer:
     def __init__(
         self,
         atom: ase.atoms.Atoms,
-        symprec: float = 0.001,
+        symprec: float = 0.01,
         layer_symprec: float = 0.01,
         round_symprec: int = 3,
     ) -> None:
@@ -112,9 +112,11 @@ class CyclicGroupAnalyzer:
                 mono.append(monomer)
             else:
                 # detect rotation
+
                 rotation, Q = self._detect_rotation(
                     monomer, tran * self._pure_trans, ind
                 )
+                # set_trace()
 
                 if rotation:
                     cyclic_group.append(
@@ -165,7 +167,6 @@ class CyclicGroupAnalyzer:
         )
 
         for test_ind in ind1:
-
             itp1, itp2 = (
                 True,
                 True,
@@ -185,6 +186,7 @@ class CyclicGroupAnalyzer:
                     [],
                     [],
                 )  # record the rotational result in current layer
+
                 for site in monomer:
                     coord1 = op1.operate(site.position)
                     coord2 = op2.operate(site.position)
