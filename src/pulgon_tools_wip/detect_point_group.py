@@ -1,8 +1,11 @@
 import argparse
+import logging
 from pdb import set_trace
 
+import ase
 import numpy as np
 import pretty_errors
+from ase import Atoms
 from ase.io import read
 from ase.io.vasp import write_vasp
 from pymatgen.core import Molecule
@@ -24,10 +27,11 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
 
     def __init__(
         self,
-        mol: Molecule,
+        mol: Molecule | Atoms,
         tolerance: float = 0.01,
         eigen_tolerance: float = 0.01,
         matrix_tolerance: float = 0.01,
+        corner: bool = False,
     ):
         """The default settings are usually sufficient. (Totally the same with PointGroupAnalyzer)
 
@@ -40,6 +44,17 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
             matrix_tolerance (float): Tolerance used to generate the full set of
                 symmetry operations of the point group.
         """
+        logging.critical(
+            "--------------------start detecting axial point group"
+        )
+
+        if type(mol) == Atoms:
+            if corner == True:
+                mol = self._change_center(mol)
+                mol = Molecule(species=mol.numbers, coords=mol.positions)
+            else:
+                mol = Molecule(species=mol.numbers, coords=mol.positions)
+
         self.mol = mol
         self.centered_mol = mol.get_centered_molecule()  # Todo:   check
         # self.centered_mol = self._find_axis_center_of_nanotube()    #Todo:   check
@@ -48,8 +63,8 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self.eig_tol = eigen_tolerance
         self.mat_tol = matrix_tolerance
         self._analyze()
-        if self.sch_symbol in ["C1v", "C1h"]:
-            self.sch_symbol = "Cs"
+        # if self.sch_symbol in ["C1v", "C1h"]:
+        #     self.sch_symbol = "Cs"
 
     def _analyze(self):
         """Rewrite the _analyze method, calculate the axial point group elements."""
@@ -64,15 +79,25 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
 
         self._check_rot_sym(z_axis)
 
-        self.rot_num_zaxis = len(self.rot_sym)
         if len(self.rot_sym) > 0:
+            logging.critical(
+                "The rot_num along zaxis is: %d" % self.rot_sym[0][1]
+            )
+            logging.critical("Start detecting U")
             self._check_perpendicular_r2_axis(z_axis)
-
-        if len(self.rot_sym) >= 2:
-            self._proc_dihedral()
-        elif len(self.rot_sym) == 1:
-            self._proc_cyclic()
+            if len(self.rot_sym) >= 2:
+                logging.critical("U exist, start detecting dihedral group")
+                self._proc_dihedral()
+            elif len(self.rot_sym) == 1:
+                logging.critical(
+                    "U does not exist, leaving Cnh, Cnv and S2n as candidates"
+                )
+                self._proc_cyclic()
         else:
+            logging.critical("The rot symmetry along zaxis does not exist")
+            logging.critical(
+                "leaving Ci, C1h and C1v as candidates, start detecting U, v, h"
+            )
             self._proc_no_rot_sym()
 
     def _inertia_tensor(self) -> np.ndarray:
@@ -131,6 +156,25 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
             positions=n_st.positions - [vector[0], vector[1], 0],
         )
         return atoms
+
+    def _change_center(self, st1: ase.atoms.Atoms) -> ase.atoms.Atoms:
+        """
+
+        Args:
+            st1: an ase.atom structure
+
+        Returns: an ase.atom structure with z axis located in the cell center
+
+        """
+        st1_pos = st1.get_scaled_positions()
+        st2_pos = st1_pos[:, :2] + 0.5
+        tmp = np.modf(st2_pos)[0]
+        tmp1 = st1_pos[:, 2]
+        tmp1 = tmp1.reshape(tmp1.shape[0], 1)
+
+        st2 = st1.copy()
+        st2.positions = np.dot(np.hstack((tmp, tmp1)), st2.cell)
+        return st2
 
 
 def main():
