@@ -61,7 +61,7 @@ class CyclicGroupAnalyzer:
             round_symprec: system precise tolerance when take "np.round"
 
         """
-        logging.debug(
+        logging.critical(
             "--------------------start detecting generalized translational group"
         )
 
@@ -72,7 +72,7 @@ class CyclicGroupAnalyzer:
             )
         else:
             if corner == True:
-                atom = self._change_center(atom)
+                atom = self._find_axis_center_of_nanotube(atom)
 
             self._symprec = symprec
             self._layer_symprec = layer_symprec
@@ -80,17 +80,24 @@ class CyclicGroupAnalyzer:
             self._zaxis = np.array([0, 0, 1])
             self._atom = atom
 
+            # write_vasp("atom.vasp", self._atom)
+
             self._primitive = self._find_primitive()
             self._pure_trans = self._primitive.cell[2, 2]
-            self._primitive = self._find_axis_center_of_nanotube(
-                self._primitive
+
+            self._primitive_center_z = self._find_Zaxis_center_nanotube(
+                self._atom
             )
+
+            # write_vasp("primitive.vasp", self._atom)
+            # write_vasp("zcenter.vasp", self._primitive_center_z)
+
             self._analyze()
 
     def _analyze(self) -> None:
         """print all possible monomers and their cyclic group"""
         monomer, potential_trans = self._potential_translation()
-        logging.debug("There are %d monomer" % len(monomer))
+        logging.critical("There are %d monomer" % len(monomer))
         self.cyclic_group, self.monomers = self._get_translations(
             monomer, potential_trans
         )
@@ -99,7 +106,6 @@ class CyclicGroupAnalyzer:
         self, atom: ase.atoms.Atoms
     ) -> ase.atoms.Atoms:
         """remove the center of structure to (x,y):(0,0)
-
         Args:
             atom: initial structure
 
@@ -107,13 +113,67 @@ class CyclicGroupAnalyzer:
 
         """
         n_st = atom.copy()
-        vector = atom.get_center_of_mass()
+        center = self._get_center_of_mass_periodic(atom)
+        pos = (
+            np.remainder(atom.get_scaled_positions() - center + 0.5, [1, 1, 1])
+            @ atom.cell
+        )
+
         atoms = Atoms(
             cell=n_st.cell,
             numbers=n_st.numbers,
-            positions=n_st.positions - [vector[0], vector[1], 0],
+            positions=pos,
         )
         return atoms
+
+    def _find_Zaxis_center_nanotube(
+        self, atom: ase.atoms.Atoms
+    ) -> ase.atoms.Atoms:
+        """remove the center of structure to (x,y):(0,0)
+        Args:
+            atom: initial structure
+
+        Returns: centralized structure
+
+        """
+        n_st = atom.copy()
+        center = self._get_center_of_mass_periodic(atom)
+        pos = (
+            np.remainder(atom.get_scaled_positions() - center, [1, 1, 1])
+            @ atom.cell
+        )
+
+        atoms = Atoms(
+            cell=n_st.cell,
+            numbers=n_st.numbers,
+            positions=pos,
+        )
+        return atoms
+
+    def _get_center_of_mass_periodic(self, atom):
+        cell_max = [1, 1, 1]
+        tmp = atom.get_scaled_positions() / cell_max * 2 * np.pi
+
+        mass = atom.get_masses()
+        itp1_av = mass @ np.cos(tmp) / mass.sum()
+        itp2_av = mass @ np.sin(tmp) / mass.sum()
+
+        theta_av = np.arctan2(-itp2_av, -itp1_av) + np.pi
+        res = cell_max * theta_av / 2 / np.pi
+        return res
+
+    def _get_center_of_mass_periodic(self, atom):
+        cell_max = [1, 1, 1]
+        tmp = atom.get_scaled_positions() / cell_max * 2 * np.pi
+        itp1 = np.cos(tmp)
+        itp2 = np.sin(tmp)
+
+        mass = atom.get_masses()
+        itp1_av = mass @ itp1 / mass.sum()
+        itp2_av = mass @ itp2 / mass.sum()
+        theta_av = np.arctan2(-itp2_av, -itp1_av) + np.pi
+        res = cell_max * theta_av / 2 / np.pi
+        return res
 
     def _get_translations(
         self, monomer_atoms: ase.atoms.Atoms, potential_tans: list
@@ -129,7 +189,7 @@ class CyclicGroupAnalyzer:
         """
         cyclic_group, mono = [], []
         for ii, monomer in enumerate(monomer_atoms):
-            logging.debug("---Start deticting NO.%d monomer" % (ii + 1))
+            logging.critical("---Start deticting NO.%d monomer" % (ii + 1))
 
             tran = potential_tans[ii]
             ind = int(np.round(1 / tran, self._round_symprec))
@@ -139,22 +199,22 @@ class CyclicGroupAnalyzer:
                 continue
 
             if len(monomer) == len(self._primitive):
-                logging.debug(
+                logging.critical(
                     "The monomer is self._primitive, so this cyclic group is T"
                 )
                 cyclic_group.append("T")
                 mono.append(monomer)
             else:
                 # detect rotation
-                logging.debug("Start detecting rotation")
-                logging.debug(
+                logging.critical("Start detecting rotation")
+                logging.critical(
                     "The scaled translational distance is %s " % (1 / ind)
                 )
                 rotation, Q = self._detect_rotation(
                     monomer, tran * self._pure_trans, ind
                 )
                 if rotation:
-                    logging.debug(
+                    logging.critical(
                         "Append rotational cyclic group, Q is 360/degree=%s"
                         % Q
                     )
@@ -163,18 +223,20 @@ class CyclicGroupAnalyzer:
                     )
                     mono.append(monomer)
                 else:
-                    logging.debug("All the candidate degree can not succeed")
+                    logging.critical(
+                        "All the candidate degree can not succeed"
+                    )
 
                 if (
                     ind == 2 and abs(tran - 0.5) < self._layer_symprec
                 ):  # only 2 layer in primitive cell
                     # detect mirror
-                    logging.debug(
+                    logging.critical(
                         "The scaled translational distance is 1/2, start detecting mirror symmetry"
                     )
                     mirror = self._detect_mirror(monomer, self._pure_trans / 2)
                     if mirror:
-                        logging.debug(
+                        logging.critical(
                             "Mirror plane exist, append to cyclic group"
                         )
                         cyclic_group.append(
@@ -182,7 +244,7 @@ class CyclicGroupAnalyzer:
                         )
                         mono.append(monomer)
                     else:
-                        logging.debug("Mirror does not exist")
+                        logging.critical("Mirror does not exist")
         return cyclic_group, mono
 
     def _detect_rotation(
@@ -198,7 +260,11 @@ class CyclicGroupAnalyzer:
         Returns: judge if the rotational symmetry exist and rotational index Q
 
         """
-        coords = self._primitive.positions
+        # coords = self._primitive.positions
+        # coords = self._primitive_center_z.positions
+        coords = (
+            self._primitive.get_scaled_positions() - [0.5, 0.5, 0.5]
+        ) @ self._primitive.cell
 
         # detect the monomer's rotational symmetry for specifying therotation
         mol = Molecule(species=monomer.numbers, coords=monomer.positions)
@@ -214,7 +280,7 @@ class CyclicGroupAnalyzer:
             )
             / ind
         )
-        logging.debug("Candidate rotational degree is: %s" % str(ind1))
+        logging.critical("Candidate rotational degree is: %s" % str(ind1))
 
         for test_ind in ind1:
             itp1, itp2 = (
@@ -237,9 +303,14 @@ class CyclicGroupAnalyzer:
                     [],
                 )  # record the rotational result in current layer
 
-                for site in monomer:
-                    coord1 = op1.operate(site.position)
-                    coord2 = op2.operate(site.position)
+                sites_pos = (
+                    monomer.get_scaled_positions() - [0.5, 0.5, 0.5]
+                ) @ monomer.cell
+                for ii, site in enumerate(monomer):
+                    # coord1 = op1.operate(site.position)
+                    # coord2 = op2.operate(site.position)
+                    coord1 = op1.operate(sites_pos[ii])
+                    coord2 = op2.operate(sites_pos[ii])
 
                     tmp1 = find_in_coord_list(coords, coord1, self._symprec)
                     tmp2 = find_in_coord_list(coords, coord2, self._symprec)
@@ -254,12 +325,13 @@ class CyclicGroupAnalyzer:
                 itp1 = itp1 and np.array(itp3).all()
                 itp2 = itp2 and np.array(itp4).all()
 
+                # set_trace()
                 if not (itp1 or itp2):
                     break
 
             if itp1 or itp2:
                 Q = int(360 / test_ind)
-                logging.debug(
+                logging.critical(
                     "The minimal rotational degree is: %s" % test_ind
                 )
                 return True, Q
@@ -279,10 +351,13 @@ class CyclicGroupAnalyzer:
         Returns: judge if the mirror symmetry exist
 
         """
+
         coords = self._primitive.positions
+
         diff_st_ind = np.array(
             [
                 find_in_coord_list(coords, coord, self._symprec)
+                # for coord in sites_pos
                 for coord in monomer.positions
             ]
         )
@@ -316,6 +391,8 @@ class CyclicGroupAnalyzer:
                         len(tmp) == 1
                         and diff_st.numbers[tmp[0]] == site.number
                     )
+                # set_trace()
+
                 if np.array(itp).all():
                     return True
         return False
@@ -358,9 +435,11 @@ class CyclicGroupAnalyzer:
 
                 if len(self._primitive) == monomer_num:
                     # if the monomer is the whole structure
+                    # monomer.append(self._primitive)
                     monomer.append(self._primitive)
                     translation.append(1)
                 else:
+                    # monomer.append(self._primitive[monomer_ind_sum[ii]])
                     monomer.append(self._primitive[monomer_ind_sum[ii]])
                     translation.append(potential_trans[ii])
         return monomer, translation
@@ -377,7 +456,7 @@ class CyclicGroupAnalyzer:
         ind = find_in_coord_list(x_y[1:], x_y[0], atol=self._symprec) + 1
 
         if len(ind) == 0:
-            logging.debug("It's a primitive cell")
+            logging.critical("It's a primitive cell")
             return self._atom
         else:
             potential_z = z[ind] - z[0]
@@ -400,7 +479,7 @@ class CyclicGroupAnalyzer:
                 ).all():
                     trans_z.append(tmp)
             if len(trans_z) == 0:
-                logging.debug("It's a primitive cell")
+                logging.critical("It's a primitive cell")
                 return self._atom
             else:
                 pure_z = min(trans_z)
@@ -415,7 +494,7 @@ class CyclicGroupAnalyzer:
                 numbers = self._atom.numbers[itp]
                 pos = self._atom.positions[itp]
                 atom = Atoms(cell=cell, numbers=numbers, positions=pos)
-                logging.debug(
+                logging.critical(
                     "It's not a primitive cell, already change to primitive self._primitive."
                 )
                 return atom

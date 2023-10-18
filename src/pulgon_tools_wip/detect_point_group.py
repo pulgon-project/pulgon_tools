@@ -62,7 +62,8 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
 
         if type(mol) == Atoms:
             if corner == True:
-                mol = self._change_center(mol)
+                # mol = self._change_center(mol)
+                mol = self._find_axis_center_of_nanotube(mol)
                 mol = Molecule(species=mol.numbers, coords=mol.positions)
             else:
                 mol = Molecule(species=mol.numbers, coords=mol.positions)
@@ -142,30 +143,40 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         ) / total_inertia
         return inertia_tensor
 
-    def _find_axis_center_of_nanotube(self) -> Molecule:
-        """remove the center of structure to (x,y):(0,0)
+    def _get_center_of_mass_periodic(self, atom):
+        cell_max = [1, 1, 1]
+        tmp = atom.get_scaled_positions() / cell_max * 2 * np.pi
+        itp1 = np.cos(tmp)
+        itp2 = np.sin(tmp)
 
+        mass = atom.get_masses()
+        itp1_av = mass @ itp1 / mass.sum()
+        itp2_av = mass @ itp2 / mass.sum()
+        theta_av = np.arctan2(-itp2_av, -itp1_av) + np.pi
+        res = cell_max * theta_av / 2 / np.pi
+        return res
+
+    def _find_axis_center_of_nanotube(
+        self, atom: ase.atoms.Atoms
+    ) -> ase.atoms.Atoms:
+        """remove the center of structure to (x,y):(0,0)
         Args:
             atom: initial structure
 
         Returns: centralized structure
 
         """
-        mol = self.mol.copy()
+        n_st = atom.copy()
+        center = self._get_center_of_mass_periodic(atom)
+        pos = (
+            np.remainder(atom.get_scaled_positions() - center + 0.5, [1, 1, 1])
+            @ atom.cell
+        )
 
-        species = np.unique(mol.species)
-        center = np.zeros((len(species), 3))
-        for site in mol:
-            idx = np.where(species, site.specie)[0]
-            center[idx] = center[idx] + site.coords
-
-            set_trace()
-
-        vector = atom.get_center_of_mass()
         atoms = Atoms(
             cell=n_st.cell,
             numbers=n_st.numbers,
-            positions=n_st.positions - [vector[0], vector[1], 0],
+            positions=pos,
         )
         return atoms
 
