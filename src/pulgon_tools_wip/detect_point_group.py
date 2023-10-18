@@ -69,8 +69,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
                 mol = Molecule(species=mol.numbers, coords=mol.positions)
 
         self.mol = mol
-        self.centered_mol = mol.get_centered_molecule()  # Todo:   check
-        # self.centered_mol = self._find_axis_center_of_nanotube()    #Todo:   check
+        self.centered_mol = mol.get_centered_molecule()
 
         self.tol = tolerance
         self.eig_tol = eigen_tolerance

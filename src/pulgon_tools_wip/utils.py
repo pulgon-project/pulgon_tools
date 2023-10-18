@@ -17,6 +17,8 @@ from pdb import set_trace
 
 import numpy as np
 
+from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
+
 
 def sortrows(a: np.ndarray) -> np.ndarray:
     """
@@ -85,3 +87,12 @@ def frac_range(
         if close[-1] - end < symprec:
             close.pop()  # delete the right boundary
     return close
+
+
+def get_symcell(monomer):
+    apg = LineGroupAnalyzer(monomer)
+    equ = list(apg.get_equivalent_atoms()["eq_sets"])
+    # sym = apg.get_symmetry_operations()
+    # write_vasp("monomer.vasp", monomer)
+    # write_vasp("symcell.vasp", monomer[equ])
+    return monomer[equ]

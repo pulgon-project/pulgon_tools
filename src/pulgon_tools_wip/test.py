@@ -20,23 +20,25 @@ from ast import literal_eval
 from pdb import set_trace
 
 import numpy as np
+from ase.io.vasp import read_vasp, write_vasp
 
-# class CharacterDataset(typing.NamedTuple):
-#     """dataset of the final result
-#
-#     Args:
-#         index: order
-#         quantum_number: SAB
-#         character_table:
-#     """
-#
-#     index: list[int]
-#     quantum_number: list[tuple]
-#     character_table: list
+from pulgon_tools_wip.detect_generalized_translational_group import (
+    CyclicGroupAnalyzer,
+)
 
 
-# with open('test.pkl', 'rb') as handle:
-#     b = pickle.load(handle)
-res = np.load("test.npy", allow_pickle=True)
+def get_symcell(monomer):
 
-set_trace()
+    set_trace()
+
+
+def main():
+    poscar = read_vasp("12-12-AM.vasp")
+    cyclic = CyclicGroupAnalyzer(poscar, corner=True, symprec=0.01)
+    cy, mon = cyclic.get_cyclic_group()
+
+    get_symcell(mon[0])
+
+
+if __name__ == "__main__":
+    main()
