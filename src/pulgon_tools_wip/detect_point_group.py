@@ -58,9 +58,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
             matrix_tolerance (float): Tolerance used to generate the full set of
                 symmetry operations of the point group.
         """
-        logging.critical(
-            "--------------------start detecting axial point group"
-        )
+        logging.debug("--------------------start detecting axial point group")
 
         if type(mol) == Atoms:
             if corner == True:
@@ -94,22 +92,22 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self._check_rot_sym(z_axis)
 
         if len(self.rot_sym) > 0:
-            logging.critical(
+            logging.debug(
                 "The rot_num along zaxis is: %d" % self.rot_sym[0][1]
             )
-            logging.critical("Start detecting U")
+            logging.debug("Start detecting U")
             self._check_perpendicular_r2_axis(z_axis)
             if len(self.rot_sym) >= 2:
-                logging.critical("U exist, start detecting dihedral group")
+                logging.debug("U exist, start detecting dihedral group")
                 self._proc_dihedral()
             elif len(self.rot_sym) == 1:
-                logging.critical(
+                logging.debug(
                     "U does not exist, leaving Cnh, Cnv and S2n as candidates"
                 )
                 self._proc_cyclic()
         else:
-            logging.critical("The rot symmetry along zaxis does not exist")
-            logging.critical(
+            logging.debug("The rot symmetry along zaxis does not exist")
+            logging.debug(
                 "leaving Ci, C1h and C1v as candidates, start detecting U, v, h"
             )
             self._proc_no_rot_sym()

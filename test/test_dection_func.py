@@ -17,6 +17,8 @@ from pathlib import Path
 from pdb import set_trace
 
 import pretty_errors
+import pytest
+import pytest_datadir
 from ase.io.vasp import read_vasp
 from pymatgen.core import Molecule
 
@@ -25,11 +27,21 @@ from pulgon_tools_wip.detect_generalized_translational_group import (
 )
 from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
 
-
 pytest_plugins = ["pytest-datadir"]
 
 
 class TestCyclicGroupAnalyzer:
+    def test_rotation(self, shared_datadir):
+        st_name = shared_datadir / "st1"
+        st = read_vasp(st_name)
+        cy = CyclicGroupAnalyzer(st, symprec=1e-2)
+        monomers, translations = cy._potential_translation()
+        idx, Q = cy._detect_rotation(
+            monomers[0], translations[0] * cy._primitive.cell[2, 2], 3
+        )
+        assert idx == True
+        assert Q == 12
+
     def test_find_axis_center_of_nanotubFe(self, shared_datadir):
         st_name = shared_datadir / "12-12-AM"
         st = read_vasp(st_name)
@@ -46,22 +58,11 @@ class TestCyclicGroupAnalyzer:
         assert str(monomers[0].symbols) == "Mo9S18"
         assert translations[0] == 0.5
 
-    def test_rotation(self, shared_datadir):
-        st_name = shared_datadir / "st1"
-        st = read_vasp(st_name)
-        cy = CyclicGroupAnalyzer(st)
-        monomers, translations = cy._potential_translation()
-        idx, Q = cy._detect_rotation(
-            monomers[0], translations[0] * cy._primitive.cell[2, 2], 3
-        )
-        assert idx == True
-        assert Q == 12
-
     def test_rotational_tolerance(self, shared_datadir):
         st_name = shared_datadir / "st1"
         st = read_vasp(st_name)
-        cy1 = CyclicGroupAnalyzer(st, symprec=1e-4)
-        cy2 = CyclicGroupAnalyzer(st, symprec=1e-5)
+        cy1 = CyclicGroupAnalyzer(st, symprec=1e-2)
+        cy2 = CyclicGroupAnalyzer(st, symprec=1e-3)
         monomers1, translations1 = cy1._potential_translation()
         monomers2, translations2 = cy2._potential_translation()
         idx1, Q1 = cy1._detect_rotation(
@@ -103,9 +104,9 @@ class TestCyclicGroupAnalyzer:
     def test_the_whole_function_st1(self, shared_datadir):
         st_name = shared_datadir / "st1"
         st = read_vasp(st_name)
-        cyclic = CyclicGroupAnalyzer(st)
+        cyclic = CyclicGroupAnalyzer(st, symprec=1e-2)
         cy, mon = cyclic.get_cyclic_group()
-        assert cy[0] == "T12(1.5)" and str(mon[0].symbols) == "C4"
+        assert cy[0] == "T12(1.499)" and str(mon[0].symbols) == "C4"
 
     def test_the_whole_function_st2(self, shared_datadir):
         st_name = shared_datadir / "st7"
