@@ -43,8 +43,6 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self,
         mol: Molecule | Atoms,
         tolerance: float = 0.01,
-        eigen_tolerance: float = 0.01,
-        matrix_tolerance: float = 0.01,
         corner: bool = False,
     ):
         """The default settings are usually sufficient. (Totally the same with PointGroupAnalyzer)
@@ -53,8 +51,6 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
             mol (Molecule): Molecule to determine point group.
             tolerance (float): Distance tolerance to consider sites as
                 symmetrically equivalent. Defaults to 0.3 Angstrom.
-            eigen_tolerance (float): Tolerance to compare eigen values of
-                the inertia tensor. Defaults to 0.01.
             matrix_tolerance (float): Tolerance used to generate the full set of
                 symmetry operations of the point group.
         """
@@ -62,7 +58,6 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
 
         if type(mol) == Atoms:
             if corner == True:
-                # mol = self._change_center(mol)
                 mol = self._find_axis_center_of_nanotube(mol)
                 mol = Molecule(species=mol.numbers, coords=mol.positions)
             else:
@@ -72,8 +67,6 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self.centered_mol = mol.get_centered_molecule()
 
         self.tol = tolerance
-        self.eig_tol = eigen_tolerance
-        self.mat_tol = matrix_tolerance
         self._analyze()
         # if self.sch_symbol in ["C1v", "C1h"]:
         #     self.sch_symbol = "Cs"

@@ -80,17 +80,12 @@ class CyclicGroupAnalyzer:
             self._zaxis = np.array([0, 0, 1])
             self._atom = atom
 
-            # write_vasp("atom.vasp", self._atom)
-
             self._primitive = self._find_primitive()
             self._pure_trans = self._primitive.cell[2, 2]
 
             self._primitive_center_z = self._find_Zaxis_center_nanotube(
                 self._atom
             )
-
-            # write_vasp("primitive.vasp", self._atom)
-            # write_vasp("zcenter.vasp", self._primitive_center_z)
 
             self._analyze()
 
