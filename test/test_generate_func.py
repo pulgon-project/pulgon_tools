@@ -28,6 +28,8 @@ from pulgon_tools_wip.generate_structures import (
     sigmaV,
 )
 
+pytest_plugins = ["pytest-datadir"]
+
 
 def pre_processing(pos_cylin, generators):
     if pos_cylin.ndim == 1:
