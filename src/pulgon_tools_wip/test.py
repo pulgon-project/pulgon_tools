@@ -7,6 +7,7 @@ from pdb import set_trace
 
 import numpy as np
 from ase.io.vasp import read_vasp, write_vasp
+from utils import get_symcell
 
 from pulgon_tools_wip.detect_generalized_translational_group import (
     CyclicGroupAnalyzer,
@@ -14,21 +15,14 @@ from pulgon_tools_wip.detect_generalized_translational_group import (
 from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
 
 
-def get_symcell(monomer):
-    apg = LineGroupAnalyzer(monomer)
-    equ = list(apg.get_equivalent_atoms()["eq_sets"])
-    # sym = apg.get_symmetry_operations()
-    # write_vasp("monomer.vasp", monomer)
-    # write_vasp("symcell.vasp", monomer[equ])
-    return monomer[equ]
-
-
 def main():
     poscar = read_vasp("POSCAR")
     cyclic = CyclicGroupAnalyzer(poscar, corner=True, symprec=0.01)
-    cy, mon = cyclic.get_cyclic_group()
+    cy, monomer = cyclic.get_cyclic_group()
+    symcell = get_symcell(monomer[0])
 
-    get_symcell(mon[0])
+    write_vasp("monomer.vasp", monomer[0])
+    write_vasp("symcell.vasp", symcell)
 
 
 if __name__ == "__main__":

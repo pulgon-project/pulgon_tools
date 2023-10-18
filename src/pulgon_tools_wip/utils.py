@@ -93,6 +93,4 @@ def get_symcell(monomer):
     apg = LineGroupAnalyzer(monomer)
     equ = list(apg.get_equivalent_atoms()["eq_sets"])
     # sym = apg.get_symmetry_operations()
-    # write_vasp("monomer.vasp", monomer)
-    # write_vasp("symcell.vasp", monomer[equ])
     return monomer[equ]
