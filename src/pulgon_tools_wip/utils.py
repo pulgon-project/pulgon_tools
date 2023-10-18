@@ -16,6 +16,7 @@ import json
 from pdb import set_trace
 
 import numpy as np
+from ase import Atoms
 
 from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
 
@@ -89,7 +90,15 @@ def frac_range(
     return close
 
 
-def get_symcell(monomer):
+def get_symcell(monomer: Atoms) -> Atoms:
+    """based on the point group symmetry of monomer, return the symcell
+
+    Args:
+        monomer:
+
+    Returns: symcell
+
+    """
     apg = LineGroupAnalyzer(monomer)
     equ = list(apg.get_equivalent_atoms()["eq_sets"])
     # sym = apg.get_symmetry_operations()
