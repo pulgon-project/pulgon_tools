@@ -9,7 +9,7 @@ name = "pulgon_tools_wip"
 authors = [
     {name = "Yujie Cen", email = "yujie.cen@tuwien.ac.at"}
 ]
-description = "Generating line group structures"
+description = "Work-in-progress foundation libraries of the PULGON project"
 requires-python = ">=3.9, <3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -32,3 +32,9 @@ pulgon-generate-structures = "pulgon_tools_wip:generate_structures.main"
 pulgon-detect-AxialPointGroup = "pulgon_tools_wip:detect_point_group.main"
 pulgon-detect-CyclicGroup = "pulgon_tools_wip:detect_generalized_translational_group.main"
 pulgon-generate-CharacterTable = "pulgon_tools_wip:Irreps_tables.main"
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-datadir"]
+
+[tool.setuptools.dynamic]
+version = {attr = "pulgon_tools_wip.__version__"}
