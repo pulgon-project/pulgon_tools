@@ -48,7 +48,7 @@ class TestCyclicGroupAnalyzer:
         res = CyclicGroupAnalyzer(st)
         n_st = res._find_axis_center_of_nanotube(st)
         average_coord = (n_st.positions[:, :2] / len(n_st)).sum(axis=0)
-        assert (average_coord - [0, 0]).sum() < 0.001
+        assert (average_coord - [0.5, 0.5] @ n_st.cell[:2, :2]).sum() < 0.001
 
     def test_generate_monomer(self, shared_datadir):
         st_name = shared_datadir / "9-9-AM"

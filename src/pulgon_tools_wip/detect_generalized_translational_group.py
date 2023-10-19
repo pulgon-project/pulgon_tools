@@ -82,11 +82,6 @@ class CyclicGroupAnalyzer:
 
             self._primitive = self._find_primitive()
             self._pure_trans = self._primitive.cell[2, 2]
-
-            self._primitive_center_z = self._find_Zaxis_center_nanotube(
-                self._atom
-            )
-
             self._analyze()
 
     def _analyze(self) -> None:
@@ -121,30 +116,6 @@ class CyclicGroupAnalyzer:
         )
         return atoms
 
-    def _find_Zaxis_center_nanotube(
-        self, atom: ase.atoms.Atoms
-    ) -> ase.atoms.Atoms:
-        """remove the center of structure to (x,y):(0,0)
-        Args:
-            atom: initial structure
-
-        Returns: centralized structure
-
-        """
-        n_st = atom.copy()
-        center = self._get_center_of_mass_periodic(atom)
-        pos = (
-            np.remainder(atom.get_scaled_positions() - center, [1, 1, 1])
-            @ atom.cell
-        )
-
-        atoms = Atoms(
-            cell=n_st.cell,
-            numbers=n_st.numbers,
-            positions=pos,
-        )
-        return atoms
-
     def _get_center_of_mass_periodic(self, atom):
         cell_max = [1, 1, 1]
         tmp = atom.get_scaled_positions() / cell_max * 2 * np.pi
@@ -153,19 +124,6 @@ class CyclicGroupAnalyzer:
         itp1_av = mass @ np.cos(tmp) / mass.sum()
         itp2_av = mass @ np.sin(tmp) / mass.sum()
 
-        theta_av = np.arctan2(-itp2_av, -itp1_av) + np.pi
-        res = cell_max * theta_av / 2 / np.pi
-        return res
-
-    def _get_center_of_mass_periodic(self, atom):
-        cell_max = [1, 1, 1]
-        tmp = atom.get_scaled_positions() / cell_max * 2 * np.pi
-        itp1 = np.cos(tmp)
-        itp2 = np.sin(tmp)
-
-        mass = atom.get_masses()
-        itp1_av = mass @ itp1 / mass.sum()
-        itp2_av = mass @ itp2 / mass.sum()
         theta_av = np.arctan2(-itp2_av, -itp1_av) + np.pi
         res = cell_max * theta_av / 2 / np.pi
         return res
@@ -185,10 +143,8 @@ class CyclicGroupAnalyzer:
         cyclic_group, mono = [], []
         for ii, monomer in enumerate(monomer_atoms):
             logging.critical("---Start deticting NO.%d monomer" % (ii + 1))
-
             tran = potential_tans[ii]
             ind = int(np.round(1 / tran, self._round_symprec))
-
             if ind - 1 / tran > self._symprec:
                 logging.error("Selecting wrong translational vector")
                 continue
@@ -348,7 +304,6 @@ class CyclicGroupAnalyzer:
         """
 
         coords = self._primitive.positions
-
         diff_st_ind = np.array(
             [
                 find_in_coord_list(coords, coord, self._symprec)
@@ -356,6 +311,7 @@ class CyclicGroupAnalyzer:
                 for coord in monomer.positions
             ]
         )
+
         if diff_st_ind.ndim > 1:
             diff_st_ind = diff_st_ind.T[0]
         # diff_st: diff_st + monomer = primitive cell
@@ -374,7 +330,9 @@ class CyclicGroupAnalyzer:
             ):
                 normal = s1.position - s2.position
                 normal[2] = 0
-                op = SymmOp.reflection(normal)
+                op = SymmOp.reflection(
+                    normal, origin=([0.5, 0.5, 0.5] @ self._primitive.cell)
+                )
 
                 itp = []
                 for site in monomer:
@@ -386,7 +344,6 @@ class CyclicGroupAnalyzer:
                         len(tmp) == 1
                         and diff_st.numbers[tmp[0]] == site.number
                     )
-                # set_trace()
 
                 if np.array(itp).all():
                     return True
@@ -493,25 +450,6 @@ class CyclicGroupAnalyzer:
                     "It's not a primitive cell, already change to primitive self._primitive."
                 )
                 return atom
-
-    def _change_center(self, st1: ase.atoms.Atoms) -> ase.atoms.Atoms:
-        """
-
-        Args:
-            st1: an ase.atom structure
-
-        Returns: an ase.atom structure with z axis located in the cell center
-
-        """
-        st1_pos = st1.get_scaled_positions()
-        st2_pos = st1_pos[:, :2] + 0.5
-        tmp = np.modf(st2_pos)[0]
-        tmp1 = st1_pos[:, 2]
-        tmp1 = tmp1.reshape(tmp1.shape[0], 1)
-
-        st2 = st1.copy()
-        st2.positions = np.dot(np.hstack((tmp, tmp1)), st2.cell)
-        return st2
 
     def _check_if_along_OZ(self, atom):
         if (
