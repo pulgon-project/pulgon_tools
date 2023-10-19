@@ -193,7 +193,7 @@ def line_group_1(
 @register_func
 def line_group_2(
     a: float,
-    n: float,
+    n: int,
     k: float,
     symprec: float = 1e-4,
     round_symprec: int = 3,
@@ -257,7 +257,7 @@ def line_group_2(
 @register_func
 def line_group_3(
     a: float,
-    n: float,
+    n: int,
     k: float,
     symprec: float = 1e-4,
     round_symprec: int = 3,
@@ -329,7 +329,7 @@ def line_group_3(
 @register_func
 def line_group_4(
     a: float,
-    n: float,
+    n: int,
     k1: float,
     k2: float,
     symprec: float = 1e-4,
