@@ -63,6 +63,8 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self.centered_mol = mol.get_centered_molecule()
 
         self.tol = tolerance
+        self._zaxis = np.array([0, 0, 1])
+
         self._analyze()
         # if self.sch_symbol in ["C1v", "C1h"]:
         #     self.sch_symbol = "Cs"
@@ -76,16 +78,14 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self.rot_sym = []
         self.symmops = [SymmOp(np.eye(4))]
 
-        z_axis = np.array([0, 0, 1])
-
-        self._check_rot_sym(z_axis)
+        self._check_rot_sym(self._zaxis)
 
         if len(self.rot_sym) > 0:
             logging.debug(
                 "The rot_num along zaxis is: %d" % self.rot_sym[0][1]
             )
             logging.debug("Start detecting U")
-            self._check_perpendicular_r2_axis(z_axis)
+            self._check_perpendicular_r2_axis(self._zaxis)
             if len(self.rot_sym) >= 2:
                 logging.debug("U exist, start detecting dihedral group")
                 self._proc_dihedral()
