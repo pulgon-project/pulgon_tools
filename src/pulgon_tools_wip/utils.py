@@ -90,6 +90,10 @@ def frac_range(
     return close
 
 
+def get_num_of_decimal(num: float) -> int:
+    return len(np.format_float_positional(num).split(".")[1])
+
+
 def get_symcell(monomer: Atoms) -> Atoms:
     """based on the point group symmetry of monomer, return the symcell
 

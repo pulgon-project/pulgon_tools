@@ -28,7 +28,7 @@ from pymatgen.core.operations import SymmOp
 from pymatgen.symmetry.analyzer import PointGroupAnalyzer
 from pymatgen.util.coord import find_in_coord_list
 
-from pulgon_tools_wip.utils import refine_cell
+from pulgon_tools_wip.utils import get_num_of_decimal, refine_cell
 
 
 class CyclicGroupAnalyzer:
@@ -48,8 +48,7 @@ class CyclicGroupAnalyzer:
     def __init__(
         self,
         atom: ase.atoms.Atoms,
-        symprec: float = 0.001,
-        layer_symprec: float = 0.01,
+        tolerance: float = 0.001,
         round_symprec: int = 3,
     ) -> None:
         """
@@ -70,12 +69,14 @@ class CyclicGroupAnalyzer:
                 "Error while detect cyclic group: The axis direction is not OZ"
             )
         else:
-            atom = self._find_axis_center_of_nanotube(atom)
 
-            self._symprec = symprec
-            self._layer_symprec = layer_symprec
+            self._symprec = tolerance
+            self._layer_symprec = 0.1
+            # self._round_symprec = get_num_of_decimal(tolerance)
             self._round_symprec = round_symprec
             self._zaxis = np.array([0, 0, 1])
+
+            atom = self._find_axis_center_of_nanotube(atom)
             self._atom = atom
 
             self._primitive = self._find_primitive()
