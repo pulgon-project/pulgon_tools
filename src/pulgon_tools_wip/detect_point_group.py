@@ -168,25 +168,6 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         )
         return atoms
 
-    def _change_center(self, st1: ase.atoms.Atoms) -> ase.atoms.Atoms:
-        """
-
-        Args:
-            st1: an ase.atom structure
-
-        Returns: an ase.atom structure with z axis located in the cell center
-
-        """
-        st1_pos = st1.get_scaled_positions()
-        st2_pos = st1_pos[:, :2] + 0.5
-        tmp = np.modf(st2_pos)[0]
-        tmp1 = st1_pos[:, 2]
-        tmp1 = tmp1.reshape(tmp1.shape[0], 1)
-
-        st2 = st1.copy()
-        st2.positions = np.dot(np.hstack((tmp, tmp1)), st2.cell)
-        return st2
-
 
 def main():
     parser = argparse.ArgumentParser(
