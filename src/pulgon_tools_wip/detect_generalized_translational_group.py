@@ -51,7 +51,6 @@ class CyclicGroupAnalyzer:
         symprec: float = 0.001,
         layer_symprec: float = 0.01,
         round_symprec: int = 3,
-        corner: bool = False,
     ) -> None:
         """
 
@@ -61,7 +60,7 @@ class CyclicGroupAnalyzer:
             round_symprec: system precise tolerance when take "np.round"
 
         """
-        logging.critical(
+        logging.debug(
             "--------------------start detecting generalized translational group"
         )
 
@@ -71,8 +70,7 @@ class CyclicGroupAnalyzer:
                 "Error while detect cyclic group: The axis direction is not OZ"
             )
         else:
-            if corner == True:
-                atom = self._find_axis_center_of_nanotube(atom)
+            atom = self._find_axis_center_of_nanotube(atom)
 
             self._symprec = symprec
             self._layer_symprec = layer_symprec
@@ -87,7 +85,7 @@ class CyclicGroupAnalyzer:
     def _analyze(self) -> None:
         """print all possible monomers and their cyclic group"""
         monomer, potential_trans = self._potential_translation()
-        logging.critical("There are %d monomer" % len(monomer))
+        logging.debug("There are %d monomer" % len(monomer))
         self.cyclic_group, self.monomers = self._get_translations(
             monomer, potential_trans
         )
@@ -142,7 +140,7 @@ class CyclicGroupAnalyzer:
         """
         cyclic_group, mono = [], []
         for ii, monomer in enumerate(monomer_atoms):
-            logging.critical("---Start deticting NO.%d monomer" % (ii + 1))
+            logging.debug("---Start deticting NO.%d monomer" % (ii + 1))
             tran = potential_tans[ii]
             ind = int(np.round(1 / tran, self._round_symprec))
             if ind - 1 / tran > self._symprec:
@@ -150,22 +148,22 @@ class CyclicGroupAnalyzer:
                 continue
 
             if len(monomer) == len(self._primitive):
-                logging.critical(
+                logging.debug(
                     "The monomer is self._primitive, so this cyclic group is T"
                 )
                 cyclic_group.append("T")
                 mono.append(monomer)
             else:
                 # detect rotation
-                logging.critical("Start detecting rotation")
-                logging.critical(
+                logging.debug("Start detecting rotation")
+                logging.debug(
                     "The scaled translational distance is %s " % (1 / ind)
                 )
                 rotation, Q = self._detect_rotation(
                     monomer, tran * self._pure_trans, ind
                 )
                 if rotation:
-                    logging.critical(
+                    logging.debug(
                         "Append rotational cyclic group, Q is 360/degree=%s"
                         % Q
                     )
@@ -174,20 +172,18 @@ class CyclicGroupAnalyzer:
                     )
                     mono.append(monomer)
                 else:
-                    logging.critical(
-                        "All the candidate degree can not succeed"
-                    )
+                    logging.debug("All the candidate degree can not succeed")
 
                 if (
                     ind == 2 and abs(tran - 0.5) < self._layer_symprec
                 ):  # only 2 layer in primitive cell
                     # detect mirror
-                    logging.critical(
+                    logging.debug(
                         "The scaled translational distance is 1/2, start detecting mirror symmetry"
                     )
                     mirror = self._detect_mirror(monomer, self._pure_trans / 2)
                     if mirror:
-                        logging.critical(
+                        logging.debug(
                             "Mirror plane exist, append to cyclic group"
                         )
                         cyclic_group.append(
@@ -195,7 +191,7 @@ class CyclicGroupAnalyzer:
                         )
                         mono.append(monomer)
                     else:
-                        logging.critical("Mirror does not exist")
+                        logging.debug("Mirror does not exist")
         return cyclic_group, mono
 
     def _detect_rotation(
@@ -211,8 +207,6 @@ class CyclicGroupAnalyzer:
         Returns: judge if the rotational symmetry exist and rotational index Q
 
         """
-        # coords = self._primitive.positions
-        # coords = self._primitive_center_z.positions
         coords = (
             self._primitive.get_scaled_positions() - [0.5, 0.5, 0.5]
         ) @ self._primitive.cell
@@ -231,7 +225,7 @@ class CyclicGroupAnalyzer:
             )
             / ind
         )
-        logging.critical("Candidate rotational degree is: %s" % str(ind1))
+        logging.debug("Candidate rotational degree is: %s" % str(ind1))
 
         for test_ind in ind1:
             itp1, itp2 = (
@@ -276,13 +270,12 @@ class CyclicGroupAnalyzer:
                 itp1 = itp1 and np.array(itp3).all()
                 itp2 = itp2 and np.array(itp4).all()
 
-                # set_trace()
                 if not (itp1 or itp2):
                     break
 
             if itp1 or itp2:
                 Q = int(360 / test_ind)
-                logging.critical(
+                logging.debug(
                     "The minimal rotational degree is: %s" % test_ind
                 )
                 return True, Q
@@ -408,7 +401,7 @@ class CyclicGroupAnalyzer:
         ind = find_in_coord_list(x_y[1:], x_y[0], atol=self._symprec) + 1
 
         if len(ind) == 0:
-            logging.critical("It's a primitive cell")
+            logging.debug("It's a primitive cell")
             return self._atom
         else:
             potential_z = z[ind] - z[0]
@@ -431,7 +424,7 @@ class CyclicGroupAnalyzer:
                 ).all():
                     trans_z.append(tmp)
             if len(trans_z) == 0:
-                logging.critical("It's a primitive cell")
+                logging.debug("It's a primitive cell")
                 return self._atom
             else:
                 pure_z = min(trans_z)
@@ -446,7 +439,7 @@ class CyclicGroupAnalyzer:
                 numbers = self._atom.numbers[itp]
                 pos = self._atom.positions[itp]
                 atom = Atoms(cell=cell, numbers=numbers, positions=pos)
-                logging.critical(
+                logging.debug(
                     "It's not a primitive cell, already change to primitive self._primitive."
                 )
                 return atom

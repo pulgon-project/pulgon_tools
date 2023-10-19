@@ -88,8 +88,8 @@ class TestCyclicGroupAnalyzer:
         st_name = shared_datadir / "st7"
         st = read_vasp(st_name)
 
-        cy1 = CyclicGroupAnalyzer(st, symprec=1e-15)
-        cy2 = CyclicGroupAnalyzer(st, symprec=1e-16)
+        cy1 = CyclicGroupAnalyzer(st, symprec=1e-14)
+        cy2 = CyclicGroupAnalyzer(st, symprec=1e-15)
         monomers1, translations1 = cy1._potential_translation()
         monomers2, translations2 = cy2._potential_translation()
         idx1 = cy1._detect_mirror(
@@ -106,7 +106,7 @@ class TestCyclicGroupAnalyzer:
         st = read_vasp(st_name)
         cyclic = CyclicGroupAnalyzer(st, symprec=1e-2)
         cy, mon = cyclic.get_cyclic_group()
-        assert cy[0] == "T12(1.499)" and str(mon[0].symbols) == "C4"
+        assert cy[0] == "T12(1.498)" and str(mon[0].symbols) == "C4"
 
     def test_the_whole_function_st2(self, shared_datadir):
         st_name = shared_datadir / "st7"
@@ -118,9 +118,20 @@ class TestCyclicGroupAnalyzer:
     def test_the_whole_function_st3(self, shared_datadir):
         st_name = shared_datadir / "9-9-AM"
         st = read_vasp(st_name)
-        cyclic = CyclicGroupAnalyzer(st)
+        cyclic = CyclicGroupAnalyzer(st, symprec=0.01)
         cy, mon = cyclic.get_cyclic_group()
-        assert cy[0] == "T2(1.614)" and str(mon[0].symbols) == "Mo9S18"
+        assert cy[0] == "T18(1.614)" and str(mon[0].symbols) == "Mo9S18"
+
+    def test_the_whole_function_st4(self, shared_datadir):
+        st_name = shared_datadir / "24-0-ZZ"
+        st = read_vasp(st_name)
+        cyclic = CyclicGroupAnalyzer(st, symprec=0.01)
+        cy, mon = cyclic.get_cyclic_group()
+        assert (
+            cy[0] == "T48(2.74)"
+            and cy[1] == "T'(2.74)"
+            and str(mon[0].symbols) == "Mo24S48"
+        )
 
 
 class TestAxialPointGroupAnalyzer:
@@ -187,3 +198,11 @@ class TestAxialPointGroupAnalyzer:
         obj = LineGroupAnalyzer(mol)
         pg = obj.get_pointgroup()
         assert str(pg) == "C1"
+
+    def test_axial_pg_st10(self, shared_datadir):
+        st_name = shared_datadir / "24-0-ZZ"
+        st = read_vasp(st_name)
+        mol = Molecule(species=st.numbers, coords=st.positions)
+        obj = LineGroupAnalyzer(st)
+        pg = obj.get_pointgroup()
+        assert str(pg) == "C24v"

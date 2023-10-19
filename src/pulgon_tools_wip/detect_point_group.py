@@ -43,7 +43,6 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self,
         mol: Molecule | Atoms,
         tolerance: float = 0.01,
-        corner: bool = False,
     ):
         """The default settings are usually sufficient. (Totally the same with PointGroupAnalyzer)
 
@@ -57,11 +56,8 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         logging.debug("--------------------start detecting axial point group")
 
         if type(mol) == Atoms:
-            if corner == True:
-                mol = self._find_axis_center_of_nanotube(mol)
-                mol = Molecule(species=mol.numbers, coords=mol.positions)
-            else:
-                mol = Molecule(species=mol.numbers, coords=mol.positions)
+            mol = self._find_axis_center_of_nanotube(mol)
+            mol = Molecule(species=mol.numbers, coords=mol.positions)
 
         self.mol = mol
         self.centered_mol = mol.get_centered_molecule()
