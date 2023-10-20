@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#   http:#www.apache.org/licenses/LICENSE-2.0
+#   http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -271,8 +271,8 @@ class CyclicGroupAnalyzer:
                 itp1 = itp1 and np.array(itp3).all()
                 itp2 = itp2 and np.array(itp4).all()
 
-                if not (itp1 or itp2):
-                    break
+            if not (itp1 or itp2):
+                break
 
             if itp1 or itp2:
                 Q = int(360 / test_ind)
