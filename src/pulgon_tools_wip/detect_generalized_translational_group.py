@@ -69,7 +69,6 @@ class CyclicGroupAnalyzer:
                 "Error while detect cyclic group: The axis direction is not OZ"
             )
         else:
-
             self._symprec = tolerance
             self._layer_symprec = 0.1
             # self._round_symprec = get_num_of_decimal(tolerance)
@@ -81,15 +80,18 @@ class CyclicGroupAnalyzer:
 
             self._primitive = self._find_primitive()
             self._pure_trans = self._primitive.cell[2, 2]
+
             self._analyze()
 
     def _analyze(self) -> None:
         """print all possible monomers and their cyclic group"""
         monomer, potential_trans = self._potential_translation()
         logging.debug("There are %d monomer" % len(monomer))
-        self.cyclic_group, self.monomers = self._get_translations(
-            monomer, potential_trans
-        )
+        (
+            self.cyclic_group,
+            self.monomers,
+            self._sym_operations,
+        ) = self._get_translations(monomer, potential_trans)
 
     def _find_axis_center_of_nanotube(
         self, atom: ase.atoms.Atoms
@@ -139,7 +141,10 @@ class CyclicGroupAnalyzer:
         Returns: cyclic groups and monomers
 
         """
-        cyclic_group, mono = [], []
+        cyclic_group, mono, sym_op = [], [], []
+        invariant_op = SymmOp(
+            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]
+        )
         for ii, monomer in enumerate(monomer_atoms):
             logging.debug("---Start deticting NO.%d monomer" % (ii + 1))
             tran = potential_tans[ii]
@@ -154,13 +159,14 @@ class CyclicGroupAnalyzer:
                 )
                 cyclic_group.append("T")
                 mono.append(monomer)
+                sym_op.append(invariant_op)
             else:
                 # detect rotation
                 logging.debug("Start detecting rotation")
                 logging.debug(
                     "The scaled translational distance is %s " % (1 / ind)
                 )
-                rotation, Q = self._detect_rotation(
+                rotation, Q, tmp_sym_operations = self._detect_rotation(
                     monomer, tran * self._pure_trans, ind
                 )
                 if rotation:
@@ -172,6 +178,8 @@ class CyclicGroupAnalyzer:
                         "T%s(%s)" % (Q, np.round(tran * self._pure_trans, 3))
                     )
                     mono.append(monomer)
+                    tmp_sym_operations.insert(0, invariant_op)
+                    sym_op.append(tmp_sym_operations)
                 else:
                     logging.debug("All the candidate degree can not succeed")
 
@@ -182,7 +190,9 @@ class CyclicGroupAnalyzer:
                     logging.debug(
                         "The scaled translational distance is 1/2, start detecting mirror symmetry"
                     )
-                    mirror = self._detect_mirror(monomer, self._pure_trans / 2)
+                    mirror, tmp_sym_operations = self._detect_mirror(
+                        monomer, self._pure_trans / 2
+                    )
                     if mirror:
                         logging.debug(
                             "Mirror plane exist, append to cyclic group"
@@ -191,9 +201,12 @@ class CyclicGroupAnalyzer:
                             "T'(%s)" % np.round(self._pure_trans / 2, 3)
                         )
                         mono.append(monomer)
+
+                        sym_op.append([invariant_op, tmp_sym_operations])
+
                     else:
                         logging.debug("Mirror does not exist")
-        return cyclic_group, mono
+        return cyclic_group, mono, sym_op
 
     def _detect_rotation(
         self, monomer: ase.atoms.Atoms, tran: np.float64, ind: int
@@ -233,6 +246,8 @@ class CyclicGroupAnalyzer:
                 True,
                 True,
             )  # record the rotational result from different layer
+
+            tmp_sym_op = []
             for layer in range(1, ind):
                 op1 = SymmOp.from_axis_angle_and_translation(
                     self._zaxis,
@@ -271,16 +286,20 @@ class CyclicGroupAnalyzer:
                 itp1 = itp1 and np.array(itp3).all()
                 itp2 = itp2 and np.array(itp4).all()
 
-            if not (itp1 or itp2):
-                break
+                if not (itp1 or itp2):
+                    break
+                if itp1:
+                    tmp_sym_op.append(op1)
+                if itp2:
+                    tmp_sym_op.append(op2)
 
             if itp1 or itp2:
                 Q = int(360 / test_ind)
                 logging.debug(
                     "The minimal rotational degree is: %s" % test_ind
                 )
-                return True, Q
-        return False, 1
+                return True, Q, tmp_sym_op
+        return False, 1, None
 
     def _detect_mirror(
         self,
@@ -340,8 +359,8 @@ class CyclicGroupAnalyzer:
                     )
 
                 if np.array(itp).all():
-                    return True
-        return False
+                    return True, [op]
+        return False, None
 
     def _get_monomer_ind(
         self, z: np.ndarray, z_uniq: np.ndarray
@@ -457,6 +476,10 @@ class CyclicGroupAnalyzer:
     def get_cyclic_group(self) -> [list, list]:
         """Returns a PointGroup object for the molecule."""
         return self.cyclic_group, self.monomers
+
+    def get_cyclic_group_and_op(self) -> [list, list]:
+        """Returns a PointGroup object for the molecule."""
+        return self.cyclic_group, self.monomers, self._sym_operations
 
 
 def main():

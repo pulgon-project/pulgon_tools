@@ -36,7 +36,7 @@ class TestCyclicGroupAnalyzer:
         st = read_vasp(st_name)
         cy = CyclicGroupAnalyzer(st, tolerance=1e-2)
         monomers, translations = cy._potential_translation()
-        idx, Q = cy._detect_rotation(
+        idx, Q, _ = cy._detect_rotation(
             monomers[0], translations[0] * cy._primitive.cell[2, 2], 3
         )
         assert idx == True
@@ -65,10 +65,10 @@ class TestCyclicGroupAnalyzer:
         cy2 = CyclicGroupAnalyzer(st, tolerance=1e-3)
         monomers1, translations1 = cy1._potential_translation()
         monomers2, translations2 = cy2._potential_translation()
-        idx1, Q1 = cy1._detect_rotation(
+        idx1, Q1, _ = cy1._detect_rotation(
             monomers1[0], translations1[0] * cy1._primitive.cell[2, 2], ind=3
         )
-        idx2, Q2 = cy2._detect_rotation(
+        idx2, Q2, _ = cy2._detect_rotation(
             monomers2[0], translations2[0] * cy2._primitive.cell[2, 2], ind=3
         )
         assert idx1 == True and Q1 == 12
@@ -79,7 +79,7 @@ class TestCyclicGroupAnalyzer:
         st = read_vasp(st_name)
         cy = CyclicGroupAnalyzer(st)
         monomers, translations = cy._potential_translation()
-        idx = cy._detect_mirror(
+        idx, _ = cy._detect_mirror(
             monomers[0], translations[0] * cy._primitive.cell[2, 2]
         )
         assert idx == True
@@ -92,10 +92,10 @@ class TestCyclicGroupAnalyzer:
         cy2 = CyclicGroupAnalyzer(st, tolerance=1e-15)
         monomers1, translations1 = cy1._potential_translation()
         monomers2, translations2 = cy2._potential_translation()
-        idx1 = cy1._detect_mirror(
+        idx1, _ = cy1._detect_mirror(
             monomers1[0], translations1[0] * cy1._primitive.cell[2, 2]
         )
-        idx2 = cy2._detect_mirror(
+        idx2, _ = cy2._detect_mirror(
             monomers2[0], translations2[0] * cy2._primitive.cell[2, 2]
         )
         assert idx1 == True

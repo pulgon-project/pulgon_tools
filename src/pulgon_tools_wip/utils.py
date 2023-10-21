@@ -12,11 +12,12 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
+import itertools
 import json
-from pdb import set_trace
 
 import numpy as np
 from ase import Atoms
+from ipdb import set_trace
 
 from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
 
@@ -107,3 +108,37 @@ def get_symcell(monomer: Atoms) -> Atoms:
     equ = list(apg.get_equivalent_atoms()["eq_sets"].keys())
     # sym = apg.get_symmetry_operations()
     return monomer[equ]
+
+
+def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-3):
+
+    combs = list(itertools.product(point_group_ops, cyclic_group_ops))
+
+    coords = atoms.get_scaled_positions()
+    for ii, op in enumerate(combs):
+        op1 = op[0]
+        op2 = op[1]
+
+        for coord in coords:
+            tmp = op1.operate(coord)
+            tmp, _ = refine_cell(tmp, 1)
+
+            idx = np.argmin(np.linalg.norm(tmp - coords, axis=1))
+            set_trace()
+
+    # perms = np.zeros((np.shape(trans)[0], len(atoms.numbers)))
+    origin_positions, numbers = refine_cell(
+        atoms.get_scaled_positions(), atoms.numbers
+    )
+    for ix, rot in enumerate(point_group_ops):
+        for ix, rot in enumerate(cyclic_group_ops):
+            for iy, o_pos in enumerate(origin_positions):
+                new_pos = np.dot(rot, o_pos.T) + trans[ix]
+                new_pos = np.mod(new_pos, 1)
+                new_pos, new_numbers = refine_cell(new_pos, numbers)
+                idx = np.argmin(
+                    np.linalg.norm(new_pos - origin_positions, axis=1)
+                )
+                perms[ix, iy] = idx
+    perms_table = np.unique(perms, axis=0)
+    return perms_table
