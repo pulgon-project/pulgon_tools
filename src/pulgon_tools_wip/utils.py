@@ -31,7 +31,7 @@ def sortrows(a: np.ndarray) -> np.ndarray:
 
 
 def refine_cell(
-    scale_pos: np.ndarray, numbers: np.ndarray, symprec: int = 4
+    scale_pos: np.ndarray, numbers: np.ndarray, symprec: int = 5
 ) -> [np.ndarray, np.ndarray]:
     """refine the scale position between 0-1, and remove duplicates
 
@@ -46,7 +46,8 @@ def refine_cell(
     if scale_pos.ndim == 1:
         scale_pos = np.modf(scale_pos)[0]
         scale_pos[scale_pos < 0] = scale_pos[scale_pos < 0] + 1
-        pos = np.round(scale_pos, symprec)
+        pos = scale_pos
+        # pos = np.round(scale_pos, symprec)
     else:
         scale_pos = np.modf(scale_pos)[0]
         scale_pos[scale_pos < 0] = scale_pos[scale_pos < 0] + 1
@@ -112,33 +113,23 @@ def get_symcell(monomer: Atoms) -> Atoms:
 
 def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-3):
 
-    combs = list(itertools.product(point_group_ops, cyclic_group_ops))
-
-    coords = atoms.get_scaled_positions()
+    combs = list(itertools.product(cyclic_group_ops, point_group_ops))
+    coords = atoms.positions
+    perms = []
     for ii, op in enumerate(combs):
+        op = combs[20]
         op1 = op[0]
         op2 = op[1]
 
-        for coord in coords:
+        tmp_perm = np.ones((1, len(atoms.numbers)))[0]
+        for jj, coord in enumerate(coords):
             tmp = op1.operate(coord)
-            tmp, _ = refine_cell(tmp, 1)
+            # tmp = op2.operate(coord)
+            set_trace()
+            # tmp, _ = refine_cell(tmp, 1)
 
             idx = np.argmin(np.linalg.norm(tmp - coords, axis=1))
-            set_trace()
-
-    # perms = np.zeros((np.shape(trans)[0], len(atoms.numbers)))
-    origin_positions, numbers = refine_cell(
-        atoms.get_scaled_positions(), atoms.numbers
-    )
-    for ix, rot in enumerate(point_group_ops):
-        for ix, rot in enumerate(cyclic_group_ops):
-            for iy, o_pos in enumerate(origin_positions):
-                new_pos = np.dot(rot, o_pos.T) + trans[ix]
-                new_pos = np.mod(new_pos, 1)
-                new_pos, new_numbers = refine_cell(new_pos, numbers)
-                idx = np.argmin(
-                    np.linalg.norm(new_pos - origin_positions, axis=1)
-                )
-                perms[ix, iy] = idx
-    perms_table = np.unique(perms, axis=0)
+            tmp_perm[jj] = idx
+        perms.append(tmp_perm)
+    perms_table = np.unique(perms, axis=0).astype(np.int32)
     return perms_table
