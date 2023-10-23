@@ -142,9 +142,7 @@ def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
             idx1 = find_in_coord_list(coords_car_center, tmp, symprec)
 
             tmp1 = op2.operate(coords_car[idx1.item()])
-
             tmp1 = np.remainder(tmp1 @ np.linalg.inv(atoms.cell), [1, 1, 1])
-
             idx2 = find_in_coord_list(coords_scaled, tmp1, symprec)
 
             if idx2.size == 0:
