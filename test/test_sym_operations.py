@@ -39,3 +39,4 @@ def test_get_perms(shared_datadir):
     sym_pg_ops = obj.get_symmetry_operations()
 
     perms_table = get_perms(atom, sym_cy_ops[0], sym_pg_ops)
+    # set_trace()

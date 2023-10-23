@@ -14,11 +14,13 @@
 
 import itertools
 import json
+import logging
 
 import numpy as np
 from ase import Atoms
 from ipdb import set_trace
 from pymatgen.core.operations import SymmOp
+from pymatgen.util.coord import find_in_coord_list
 
 from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
 
@@ -119,29 +121,35 @@ def transform_SymmOp_from_car2direct(sym, atoms):
     return SymmOp.from_rotation_and_translation(sym.rotation_matrix, trans)
 
 
-def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-3):
+def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
     combs = list(itertools.product(point_group_ops, cyclic_group_ops))
-    coords = atoms.get_scaled_positions()
+    coords_car = atoms.positions
+    coords_scaled = atoms.get_scaled_positions()
+    coords_car_center = (
+        atoms.get_scaled_positions() - [0.5, 0.5, 0.5]
+    ) @ atoms.cell
 
     perms = []
     for ii, op in enumerate(combs):
         tmp_perm = np.ones((1, len(atoms.numbers)))[0]
-        op = combs[13]
         op1, op2 = op
         # op2 = transform_SymmOp_from_car2direct(op2, atoms)
 
         for jj, site in enumerate(atoms):
-            tmp = op1.operate(site.position)
-            tmp1 = np.remainder(tmp @ np.linalg.inv(atoms.cell), [1, 1, 1])
+            pos = (site.scaled_position - [0.5, 0.5, 0.5]) @ atoms.cell
 
-            idx = np.argmin(np.linalg.norm(tmp1 - coords, axis=1))
+            tmp = op1.operate(pos)
+            idx1 = find_in_coord_list(coords_car_center, tmp, symprec)
 
-            print(((coords[idx] - tmp1) ** 2).sum())
+            tmp1 = op2.operate(coords_car[idx1.item()])
 
-            tmp_perm[jj] = idx
+            tmp1 = np.remainder(tmp1 @ np.linalg.inv(atoms.cell), [1, 1, 1])
 
-            set_trace()
+            idx2 = find_in_coord_list(coords_scaled, tmp1, symprec)
 
+            if idx2.size == 0:
+                logging.ERROR("tolerance exceed while calculate perms")
+            tmp_perm[jj] = idx2
         perms.append(tmp_perm)
     perms_table = np.unique(perms, axis=0).astype(np.int32)
     return perms_table
