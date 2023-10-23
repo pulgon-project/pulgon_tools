@@ -18,6 +18,7 @@ import json
 import numpy as np
 from ase import Atoms
 from ipdb import set_trace
+from pymatgen.core.operations import SymmOp
 
 from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
 
@@ -111,24 +112,36 @@ def get_symcell(monomer: Atoms) -> Atoms:
     return monomer[equ]
 
 
+def transform_SymmOp_from_car2direct(sym, atoms):
+    trans = np.remainder(
+        sym.translation_vector @ np.linalg.inv(atoms.cell), [1, 1, 1]
+    )
+    return SymmOp.from_rotation_and_translation(sym.rotation_matrix, trans)
+
+
 def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-3):
     combs = list(itertools.product(point_group_ops, cyclic_group_ops))
-    coords = atoms.positions
+    coords = atoms.get_scaled_positions()
+
     perms = []
     for ii, op in enumerate(combs):
-        op = combs[20]
-        op1 = op[0]
-        op2 = op[1]
-
         tmp_perm = np.ones((1, len(atoms.numbers)))[0]
-        for jj, coord in enumerate(coords):
-            tmp = op1.operate(coord)
-            # tmp = op2.operate(coord)
-            set_trace()
-            # tmp, _ = refine_cell(tmp, 1)
+        op = combs[13]
+        op1, op2 = op
+        # op2 = transform_SymmOp_from_car2direct(op2, atoms)
 
-            idx = np.argmin(np.linalg.norm(tmp - coords, axis=1))
+        for jj, site in enumerate(atoms):
+            tmp = op1.operate(site.position)
+            tmp1 = np.remainder(tmp @ np.linalg.inv(atoms.cell), [1, 1, 1])
+
+            idx = np.argmin(np.linalg.norm(tmp1 - coords, axis=1))
+
+            print(((coords[idx] - tmp1) ** 2).sum())
+
             tmp_perm[jj] = idx
+
+            set_trace()
+
         perms.append(tmp_perm)
     perms_table = np.unique(perms, axis=0).astype(np.int32)
     return perms_table

@@ -143,13 +143,20 @@ class CyclicGroupAnalyzer:
         L = np.array([1, 1, 1])
         x = atom.get_scaled_positions()
         theta = 2.0 * np.pi * x / L
+        mass = atom.get_masses()
         mtheta = (
-            np.arctan2(-np.sin(theta).sum(axis=0), -np.cos(theta).sum(axis=0))
+            np.arctan2(
+                (-np.sin(theta) * np.expand_dims(mass, axis=1)).sum(axis=0)
+                / len(theta),
+                (-np.cos(theta) * np.expand_dims(mass, axis=1)).sum(axis=0)
+                / len(theta),
+            )
             + np.pi
         )
         center = L * mtheta / 2.0 / np.pi
-        # atom.center()
-        # set_trace()
+
+        tmp = atom.get_center_of_mass(scaled=True)
+        center[2] = tmp[2]
         return center
 
     def _get_translations(
@@ -213,6 +220,7 @@ class CyclicGroupAnalyzer:
                     logging.debug(
                         "The scaled translational distance is 1/2, start detecting mirror symmetry"
                     )
+
                     mirror, tmp_sym_operations = self._detect_mirror(
                         monomer, self._pure_trans / 2
                     )
@@ -244,9 +252,8 @@ class CyclicGroupAnalyzer:
         Returns: judge if the rotational symmetry exist and rotational index Q
 
         """
-        coords = (
-            self._primitive.get_scaled_positions() - [0.5, 0.5, 0.5]
-        ) @ self._primitive.cell
+        coords = self._primitive.get_scaled_positions() @ self._primitive.cell
+        center = [0.5, 0.5, 0] @ self._primitive.cell
 
         # detect the monomer's rotational symmetry for specifying therotation
         mol = Molecule(species=monomer.numbers, coords=monomer.positions)
@@ -272,32 +279,45 @@ class CyclicGroupAnalyzer:
 
             tmp_sym_op = []
             for layer in range(1, ind):
-                op1 = SymmOp.from_axis_angle_and_translation(
-                    self._zaxis,
-                    test_ind * layer,
-                    translation_vec=(0, 0, tran * layer),
+                # op1 = SymmOp.from_axis_angle_and_translation(
+                #     self._zaxis,
+                #     test_ind * layer,
+                #     translation_vec=(0, 0, tran * layer),
+                # )
+                # op2 = SymmOp.from_axis_angle_and_translation(
+                #     self._zaxis,
+                #     -test_ind * layer,
+                #     translation_vec=(0, 0, tran * layer),
+                # )
+                op1 = SymmOp.from_origin_axis_angle(
+                    origin=center, axis=self._zaxis, angle=test_ind * layer
                 )
-                op2 = SymmOp.from_axis_angle_and_translation(
-                    self._zaxis,
-                    -test_ind * layer,
-                    translation_vec=(0, 0, tran * layer),
+                op1 = SymmOp.from_rotation_and_translation(
+                    op1.rotation_matrix,
+                    op1.translation_vector + [0, 0, tran * layer],
                 )
+                op2 = SymmOp.from_origin_axis_angle(
+                    origin=center, axis=self._zaxis, angle=-test_ind * layer
+                )
+                op2 = SymmOp.from_rotation_and_translation(
+                    op2.rotation_matrix,
+                    op2.translation_vector + [0, 0, tran * layer],
+                )
+
                 itp3, itp4 = (
                     [],
                     [],
                 )  # record the rotational result in current layer
 
-                sites_pos = (
-                    monomer.get_scaled_positions() - [0.5, 0.5, 0.5]
-                ) @ monomer.cell
                 for ii, site in enumerate(monomer):
-                    # coord1 = op1.operate(site.position)
-                    # coord2 = op2.operate(site.position)
-                    coord1 = op1.operate(sites_pos[ii])
-                    coord2 = op2.operate(sites_pos[ii])
+                    coord1 = op1.operate(site.position)
+                    coord2 = op2.operate(site.position)
+                    # coord1 = np.remainder(op1.operate(np.remainder(site.scaled_position - [0.5,0.5,0.5], [1,1,1])), [1,1,1])
+                    # coord2 = np.remainder(op2.operate(np.remainder(site.scaled_position - [0.5,0.5,0.5],[1,1,1])), [1,1,1])
 
                     tmp1 = find_in_coord_list(coords, coord1, self._symprec)
                     tmp2 = find_in_coord_list(coords, coord2, self._symprec)
+                    # set_trace()
                     itp3.append(
                         len(tmp1) == 1
                         and self._primitive.numbers[tmp1[0]] == site.number
@@ -315,7 +335,6 @@ class CyclicGroupAnalyzer:
                     tmp_sym_op.append(op1)
                 if itp2:
                     tmp_sym_op.append(op2)
-
             if itp1 or itp2:
                 Q = int(360 / test_ind)
                 logging.debug(
@@ -369,20 +388,26 @@ class CyclicGroupAnalyzer:
                 op = SymmOp.reflection(
                     normal, origin=([0.5, 0.5, 0.5] @ self._primitive.cell)
                 )
-
+                # op = SymmOp.reflection(normal)
+                # set_trace()
+                op = SymmOp.from_rotation_and_translation(
+                    op.rotation_matrix,
+                    op.translation_vector + np.array([0, 0, tran]),
+                )
                 itp = []
                 for site in monomer:
-                    coord = op.operate(site.position) + np.array([0, 0, tran])
+                    coord = op.operate(site.position)
                     tmp = find_in_coord_list(
                         diff_st.positions, coord, self._symprec
                     )
+                    # tmp = find_in_coord_list(diff_st.get_scaled_positions(), coord, self._symprec)
                     itp.append(
                         len(tmp) == 1
                         and diff_st.numbers[tmp[0]] == site.number
                     )
-
+                # set_trace()
                 if np.array(itp).all():
-                    return True, [op]
+                    return True, op
         return False, None
 
     def _get_monomer_ind(
