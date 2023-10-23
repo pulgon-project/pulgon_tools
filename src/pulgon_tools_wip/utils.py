@@ -31,7 +31,7 @@ def sortrows(a: np.ndarray) -> np.ndarray:
 
 
 def refine_cell(
-    scale_pos: np.ndarray, numbers: np.ndarray, symprec: int = 5
+    scale_pos: np.ndarray, numbers: np.ndarray, symprec: int = 4
 ) -> [np.ndarray, np.ndarray]:
     """refine the scale position between 0-1, and remove duplicates
 
@@ -112,8 +112,7 @@ def get_symcell(monomer: Atoms) -> Atoms:
 
 
 def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-3):
-
-    combs = list(itertools.product(cyclic_group_ops, point_group_ops))
+    combs = list(itertools.product(point_group_ops, cyclic_group_ops))
     coords = atoms.positions
     perms = []
     for ii, op in enumerate(combs):

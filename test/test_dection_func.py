@@ -106,7 +106,7 @@ class TestCyclicGroupAnalyzer:
         st = read_vasp(st_name)
         cyclic = CyclicGroupAnalyzer(st, tolerance=1e-2)
         cy, mon = cyclic.get_cyclic_group()
-        assert cy[0] == "T12(1.498)" and str(mon[0].symbols) == "C4"
+        assert cy[0] == "T12(1.499)" and str(mon[0].symbols) == "C4"
 
     def test_the_whole_function_st2(self, shared_datadir):
         st_name = shared_datadir / "st7"

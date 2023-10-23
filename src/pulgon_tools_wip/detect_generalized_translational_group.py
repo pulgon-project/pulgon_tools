@@ -75,8 +75,9 @@ class CyclicGroupAnalyzer:
             self._round_symprec = round_symprec
             self._zaxis = np.array([0, 0, 1])
 
-            atom = self._find_axis_center_of_nanotube(atom)
-            self._atom = atom
+            # self._center_atom = self._center_of_nanotube(atom)
+
+            self._atom = self._find_axis_center_of_nanotube(atom)
 
             self._primitive = self._find_primitive()
             self._pure_trans = self._primitive.cell[2, 2]
@@ -96,6 +97,28 @@ class CyclicGroupAnalyzer:
     def _find_axis_center_of_nanotube(
         self, atom: ase.atoms.Atoms
     ) -> ase.atoms.Atoms:
+        """remove the center of structure to (x,y):(0.5,0.5)
+        Args:
+            atom: initial structure
+
+        Returns: centralized structure
+
+        """
+        n_st = atom.copy()
+        center = self._get_center_of_mass_periodic(atom)
+
+        pos = (
+            np.remainder(atom.get_scaled_positions() - center + 0.5, [1, 1, 1])
+            @ atom.cell
+        )
+        atoms = Atoms(
+            cell=n_st.cell,
+            numbers=n_st.numbers,
+            positions=pos,
+        )
+        return atoms
+
+    def _center_of_nanotube(self, atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
         """remove the center of structure to (x,y):(0,0)
         Args:
             atom: initial structure
@@ -106,10 +129,9 @@ class CyclicGroupAnalyzer:
         n_st = atom.copy()
         center = self._get_center_of_mass_periodic(atom)
         pos = (
-            np.remainder(atom.get_scaled_positions() - center + 0.5, [1, 1, 1])
+            np.remainder(atom.get_scaled_positions() - center, [1, 1, 1])
             @ atom.cell
         )
-
         atoms = Atoms(
             cell=n_st.cell,
             numbers=n_st.numbers,
@@ -118,16 +140,17 @@ class CyclicGroupAnalyzer:
         return atoms
 
     def _get_center_of_mass_periodic(self, atom):
-        cell_max = [1, 1, 1]
-        tmp = atom.get_scaled_positions() / cell_max * 2 * np.pi
-
-        mass = atom.get_masses()
-        itp1_av = mass @ np.cos(tmp) / mass.sum()
-        itp2_av = mass @ np.sin(tmp) / mass.sum()
-
-        theta_av = np.arctan2(-itp2_av, -itp1_av) + np.pi
-        res = cell_max * theta_av / 2 / np.pi
-        return res
+        L = np.array([1, 1, 1])
+        x = atom.get_scaled_positions()
+        theta = 2.0 * np.pi * x / L
+        mtheta = (
+            np.arctan2(-np.sin(theta).sum(axis=0), -np.cos(theta).sum(axis=0))
+            + np.pi
+        )
+        center = L * mtheta / 2.0 / np.pi
+        # atom.center()
+        # set_trace()
+        return center
 
     def _get_translations(
         self, monomer_atoms: ase.atoms.Atoms, potential_tans: list
