@@ -114,14 +114,18 @@ def get_symcell(monomer: Atoms) -> Atoms:
     return monomer[equ]
 
 
-def transform_SymmOp_from_car2direct(sym, atoms):
-    trans = np.remainder(
-        sym.translation_vector @ np.linalg.inv(atoms.cell), [1, 1, 1]
-    )
-    return SymmOp.from_rotation_and_translation(sym.rotation_matrix, trans)
-
-
 def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
+    """get the permutation table from symmetry operations
+
+    Args:
+        atoms:
+        cyclic_group_ops:
+        point_group_ops:
+        symprec:
+
+    Returns: permutation table
+             rotation matrix (RM) = RM from point group @ RM from cyclic group
+    """
     combs = list(itertools.product(point_group_ops, cyclic_group_ops))
     coords_car = atoms.positions
     coords_scaled = atoms.get_scaled_positions()
@@ -129,11 +133,11 @@ def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
         atoms.get_scaled_positions() - [0.5, 0.5, 0.5]
     ) @ atoms.cell
 
-    perms = []
+    perms, rotation_matrix = [], []
     for ii, op in enumerate(combs):
         tmp_perm = np.ones((1, len(atoms.numbers)))[0]
         op1, op2 = op
-        # op2 = transform_SymmOp_from_car2direct(op2, atoms)
+        rotation_matrix.append(op1.rotation_matrix @ op2.rotation_matrix)
 
         for jj, site in enumerate(atoms):
             pos = (site.scaled_position - [0.5, 0.5, 0.5]) @ atoms.cell
@@ -149,5 +153,7 @@ def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
                 logging.ERROR("tolerance exceed while calculate perms")
             tmp_perm[jj] = idx2
         perms.append(tmp_perm)
-    perms_table = np.unique(perms, axis=0).astype(np.int32)
-    return perms_table
+    perms_table, itp = np.unique(perms, axis=0, return_index=True)
+    perms_table = perms_table.astype(np.int32)
+    rotation_matrix = np.array(rotation_matrix)[itp]
+    return perms_table, rotation_matrix
