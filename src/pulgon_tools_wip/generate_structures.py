@@ -338,7 +338,6 @@ def main():
     st_name = args.st_name
 
     rot_sym = dimino(generators, symec=3)
-    set_trace()
 
     monomer_pos = []
     for sym in rot_sym:

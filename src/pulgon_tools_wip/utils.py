@@ -133,11 +133,14 @@ def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
         atoms.get_scaled_positions() - [0.5, 0.5, 0.5]
     ) @ atoms.cell
 
-    perms, rotation_matrix = [], []
+    perms, rotation_matrix, translation_vector = [], [], []
     for ii, op in enumerate(combs):
         tmp_perm = np.ones((1, len(atoms.numbers)))[0]
         op1, op2 = op
         rotation_matrix.append(op1.rotation_matrix @ op2.rotation_matrix)
+        translation_vector.append(
+            op1.translation_vector + op2.translation_vector
+        )
 
         for jj, site in enumerate(atoms):
             pos = (site.scaled_position - [0.5, 0.5, 0.5]) @ atoms.cell
@@ -155,5 +158,25 @@ def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
         perms.append(tmp_perm)
     perms_table, itp = np.unique(perms, axis=0, return_index=True)
     perms_table = perms_table.astype(np.int32)
+
     rotation_matrix = np.array(rotation_matrix)[itp]
-    return perms_table, rotation_matrix
+    translation_vector = np.array(translation_vector)[itp]
+    sym_operations = [
+        SymmOp.from_rotation_and_translation(
+            rotation_matrix[ii], translation_vector[ii]
+        )
+        for ii in range(len(itp))
+    ]
+    return perms_table, sym_operations
+
+
+def fast_orth(A, maxrank):
+    """Reimplementation of scipy.linalg.orth() which takes only the vectors with
+    values almost equal to the maximum, and returns at most maxrank vectors.
+    """
+    u, s, vh = la.interpolative.svd(A, maxrank)
+    reference = s[0]
+    for i in range(s.size):
+        if abs(reference - s[i]) > 0.05 * reference:
+            return u[:, :i]
+    return u
