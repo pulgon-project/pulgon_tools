@@ -12,6 +12,7 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
+import copy
 import itertools
 import json
 import logging
@@ -180,3 +181,72 @@ def fast_orth(A, maxrank):
         if abs(reference - s[i]) > 0.05 * reference:
             return u[:, :i]
     return u
+
+
+def affine_matrix_op(af1, af2):
+    ro = af1[:3, :3] @ af2[:3, :3]
+    tran = np.remainder(af1[:3, 3] + af2[:3, 3], [1, 1, 1])
+    af = np.eye(4)
+    af[:3, :3] = ro
+    af[:3, 3] = tran
+    return af
+
+
+def dimino_affine_matrix_and_character(
+    generators: np.ndarray, character, symec: float = 0.001
+) -> np.ndarray:
+    """
+
+    Args:
+        generators: the generators of point group
+        symec: system precision
+
+    Returns: all the group elements
+
+    """
+    e_in = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+
+    G = generators
+    g, g1 = copy.deepcopy(G[0]), copy.deepcopy(G[0])
+    L = np.array([e_in])
+
+    while not ((g - e_in) < symec).all():
+        L = np.vstack((L, [g]))
+        # g = np.dot(g, g1)
+        g = affine_matrix_op(g, g1)
+
+    for ii in range(len(G)):
+        C = np.array([e_in])
+        L1 = copy.deepcopy(L)
+        more = True
+        while more:
+            more = False
+            for g in list(C):
+                for ss in G[: ii + 1]:
+                    sg = affine_matrix_op(ss, g)
+
+                    itp = ((sg - L).sum(axis=1).sum(axis=1) < 0.001).any()
+                    # set_trace()
+                    if not itp:
+                        if C.ndim == 3:
+                            C = np.vstack((C, [sg]))
+                        else:
+                            C = np.array((C, sg))
+                        if L.ndim == 3:
+                            L = np.vstack(
+                                (
+                                    L,
+                                    np.array(
+                                        [affine_matrix_op(sg, t) for t in L1]
+                                    ),
+                                )
+                            )
+                        else:
+                            L = np.array(
+                                L,
+                                np.array(
+                                    [affine_matrix_op(sg, t) for t in L1]
+                                ),
+                            )
+                        more = True
+    return L

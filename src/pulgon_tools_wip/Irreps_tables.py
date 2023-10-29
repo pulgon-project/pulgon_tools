@@ -356,16 +356,29 @@ def line_group_4(
         index = []
 
         if k2 != None:
-            combs = list(itertools.product(*[m1, m2, piH]))
+            if k1 == 0:
+                combs = list(itertools.product(*[m1, m2, piH]))
+            else:
+                combs = list(itertools.product(*[m1, m2]))
         else:
-            combs = list(itertools.product(*[m1, piH]))
+            if k1 == 0:
+                combs = list(itertools.product(*[m1, piH]))
+            else:
+                combs = list(m1)
 
         for comb in combs:
 
             if k2 != None:
-                tmp_m1, tmp_m2, tmp_piH = comb
+                if k1 == 0:
+                    tmp_m1, tmp_m2, tmp_piH = comb
+                else:
+                    tmp_m1, tmp_m2 = comb
+
             else:
-                tmp_m1, tmp_piH = comb
+                if k1 == 0:
+                    tmp_m1, tmp_piH = comb
+                else:
+                    tmp_m1 = comb
 
             if k2 != None:
                 if k2 < 2 * np.pi * tmp_m2 / n / a or k2 > (
