@@ -201,37 +201,55 @@ def dimino_affine_matrix_and_character(
         generators: the generators of point group
         symec: system precision
 
-    Returns: all the group elements
+    Returns: all the group elements and correspond character
 
     """
     e_in = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
 
-    G = generators
-    g, g1 = copy.deepcopy(G[0]), copy.deepcopy(G[0])
-    L = np.array([e_in])
+    if character[0].ndim == 0:
+        L_chara = np.array([np.complex128(1)])
+        C_chara = np.array([np.complex128(1)])
+    else:
+        L_chara = np.array([np.complex128(1) * np.eye(character[0].shape[0])])
+        C_chara = np.array([np.complex128(1) * np.eye(character[0].shape[0])])
 
+    G = generators
+    g, g1 = G[0].copy(), G[0].copy()
+    g_chara, g1_chara = character[0].copy(), character[0].copy()
+    L = np.array([e_in])
     while not ((g - e_in) < symec).all():
         L = np.vstack((L, [g]))
+        L_chara = np.vstack((L_chara, [g_chara]))
+
         # g = np.dot(g, g1)
         g = affine_matrix_op(g, g1)
+        g_chara = np.dot(g_chara, g1_chara)
 
     for ii in range(len(G)):
         C = np.array([e_in])
-        L1 = copy.deepcopy(L)
+        L1 = L.copy()
+        L1_chara = L_chara.copy()
+
         more = True
         while more:
             more = False
-            for g in list(C):
-                for ss in G[: ii + 1]:
+            for jj, g in enumerate(list(C)):
+                g_chara = C_chara[jj]
+
+                for kk, ss in enumerate(G[: ii + 1]):
+                    ss_chara = character[kk]
                     sg = affine_matrix_op(ss, g)
+                    sg_chara = np.dot(ss_chara, g_chara)
 
                     itp = ((sg - L).sum(axis=1).sum(axis=1) < 0.001).any()
-                    # set_trace()
                     if not itp:
                         if C.ndim == 3:
                             C = np.vstack((C, [sg]))
+                            C_chara = np.vstack((C_chara, [sg_chara]))
                         else:
                             C = np.array((C, sg))
+                            C_chara = np.array((C_chara, sg_chara))
+
                         if L.ndim == 3:
                             L = np.vstack(
                                 (
@@ -241,6 +259,13 @@ def dimino_affine_matrix_and_character(
                                     ),
                                 )
                             )
+                            tmp = np.array(
+                                [
+                                    np.dot(sg_chara, t_chara)
+                                    for t_chara in L1_chara
+                                ]
+                            )
+                            L_chara = np.vstack((L_chara, tmp))
                         else:
                             L = np.array(
                                 L,
@@ -249,4 +274,87 @@ def dimino_affine_matrix_and_character(
                                 ),
                             )
                         more = True
-    return L
+    L_chara_trace = []
+    for lc in L_chara:
+        if lc.ndim == 1:
+            L_chara_trace.append(lc)
+        else:
+            L_chara_trace.append(np.trace(lc))
+    return L, np.array(L_chara_trace)
+
+
+def dimino_affine_matrix_and_subsquent(
+    generators: np.ndarray, symec: float = 0.001
+) -> np.ndarray:
+    """
+
+    Args:
+        generators: the generators of point group
+        symec: system precision
+
+    Returns: all the group elements and correspond character
+
+    """
+    e_in = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+
+    G = generators
+    g, g1 = G[0].copy(), G[0].copy()
+    g_subs, g1_subs = [1], [1]
+    L = np.array([e_in])
+    L_subs = [[0]]
+
+    while not ((g - e_in) < symec).all():
+        L = np.vstack((L, [g]))
+        L_subs.append(g_subs.copy())
+
+        g = affine_matrix_op(g, g1)
+        g_subs = g_subs + g1_subs
+    for ii in range(len(G)):
+        C = np.array([e_in])
+        C_subs = [[0]]
+
+        L1 = L.copy()
+        L1_subs = L_subs.copy()
+        more = True
+        while more:
+            more = False
+            for jj, g in enumerate(list(C)):
+                g_subs = C_subs[jj]
+
+                for kk, ss in enumerate(G[: ii + 1]):
+                    ss_subs = [kk + 1]
+
+                    sg = affine_matrix_op(ss, g)
+                    sg_subs = ss_subs + g_subs
+
+                    itp = ((sg - L).sum(axis=1).sum(axis=1) < 0.001).any()
+                    if not itp:
+                        if C.ndim == 3:
+                            C = np.vstack((C, [sg]))
+                            C_subs.append(sg_subs)
+                        else:
+                            C = np.array((C, sg))
+                            C_subs = C_subs.append(sg_subs)
+                        if L.ndim == 3:
+                            L = np.vstack(
+                                (
+                                    L,
+                                    np.array(
+                                        [affine_matrix_op(sg, t) for t in L1]
+                                    ),
+                                )
+                            )
+                            tmp = [sg_subs + t_subs for t_subs in L1_subs]
+                            L_subs = L_subs + tmp
+
+                        else:
+                            L = np.array(
+                                L,
+                                np.array(
+                                    [affine_matrix_op(sg, t) for t in L1]
+                                ),
+                            )
+                            tmp = [sg_subs + t_subs for t_subs in L1_subs]
+                            L_subs = L_subs + tmp
+                        more = True
+    return L, L_subs

@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 import pickle
 import typing
 from ast import literal_eval
@@ -18,15 +19,16 @@ from pulgon_tools_wip.Irreps_tables import line_group_4
 from pulgon_tools_wip.utils import (
     affine_matrix_op,
     dimino_affine_matrix_and_character,
+    dimino_affine_matrix_and_subsquent,
 )
 
 
 def get_character(qpoints, Zperiod_a, nrot):
     qpoints = qpoints / Zperiod_a
-    qz = 0.1
-    # for qz in qpoints:
-    Dataset = line_group_4(Zperiod_a, nrot, qz)
-    return Dataset
+    Dataset_q = []
+    for qz in qpoints:
+        Dataset_q.append(line_group_4(Zperiod_a, nrot, qz))
+    return Dataset_q
 
 
 def main():
@@ -44,9 +46,7 @@ def main():
     NQS = 51
     qpoints = np.linspace(0, np.pi, num=NQS, endpoint=False)
     Zperiod_a = cyclic._pure_trans
-    Dataset = get_character(qpoints, Zperiod_a, nrot)
-
-    set_trace()
+    Dataset_q = get_character(qpoints, Zperiod_a, nrot)
 
     sym = []
     pg1 = [Cn(9), sigmaH()]
@@ -56,7 +56,16 @@ def main():
     tran = SymmOp.from_rotation_and_translation(Cn(18), [0, 0, 1 / 2])
     sym.append(tran.affine_matrix)
 
-    res = dimino_affine_matrix(sym)
+    ops, subs = dimino_affine_matrix_and_subsquent(sym)
+    for ii, Dataset in enumerate(Dataset_q[1:]):
+        charas = Dataset.character_table
+        character = []
+        for chara in charas:
+            # ops, ops_chara = dimino_affine_matrix_and_character(sym, chara[0])
+            if len(ops) != len(subs):
+                logging.ERROR("len(ops) != len(subs)")
+
+        set_trace()
 
 
 if __name__ == "__main__":

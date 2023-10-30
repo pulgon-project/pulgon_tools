@@ -479,7 +479,8 @@ def line_group_4(
                 irreps = [irrep1]
 
             quantum_number.append(tuple(tmp_qn))
-            character_table.append(_cal_irrep_trace(irreps, symprec))
+            # character_table.append(_cal_irrep_trace(irreps, symprec))
+            character_table.append(irreps)
             index.append(ind)
             ind = ind + 1
         return CharacterDataset(index, quantum_number, character_table)
