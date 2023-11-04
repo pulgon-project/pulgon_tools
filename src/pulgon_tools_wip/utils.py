@@ -523,7 +523,6 @@ def get_character(qpoints, Zperiod_a, nrot):
     sym.append(tran.affine_matrix)
 
     ops, order = dimino_affine_matrix_and_subsquent(sym)
-
     if len(ops) != len(order):
         logging.ERROR("len(ops) != len(order)")
 
@@ -556,9 +555,9 @@ def get_character(qpoints, Zperiod_a, nrot):
                         tmp_mat = tmp_matrices[0]
                         for idx in range(1, len(tmp1)):
                             tmp_mat = np.dot(tmp_mat, tmp_matrices[idx])
-                        set_trace()
                         res.append(np.trace(tmp_mat))
 
+                    set_trace()
                 character.append(res)
             else:
                 logging.ERROR("some error about the chara dim")
