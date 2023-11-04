@@ -21,99 +21,17 @@ import numpy as np
 from ase import Atoms
 from ase.io.vasp import write_vasp
 
-from pulgon_tools_wip.utils import refine_cell, sortrows
-
-
-def e() -> np.ndarray:
-    """
-    Returns: identity matrix
-    """
-    mat = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    return mat
-
-
-def Cn(n: int | float) -> np.ndarray:
-    """
-    Args:
-        n: rotate 2*pi/n
-
-    Returns: rotation matrix
-    """
-    mat = np.array(
-        [
-            [np.cos(2 * np.pi / n), -np.sin(2 * np.pi / n), 0],
-            [np.sin(2 * np.pi / n), np.cos(2 * np.pi / n), 0],
-            [0, 0, 1],
-        ]
-    )
-    return mat
-
-
-def sigmaV() -> np.ndarray:
-    """
-
-    Returns: mirror symmetric matrix
-
-    """
-    mat = np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]])
-    return mat
-
-
-def sigmaH() -> np.ndarray:
-    """
-
-    Returns: mirror symmetric matrix about x-y plane
-
-    """
-    mat = np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])
-    return mat
-
-
-def U() -> np.ndarray:
-    """
-
-    Returns: A symmetric matrix about the x-axis
-
-    """
-    mat = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
-    return mat
-
-
-def U_d(fid: float | int) -> np.ndarray:
-    """
-
-    Args:
-        fid: the angle between symmetry axis d and axis x, d located in th x-y plane
-
-    Returns: A symmetric matrix about the d-axis
-
-    """
-    mat = np.array(
-        [
-            [np.cos(2 * fid), np.sin(2 * fid), 0],
-            [np.sin(2 * fid), -np.cos(2 * fid), 0],
-            [0, 0, -1],
-        ]
-    )
-    return mat
-
-
-def S2n(n: int | float) -> np.ndarray:
-    """
-    Args:
-        n: dihedral group, rotate 2*pi/n
-
-    Returns: rotation and mirror matrix
-
-    """
-    mat = np.array(
-        [
-            [np.cos(np.pi / n), np.sin(np.pi / n), 0],
-            [-np.sin(np.pi / n), np.cos(np.pi / n), 0],
-            [0, 0, -1],
-        ]
-    )
-    return mat
+from pulgon_tools_wip.utils import (
+    Cn,
+    S2n,
+    U,
+    U_d,
+    e,
+    refine_cell,
+    sigmaH,
+    sigmaV,
+    sortrows,
+)
 
 
 def T_Q(Q: float | int, f: float | int, pos: np.ndarray) -> np.ndarray:

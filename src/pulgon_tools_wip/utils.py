@@ -18,12 +18,107 @@ import json
 import logging
 
 import numpy as np
+import scipy.interpolate
 from ase import Atoms
 from ipdb import set_trace
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
+from scipy.linalg.interpolative import svd
 
 from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
+from pulgon_tools_wip.Irreps_tables import *
+
+
+def e() -> np.ndarray:
+    """
+    Returns: identity matrix
+    """
+    mat = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    return mat
+
+
+def Cn(n: int | float) -> np.ndarray:
+    """
+    Args:
+        n: rotate 2*pi/n
+
+    Returns: rotation matrix
+    """
+    mat = np.array(
+        [
+            [np.cos(2 * np.pi / n), -np.sin(2 * np.pi / n), 0],
+            [np.sin(2 * np.pi / n), np.cos(2 * np.pi / n), 0],
+            [0, 0, 1],
+        ]
+    )
+    return mat
+
+
+def sigmaV() -> np.ndarray:
+    """
+
+    Returns: mirror symmetric matrix
+
+    """
+    mat = np.array([[1, 0, 0], [0, -1, 0], [0, 0, 1]])
+    return mat
+
+
+def sigmaH() -> np.ndarray:
+    """
+
+    Returns: mirror symmetric matrix about x-y plane
+
+    """
+    mat = np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])
+    return mat
+
+
+def U() -> np.ndarray:
+    """
+
+    Returns: A symmetric matrix about the x-axis
+
+    """
+    mat = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+    return mat
+
+
+def U_d(fid: float | int) -> np.ndarray:
+    """
+
+    Args:
+        fid: the angle between symmetry axis d and axis x, d located in th x-y plane
+
+    Returns: A symmetric matrix about the d-axis
+
+    """
+    mat = np.array(
+        [
+            [np.cos(2 * fid), np.sin(2 * fid), 0],
+            [np.sin(2 * fid), -np.cos(2 * fid), 0],
+            [0, 0, -1],
+        ]
+    )
+    return mat
+
+
+def S2n(n: int | float) -> np.ndarray:
+    """
+    Args:
+        n: dihedral group, rotate 2*pi/n
+
+    Returns: rotation and mirror matrix
+
+    """
+    mat = np.array(
+        [
+            [np.cos(np.pi / n), np.sin(np.pi / n), 0],
+            [-np.sin(np.pi / n), np.cos(np.pi / n), 0],
+            [0, 0, -1],
+        ]
+    )
+    return mat
 
 
 def sortrows(a: np.ndarray) -> np.ndarray:
@@ -171,19 +266,72 @@ def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
     return perms_table, sym_operations
 
 
-def fast_orth(A, maxrank):
-    """Reimplementation of scipy.linalg.orth() which takes only the vectors with
-    values almost equal to the maximum, and returns at most maxrank vectors.
+def get_perms_from_ops(atoms, ops_sym, symprec=1e-2):
+    """get the permutation table from symmetry operations
+
+    Args:
+        atoms:
+        symprec:
+
+    Returns: permutation table
     """
-    u, s, vh = la.interpolative.svd(A, maxrank)
-    reference = s[0]
-    for i in range(s.size):
-        if abs(reference - s[i]) > 0.05 * reference:
-            return u[:, :i]
-    return u
+    natoms = len(atoms.numbers)
+    coords_car = atoms.positions
+    coords_scaled = atoms.get_scaled_positions()
+    coords_car_center = (
+        atoms.get_scaled_positions() - [0.5, 0.5, 0.5]
+    ) @ atoms.cell
+    coords_scaled_center = np.remainder(
+        coords_scaled - [0.5, 0.5, 0.5], [1, 1, 1]
+    )
+
+    perms = []
+    for ii, op in enumerate(ops_sym):
+        tmp_perm = np.zeros((1, len(atoms.numbers)))[0]
+        for jj, site in enumerate(atoms):
+            pos = (site.scaled_position - [0.5, 0.5, 0.5]) @ atoms.cell
+
+            tmp = op.operate(pos)
+            tmp1 = np.remainder(tmp @ np.linalg.inv(atoms.cell), [1, 1, 1])
+            idx2 = find_in_coord_list(coords_scaled_center, tmp1, symprec)
+
+            if idx2.size == 0:
+                logging.ERROR("tolerance exceed while calculate perms")
+            tmp_perm[jj] = idx2
+
+        idx = len(np.unique(tmp_perm))
+        if idx != natoms:
+            logging.ERROR("perms numebr != natoms")
+        perms.append(tmp_perm)
+    perms_table = np.array(perms).astype(np.int32)
+    return perms_table
+
+
+def get_matrices(atoms, ops_sym):
+    perms_table = get_perms_from_ops(atoms, ops_sym)
+    natoms = len(atoms.numbers)
+    matrices = []
+    for ii, perm in enumerate(perms_table):
+        matrix = np.zeros((3 * natoms, 3 * natoms))
+        for jj in range(natoms):
+            idx = perm[jj]
+            matrix[3 * idx : 3 * (idx + 1), 3 * jj : 3 * (jj + 1)] = ops_sym[
+                ii
+            ].rotation_matrix.copy()
+        matrices.append(matrix)
+    return matrices
 
 
 def affine_matrix_op(af1, af2):
+    """Definition of group multiplication
+
+    Args:
+        af1:
+        af2:
+
+    Returns:
+
+    """
     ro = af1[:3, :3] @ af2[:3, :3]
     tran = np.remainder(af1[:3, 3] + af2[:3, 3], [1, 1, 1])
     af = np.eye(4)
@@ -358,3 +506,73 @@ def dimino_affine_matrix_and_subsquent(
                             L_subs = L_subs + tmp
                         more = True
     return L, L_subs
+
+
+def get_character(qpoints, Zperiod_a, nrot):
+    qpoints = qpoints / Zperiod_a
+    Dataset_q = []
+    for qz in qpoints:
+        Dataset_q.append(line_group_4(Zperiod_a, nrot, qz))
+
+    sym = []
+    pg1 = [Cn(nrot), sigmaH()]
+    for pg in pg1:
+        tmp = SymmOp.from_rotation_and_translation(pg, [0, 0, 0])
+        sym.append(tmp.affine_matrix)
+    tran = SymmOp.from_rotation_and_translation(Cn(2 * nrot), [0, 0, 1 / 2])
+    sym.append(tran.affine_matrix)
+
+    ops, order = dimino_affine_matrix_and_subsquent(sym)
+
+    if len(ops) != len(order):
+        logging.ERROR("len(ops) != len(order)")
+
+    character_q = []
+    for ii, Dataset in enumerate(Dataset_q):
+        charas = Dataset.character_table
+        character = []
+        for jj, chara in enumerate(charas):
+            # ops, ops_chara = dimino_affine_matrix_and_character(sym, chara[0])
+            if chara[0].ndim == 1:
+                chara_order = np.hstack((1, chara[0][1:], chara[0][0]))
+                res = [np.prod(chara_order[tmp]) for tmp in order]
+                character.append(res)
+
+            elif chara[0].ndim == 3:
+                chara_order = np.vstack(
+                    (
+                        [np.eye(chara[0][0].shape[0])],
+                        chara[0][1:],
+                        [chara[0][0]],
+                    )
+                )
+
+                res = []
+                for tmp1 in order:
+                    if len(tmp1) == 1:
+                        res.append(np.trace(chara_order[tmp1][0]))
+                    else:
+                        tmp_matrices = chara_order[tmp1]
+                        tmp_mat = tmp_matrices[0]
+                        for idx in range(1, len(tmp1)):
+                            tmp_mat = np.dot(tmp_mat, tmp_matrices[idx])
+                        set_trace()
+                        res.append(np.trace(tmp_mat))
+
+                character.append(res)
+            else:
+                logging.ERROR("some error about the chara dim")
+        character_q.append(character)
+    return character_q, Dataset_q, ops
+
+
+def fast_orth(A, maxrank):
+    """Reimplementation of scipy.linalg.orth() which takes only the vectors with
+    values almost equal to the maximum, and returns at most maxrank vectors.
+    """
+    u, s, vh = svd(A, maxrank)
+    reference = s[0]
+    for i in range(s.size):
+        if abs(reference - s[i]) > 0.05 * reference:
+            return u[:, :i]
+    return u
