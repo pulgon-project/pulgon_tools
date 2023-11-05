@@ -328,7 +328,7 @@ def line_group_3(
 
 # @register_func
 def line_group_4(
-    a: float,
+    # a: float,
     n: int,
     k1: float,
     k2: float | bool = None,
@@ -341,7 +341,10 @@ def line_group_4(
     judge = True
     message = []
 
-    if k1 < 0 or k1 > np.pi / a:
+    # if k1 < 0 or k1 > np.pi / a:
+    #     judge = False
+    #     message.append("k1 not belong to [0,pi/a]")
+    if k1 < 0 or k1 > np.pi:
         judge = False
         message.append("k1 not belong to [0,pi/a]")
 
@@ -380,9 +383,14 @@ def line_group_4(
                 else:
                     tmp_m1 = comb
 
+            # if k2 != None:
+            #     if k2 < 2 * np.pi * tmp_m2 / n / a or k2 > (
+            #         2 * np.pi / a + 2 * np.pi * tmp_m2 / n / a
+            #     ):
+            #         continue
             if k2 != None:
-                if k2 < 2 * np.pi * tmp_m2 / n / a or k2 > (
-                    2 * np.pi / a + 2 * np.pi * tmp_m2 / n / a
+                if k2 < 2 * np.pi * tmp_m2 / n or k2 > (
+                    2 * np.pi + 2 * np.pi * tmp_m2 / n
                 ):
                     continue
 
@@ -402,12 +410,14 @@ def line_group_4(
                     [
                         [
                             [
-                                np.exp(1j * (tmp_m1 * np.pi / n + k1 * a / 2)),
+                                # np.exp(1j * (tmp_m1 * np.pi / n + k1 * a / 2)),
+                                np.exp(1j * (tmp_m1 * np.pi / n + k1 / 2)),
                                 0,
                             ],
                             [
                                 0,
-                                np.exp(1j * (tmp_m1 * np.pi / n - k1 * a / 2)),
+                                # np.exp(1j * (tmp_m1 * np.pi / n - k1 * a / 2)),
+                                np.exp(1j * (tmp_m1 * np.pi / n - k1 / 2)),
                             ],
                         ],
                         [
@@ -428,12 +438,15 @@ def line_group_4(
 
             if k2 != None:
                 if (
-                    k2 == 2 * np.pi * tmp_m2 / n / a
-                    or k2 == 2 * np.pi * tmp_m2 / n / a + 2 * np.pi / a
+                    # k2 == 2 * np.pi * tmp_m2 / n / a
+                    # or k2 == 2 * np.pi * tmp_m2 / n / a + 2 * np.pi / a
+                    k2 == 2 * np.pi * tmp_m2 / n
+                    or k2 == 2 * np.pi * tmp_m2 / n + 2 * np.pi
                 ):
                     irrep2 = np.round(
                         [
-                            np.exp(1j * k2 * a / 2),
+                            # np.exp(1j * k2 * a / 2),
+                            np.exp(1j * k2 / 2),
                             np.exp(1j * tmp_m2 * 2 * np.pi / n),
                             tmp_piH,
                         ],
@@ -444,12 +457,14 @@ def line_group_4(
                     irrep2 = np.round(
                         [
                             [
-                                [np.exp(1j * k2 * a / 2), 0],
+                                # [np.exp(1j * k2 * a / 2), 0],
+                                [np.exp(1j * k2 / 2), 0],
                                 [
                                     0,
                                     np.exp(
                                         1j
-                                        * (tmp_m2 * 2 * np.pi / n - k2 * a / 2)
+                                        * (tmp_m2 * 2 * np.pi / n - k2 / 2)
+                                        # * (tmp_m2 * 2 * np.pi / n - k2 * a / 2)
                                     ),
                                 ],
                             ],
@@ -470,7 +485,8 @@ def line_group_4(
                     tmp_qn.append(
                         (
                             (k2, tmp_m2),
-                            (-k2 + 4 * tmp_m2 * np.pi / n / a, tmp_m2),
+                            # (-k2 + 4 * tmp_m2 * np.pi / n / a, tmp_m2),
+                            (-k2 + 4 * tmp_m2 * np.pi / n, tmp_m2),
                         )
                     )
             if k2 != None:

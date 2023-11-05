@@ -512,7 +512,8 @@ def get_character(qpoints, Zperiod_a, nrot):
     qpoints = qpoints / Zperiod_a
     Dataset_q = []
     for qz in qpoints:
-        Dataset_q.append(line_group_4(Zperiod_a, nrot, qz))
+        # Dataset_q.append(line_group_4(Zperiod_a, nrot, qz))
+        Dataset_q.append(line_group_4(nrot, qz))
 
     sym = []
     pg1 = [Cn(nrot), sigmaH()]
@@ -523,6 +524,7 @@ def get_character(qpoints, Zperiod_a, nrot):
     sym.append(tran.affine_matrix)
 
     ops, order = dimino_affine_matrix_and_subsquent(sym)
+
     if len(ops) != len(order):
         logging.ERROR("len(ops) != len(order)")
 
@@ -536,7 +538,6 @@ def get_character(qpoints, Zperiod_a, nrot):
                 chara_order = np.hstack((1, chara[0][1:], chara[0][0]))
                 res = [np.prod(chara_order[tmp]) for tmp in order]
                 character.append(res)
-
             elif chara[0].ndim == 3:
                 chara_order = np.vstack(
                     (
@@ -545,7 +546,6 @@ def get_character(qpoints, Zperiod_a, nrot):
                         [chara[0][0]],
                     )
                 )
-
                 res = []
                 for tmp1 in order:
                     if len(tmp1) == 1:
@@ -556,8 +556,6 @@ def get_character(qpoints, Zperiod_a, nrot):
                         for idx in range(1, len(tmp1)):
                             tmp_mat = np.dot(tmp_mat, tmp_matrices[idx])
                         res.append(np.trace(tmp_mat))
-
-                    set_trace()
                 character.append(res)
             else:
                 logging.ERROR("some error about the chara dim")
@@ -572,6 +570,6 @@ def fast_orth(A, maxrank):
     u, s, vh = svd(A, maxrank)
     reference = s[0]
     for i in range(s.size):
-        if abs(reference - s[i]) > 0.05 * reference:
+        if abs(reference - s[i]) > 0.15 * reference:
             return u[:, :i]
     return u
