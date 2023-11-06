@@ -570,6 +570,6 @@ def fast_orth(A, maxrank):
     u, s, vh = svd(A, maxrank)
     reference = s[0]
     for i in range(s.size):
-        if abs(reference - s[i]) > 0.15 * reference:
+        if abs(reference - s[i]) > 0.17 * reference:
             return u[:, :i]
     return u
