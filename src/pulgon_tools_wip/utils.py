@@ -19,11 +19,13 @@ import logging
 
 import numpy as np
 import scipy.interpolate
+import sympy
 from ase import Atoms
 from ipdb import set_trace
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
 from scipy.linalg.interpolative import svd
+from sympy import symbols
 
 from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
 from pulgon_tools_wip.Irreps_tables import *
@@ -294,7 +296,6 @@ def get_perms_from_ops(atoms, ops_sym, symprec=1e-2):
             tmp = op.operate(pos)
             tmp1 = np.remainder(tmp @ np.linalg.inv(atoms.cell), [1, 1, 1])
             idx2 = find_in_coord_list(coords_scaled_center, tmp1, symprec)
-
             if idx2.size == 0:
                 logging.ERROR("tolerance exceed while calculate perms")
             tmp_perm[jj] = idx2
@@ -318,6 +319,7 @@ def get_matrices(atoms, ops_sym):
             matrix[3 * idx : 3 * (idx + 1), 3 * jj : 3 * (jj + 1)] = ops_sym[
                 ii
             ].rotation_matrix.copy()
+            # matrix[4 * idx : 4 * (idx + 1), 4 * jj : 4 * (jj + 1)] = ops_sym[ii].affine_matrix.copy()
         matrices.append(matrix)
     return matrices
 
@@ -509,11 +511,8 @@ def dimino_affine_matrix_and_subsquent(
 
 
 def get_character(qpoints, Zperiod_a, nrot):
-    qpoints = qpoints / Zperiod_a
-    Dataset_q = []
-    for qz in qpoints:
-        # Dataset_q.append(line_group_4(Zperiod_a, nrot, qz))
-        Dataset_q.append(line_group_4(nrot, qz))
+    # qpoints = qpoints / Zperiod_a
+    # qpoints = qpoints
 
     sym = []
     pg1 = [Cn(nrot), sigmaH()]
@@ -524,43 +523,69 @@ def get_character(qpoints, Zperiod_a, nrot):
     sym.append(tran.affine_matrix)
 
     ops, order = dimino_affine_matrix_and_subsquent(sym)
-
     if len(ops) != len(order):
         logging.ERROR("len(ops) != len(order)")
 
+    n, k1, m1, piH = symbols("n k1 m1 piH")
+    chara_funcs = line_group_4_sympy(nrot)
+
+    m_irrep = range(-8, 10)
     character_q = []
-    for ii, Dataset in enumerate(Dataset_q):
-        charas = Dataset.character_table
+    for ii, qz in enumerate(qpoints):
         character = []
-        for jj, chara in enumerate(charas):
+        for jj, tmp_m in enumerate(m_irrep):
+            print("Run in character qz=%s, m=%s" % (ii, jj - 8))
+
             # ops, ops_chara = dimino_affine_matrix_and_character(sym, chara[0])
-            if chara[0].ndim == 1:
-                chara_order = np.hstack((1, chara[0][1:], chara[0][0]))
-                res = [np.prod(chara_order[tmp]) for tmp in order]
+            if ii == 0:
+                chara_func1 = chara_funcs[0]
+                chara_order = np.hstack(
+                    (chara_func1[0], chara_func1[2:], chara_func1[1])
+                )
+
+                res = []
+                for tmp_order in order:
+                    tmp = np.prod(chara_order[tmp_order]).evalf(
+                        subs={n: nrot, k1: qz, m1: tmp_m, piH: 1}
+                    )
+                    res.append(tmp)
+                res = np.array(res).astype(np.complex128)
                 character.append(res)
-            elif chara[0].ndim == 3:
-                chara_order = np.vstack(
+            else:
+                chara_func1 = chara_funcs[1]
+                chara_order = np.array(
                     (
-                        [np.eye(chara[0][0].shape[0])],
-                        chara[0][1:],
-                        [chara[0][0]],
+                        chara_func1[0],
+                        chara_func1[2],
+                        chara_func1[3],
+                        chara_func1[1],
                     )
                 )
                 res = []
                 for tmp1 in order:
                     if len(tmp1) == 1:
-                        res.append(np.trace(chara_order[tmp1][0]))
+                        # res.append(sympy.simplify(np.trace(chara_order[tmp1][0])).evalf(subs={n:nrot, k1:qz, m1:tmp_m}) )
+                        res.append(
+                            np.trace(chara_order[tmp1][0]).evalf(
+                                subs={n: nrot, k1: qz, m1: tmp_m}
+                            )
+                        )
                     else:
                         tmp_matrices = chara_order[tmp1]
                         tmp_mat = tmp_matrices[0]
                         for idx in range(1, len(tmp1)):
                             tmp_mat = np.dot(tmp_mat, tmp_matrices[idx])
-                        res.append(np.trace(tmp_mat))
+                        res.append(
+                            np.trace(tmp_mat).evalf(
+                                subs={n: nrot, k1: qz, m1: tmp_m}
+                            )
+                        )
+
+                res = np.array(res).astype(np.complex128)
                 character.append(res)
-            else:
-                logging.ERROR("some error about the chara dim")
+
         character_q.append(character)
-    return character_q, Dataset_q, ops
+    return character_q, ops
 
 
 def fast_orth(A, maxrank):
@@ -569,7 +594,8 @@ def fast_orth(A, maxrank):
     """
     u, s, vh = svd(A, maxrank)
     reference = s[0]
-    for i in range(s.size):
-        if abs(reference - s[i]) > 0.17 * reference:
-            return u[:, :i]
-    return u
+    return u[:, :9]
+    # for i in range(s.size):
+    #     if abs(reference - s[i]) > 0.1 * reference:
+    #         return u[:, :i]
+    # return u

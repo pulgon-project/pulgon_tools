@@ -20,6 +20,8 @@ from pdb import set_trace
 
 import numpy as np
 import pretty_errors
+import sympy
+from sympy import symbols
 from sympy.ntheory.factor_ import totient
 
 
@@ -326,6 +328,54 @@ def line_group_3(
             print(tmp)
 
 
+def line_group_4_sympy(
+    n: int,
+    # k1: float,
+) -> CharacterDataset:
+    """T(a)Cnh"""
+    n, k1, m1, piH = symbols("n k1 m1 piH")
+
+    func0 = sympy.Matrix(
+        [
+            1,
+            sympy.exp(1j * m1 * sympy.pi / n),
+            sympy.exp(1j * m1 * 2 * sympy.pi / n),
+            piH,
+        ]
+    )
+
+    func1 = [
+        sympy.Matrix([[1, 0], [0, 1]]),
+        sympy.Matrix(
+            [
+                [
+                    sympy.exp(1j * (m1 * sympy.pi / n + k1 / 2)),
+                    0,
+                ],
+                [
+                    0,
+                    sympy.exp(1j * (m1 * sympy.pi / n - k1 / 2)),
+                ],
+            ]
+        ),
+        sympy.Matrix(
+            [
+                [
+                    sympy.exp(1j * m1 * 2 * sympy.pi / n),
+                    0,
+                ],
+                [
+                    0,
+                    sympy.exp(1j * m1 * 2 * sympy.pi / n),
+                ],
+            ]
+        ),
+        sympy.Matrix([[0, 1], [1, 0]]),
+    ]
+    func = [func0, func1]
+    return func
+
+
 # @register_func
 def line_group_4(
     # a: float,
@@ -412,12 +462,14 @@ def line_group_4(
                             [
                                 # np.exp(1j * (tmp_m1 * np.pi / n + k1 * a / 2)),
                                 np.exp(1j * (tmp_m1 * np.pi / n + k1 / 2)),
+                                # np.exp(1j * (tmp_m1 * np.pi / n)),
                                 0,
                             ],
                             [
                                 0,
                                 # np.exp(1j * (tmp_m1 * np.pi / n - k1 * a / 2)),
                                 np.exp(1j * (tmp_m1 * np.pi / n - k1 / 2)),
+                                # np.exp(1j * (tmp_m1 * np.pi / n)),
                             ],
                         ],
                         [
