@@ -19,6 +19,7 @@ import logging
 
 import numpy as np
 import scipy.interpolate
+import scipy.sparse as ss
 import sympy
 from ase import Atoms
 from ipdb import set_trace
@@ -297,6 +298,7 @@ def get_perms_from_ops(atoms, ops_sym, symprec=1e-2):
             tmp1 = np.remainder(tmp @ np.linalg.inv(atoms.cell), [1, 1, 1])
             idx2 = find_in_coord_list(coords_scaled_center, tmp1, symprec)
             if idx2.size == 0:
+                set_trace()
                 logging.ERROR("tolerance exceed while calculate perms")
             tmp_perm[jj] = idx2
 
@@ -599,3 +601,73 @@ def fast_orth(A, maxrank):
     #     if abs(reference - s[i]) > 0.1 * reference:
     #         return u[:, :i]
     # return u
+
+
+def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
+    """M K = 0
+
+    :param ops:
+    :param permutations:
+    :param diminsion:
+    :return:
+
+    """
+
+    if permutations.ndim == 2:
+        natom = len(permutations[0])
+    elif permutations.ndim == 1:
+        natom = len(permutations)
+        permutations = np.array([permutations])
+    else:
+        logging.ERROR("error for permutations' ndim")
+
+    if len(ops.shape) == 2:
+        ops = np.array([ops])
+
+    size1 = diminsion**2
+    I = np.eye(size1)
+    M = []
+    for ii, op in enumerate(ops):
+        print("now run in %s operarion" % ii)
+        perm = permutations[ii]
+        C = np.einsum(
+            "ij,kl->ikjl",
+            op[:diminsion, :diminsion],
+            op[:diminsion, :diminsion],
+        ).reshape(size1, size1)
+        x = ss.csc_matrix((size1 * (natom**2), size1 * (natom**2)))
+        if (perm == np.arange(natom)).all():
+            # x[np.arange(size1*(natom**2)), np.arange(size1*(natom**2))] = 1
+            M.append(x)
+            continue
+        # for ii, jj in list(itertools.product(np.arange(natom), np.arange(natom))):
+        #     x[(ii * natom + jj) * size1:(ii * natom + jj + 1) * size1, (ii * natom + jj) * size1:(ii * natom + jj + 1) * size1] = C
+        #     pii, pjj = perm[ii], perm[jj]
+        #     x[(ii * natom + jj) * size1:(ii * natom + jj + 1) * size1, (pii * natom + pjj) * size1:(pii * natom + pjj + 1) * size1] = -I
+
+        idx1 = np.repeat(np.arange(natom), natom)
+        idx2 = np.tile(np.arange(natom), natom)
+        pidx1 = perm[idx1]
+        pidx2 = perm[idx2]
+
+        tmp1 = (idx1 * natom + idx2) * size1
+        tmp2 = (idx1 * natom + idx2 + 1) * size1
+        tmp3 = np.array(
+            [np.arange(tmp1[ii], tmp2[ii]) for ii in range(len(tmp1))]
+        )
+
+        ptmp1 = (pidx1 * natom + pidx2) * size1
+        ptmp2 = (pidx1 * natom + pidx2 + 1) * size1
+        ptmp3 = np.array(
+            [np.arange(ptmp1[ii], ptmp2[ii]) for ii in range(len(ptmp1))]
+        )
+
+        itp1 = np.repeat(tmp3, size1, axis=1)
+        itp2 = np.tile(tmp3, (1, size1))
+        pitp2 = np.tile(ptmp3, (1, size1))
+
+        x[itp1, itp2] = C.flatten()
+        x[itp1, pitp2] = -I.flatten()  #
+
+        M.append(x)
+    return M
