@@ -596,7 +596,7 @@ def fast_orth(A, maxrank):
     """
     u, s, vh = svd(A, maxrank)
     reference = s[0]
-    return u[:, :9]
+    return u[:, :9]  # Todo: correct the number
     # for i in range(s.size):
     #     if abs(reference - s[i]) > 0.1 * reference:
     #         return u[:, :i]
@@ -627,6 +627,14 @@ def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
     size1 = diminsion**2
     I = np.eye(size1)
     M = []
+
+    idx1 = np.repeat(np.arange(natom), natom)
+    idx2 = np.tile(np.arange(natom), natom)
+
+    tmp1 = (idx1 * natom + idx2) * size1
+    tmp2 = (idx1 * natom + idx2 + 1) * size1
+    tmp3 = np.linspace(tmp1, tmp2, size1 + 1).astype(np.int64)[:-1, :].T
+    # tmp3 = np.array([np.arange(tmp1[ii], tmp2[ii]) for ii in range(len(tmp1))])
     for ii, op in enumerate(ops):
         print("now run in %s operarion" % ii)
         perm = permutations[ii]
@@ -635,7 +643,7 @@ def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
             op[:diminsion, :diminsion],
             op[:diminsion, :diminsion],
         ).reshape(size1, size1)
-        x = ss.csc_matrix((size1 * (natom**2), size1 * (natom**2)))
+        x = ss.csc_matrix((size1 * natom**2, size1 * natom**2))
         if (perm == np.arange(natom)).all():
             # x[np.arange(size1*(natom**2)), np.arange(size1*(natom**2))] = 1
             M.append(x)
@@ -644,30 +652,30 @@ def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
         #     x[(ii * natom + jj) * size1:(ii * natom + jj + 1) * size1, (ii * natom + jj) * size1:(ii * natom + jj + 1) * size1] = C
         #     pii, pjj = perm[ii], perm[jj]
         #     x[(ii * natom + jj) * size1:(ii * natom + jj + 1) * size1, (pii * natom + pjj) * size1:(pii * natom + pjj + 1) * size1] = -I
+        # ptmp1 = np.hstack(([(pidx1[ii] * natom + pidx2) * size1 for ii in range(len(pidx1))]))
+        # ptmp2 = np.hstack(([(pidx1[ii] * natom + pidx2 + 1) * size1 for ii in range(len(pidx1))]))
 
-        idx1 = np.repeat(np.arange(natom), natom)
-        idx2 = np.tile(np.arange(natom), natom)
         pidx1 = perm[idx1]
         pidx2 = perm[idx2]
 
-        tmp1 = (idx1 * natom + idx2) * size1
-        tmp2 = (idx1 * natom + idx2 + 1) * size1
-        tmp3 = np.array(
-            [np.arange(tmp1[ii], tmp2[ii]) for ii in range(len(tmp1))]
-        )
-
         ptmp1 = (pidx1 * natom + pidx2) * size1
         ptmp2 = (pidx1 * natom + pidx2 + 1) * size1
-        ptmp3 = np.array(
-            [np.arange(ptmp1[ii], ptmp2[ii]) for ii in range(len(ptmp1))]
-        )
+
+        # ptmp3 = np.array([np.arange(ptmp1[ii], ptmp2[ii]) for ii in range(len(ptmp1))])
+        ptmp3 = np.linspace(ptmp1, ptmp2, size1 + 1).astype(np.int64)[:-1, :].T
 
         itp1 = np.repeat(tmp3, size1, axis=1)
         itp2 = np.tile(tmp3, (1, size1))
         pitp2 = np.tile(ptmp3, (1, size1))
 
-        x[itp1, itp2] = C.flatten()
-        x[itp1, pitp2] = -I.flatten()  #
+        xl = x.tolil()
 
-        M.append(x)
+        xl[itp1, itp2] = C.flatten()
+        xl[itp1, pitp2] = -I.flatten()  #
+
+        M.append(xl)
+
+        print("end itp")
+
+    M = scipy.sparse.vstack((M))
     return M
