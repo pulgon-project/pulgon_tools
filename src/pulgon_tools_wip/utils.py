@@ -17,6 +17,7 @@ import itertools
 import json
 import logging
 
+import ase
 import numpy as np
 import scipy.interpolate
 import scipy.sparse as ss
@@ -211,6 +212,50 @@ def get_symcell(monomer: Atoms) -> Atoms:
     equ = list(apg.get_equivalent_atoms()["eq_sets"].keys())
     # sym = apg.get_symmetry_operations()
     return monomer[equ]
+
+
+def get_center_of_mass_periodic(atom):
+    L = np.array([1, 1, 1])
+    x = atom.get_scaled_positions()
+    theta = 2.0 * np.pi * x / L
+    mass = atom.get_masses()
+    mtheta = (
+        np.arctan2(
+            (-np.sin(theta) * np.expand_dims(mass, axis=1)).sum(axis=0)
+            / len(theta),
+            (-np.cos(theta) * np.expand_dims(mass, axis=1)).sum(axis=0)
+            / len(theta),
+        )
+        + np.pi
+    )
+    center = L * mtheta / 2.0 / np.pi
+
+    tmp = atom.get_center_of_mass(scaled=True)
+    center[2] = tmp[2]
+    return center
+
+
+def find_axis_center_of_nanotube(atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
+    """remove the center of structure to (x,y):(0.5,0.5)
+    Args:
+        atom: initial structure
+
+    Returns: centralized structure
+
+    """
+    n_st = atom.copy()
+    center = get_center_of_mass_periodic(atom)
+
+    pos = (
+        np.remainder(atom.get_scaled_positions() - center + 0.5, [1, 1, 1])
+        @ atom.cell
+    )
+    atoms = Atoms(
+        cell=n_st.cell,
+        numbers=n_st.numbers,
+        positions=pos,
+    )
+    return atoms
 
 
 def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
@@ -677,5 +722,76 @@ def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
 
         print("end itp")
 
+    M = scipy.sparse.vstack((M))
+    return M
+
+
+def get_sym_constrains_matrices_M_for_conpact_fc(
+    ops, perms_ops, perms_trans, p2s_map, natom_pri, diminsion=3
+):
+    """
+
+    :param ops:
+    :param perms_ops:
+    :param perms_trans:
+    :param p2s_map:
+    :param natom_pri:
+    :param diminsion:
+    :return:
+
+    """
+
+    natom = perms_ops.shape[1]
+    supercell = perms_trans.shape[0]
+    size1 = diminsion**2
+    I = np.eye(size1)
+    M = []
+
+    idx1 = np.repeat(np.arange(natom_pri), natom)
+    idx2 = np.tile(np.arange(natom), natom_pri)
+
+    tmp1 = (idx1 * natom + idx2) * size1
+    tmp2 = (idx1 * natom + idx2 + 1) * size1
+    tmp3 = np.linspace(tmp1, tmp2, size1 + 1).astype(np.int64)[:-1, :].T
+
+    itp1 = np.repeat(tmp3, size1, axis=1)
+    itp2 = np.tile(tmp3, (1, size1))
+
+    # ops = np.array(ops[1:2])
+    # perms_ops = perms_ops[1:2]
+    for ii, op in enumerate(ops):
+        print("now run in %s operarion" % ii)
+        perm = perms_ops[ii]
+        C = np.einsum(
+            "ij,kl->ikjl",
+            op[:diminsion, :diminsion],
+            op[:diminsion, :diminsion],
+        ).reshape(size1, size1)
+        x = ss.csc_matrix(
+            (size1 * natom * natom_pri, size1 * natom * natom_pri)
+        )
+
+        if (perm == np.arange(natom)).all():
+            # x[np.arange(size1*(natom**2)), np.arange(size1*(natom**2))] = 1
+            M.append(x)
+            continue
+        pidx1 = perms_trans[:, perm[idx1 * supercell]]
+        pindex1 = np.isin(pidx1, p2s_map)
+
+        pidx1 = (pidx1[pindex1] / supercell).astype(np.int32)
+        pidx2 = perms_trans[:, perm[idx2]][pindex1]
+        set_trace()
+
+        ptmp1 = (pidx1 * natom + pidx2) * size1
+        ptmp2 = (pidx1 * natom + pidx2 + 1) * size1
+
+        # ptmp3 = np.array([np.arange(ptmp1[ii], ptmp2[ii]) for ii in range(len(ptmp1))])
+        ptmp3 = np.linspace(ptmp1, ptmp2, size1 + 1).astype(np.int64)[:-1, :].T
+        pitp2 = np.tile(ptmp3, (1, size1))
+
+        xl = x.tolil()
+        xl[itp1, itp2] = C.flatten()
+        xl[itp1, pitp2] = -I.flatten()  #
+        M.append(xl)
     M = scipy.sparse.vstack((M))
     return M
