@@ -780,7 +780,6 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
 
         pidx1 = (pidx1[pindex1] / supercell).astype(np.int32)
         pidx2 = perms_trans[:, perm[idx2]][pindex1]
-        set_trace()
 
         ptmp1 = (pidx1 * natom + pidx2) * size1
         ptmp2 = (pidx1 * natom + pidx2 + 1) * size1
@@ -791,7 +790,8 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
 
         xl = x.tolil()
         xl[itp1, itp2] = C.flatten()
-        xl[itp1, pitp2] = -I.flatten()  #
+        xl[itp1, pitp2] = -I.flatten()
         M.append(xl)
+        # set_trace()
     M = scipy.sparse.vstack((M))
     return M
