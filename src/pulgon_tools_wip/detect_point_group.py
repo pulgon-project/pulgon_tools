@@ -61,6 +61,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
 
         self.mol = mol
         self.centered_mol = mol.get_centered_molecule()
+
         self.tol = tolerance
         self._zaxis = np.array([0, 0, 1])
 
@@ -85,6 +86,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
             )
             logging.debug("Start detecting U")
             self._check_perpendicular_r2_axis(self._zaxis)
+
             if len(self.rot_sym) >= 2:
                 logging.debug("U exist, start detecting dihedral group")
                 self._proc_dihedral()

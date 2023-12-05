@@ -247,9 +247,16 @@ def find_axis_center_of_nanotube(atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
     center = get_center_of_mass_periodic(atom)
 
     pos = (
-        np.remainder(atom.get_scaled_positions() - center + 0.5, [1, 1, 1])
+        # np.remainder(atom.get_scaled_positions() - center + 0.5, [1, 1, 1])
+        np.remainder(
+            atom.get_scaled_positions()
+            - [center[0], center[1], 0]
+            + [0.5, 0.5, 0],
+            [1, 1, 1],
+        )
         @ atom.cell
     )
+
     atoms = Atoms(
         cell=n_st.cell,
         numbers=n_st.numbers,
@@ -324,25 +331,24 @@ def get_perms_from_ops(atoms, ops_sym, symprec=1e-2):
     Returns: permutation table
     """
     natoms = len(atoms.numbers)
-    coords_car = atoms.positions
     coords_scaled = atoms.get_scaled_positions()
-    coords_car_center = (
-        atoms.get_scaled_positions() - [0.5, 0.5, 0.5]
-    ) @ atoms.cell
     coords_scaled_center = np.remainder(
-        coords_scaled - [0.5, 0.5, 0.5], [1, 1, 1]
+        coords_scaled - [0.5, 0.5, 0], [1, 1, 1]
     )
 
     perms = []
     for ii, op in enumerate(ops_sym):
         tmp_perm = np.zeros((1, len(atoms.numbers)))[0]
         for jj, site in enumerate(atoms):
-            pos = (site.scaled_position - [0.5, 0.5, 0.5]) @ atoms.cell
-
+            pos = (site.scaled_position - [0.5, 0.5, 0]) @ atoms.cell
             tmp = op.operate(pos)
             tmp1 = np.remainder(tmp @ np.linalg.inv(atoms.cell), [1, 1, 1])
             idx2 = find_in_coord_list(coords_scaled_center, tmp1, symprec)
+
             if idx2.size == 0:
+                idx = (coords_scaled_center[:, :2] == tmp1[:2]).all(axis=1)
+                res = coords_scaled_center[idx]
+
                 set_trace()
                 logging.ERROR("tolerance exceed while calculate perms")
             tmp_perm[jj] = idx2
@@ -438,7 +444,7 @@ def dimino_affine_matrix_and_character(
                     sg = affine_matrix_op(ss, g)
                     sg_chara = np.dot(ss_chara, g_chara)
 
-                    itp = ((sg - L).sum(axis=1).sum(axis=1) < 0.001).any()
+                    itp = (abs((sg - L).sum(axis=1).sum(axis=1)) < 0.001).any()
                     if not itp:
                         if C.ndim == 3:
                             C = np.vstack((C, [sg]))
@@ -480,6 +486,61 @@ def dimino_affine_matrix_and_character(
     return L, np.array(L_chara_trace)
 
 
+def dimino_affine_matrix(
+    generators: np.ndarray, symec: float = 0.001
+) -> np.ndarray:
+    """
+
+    Args:
+        generators: the generators of point group
+        symec: system precision
+
+    Returns: all the group elements and correspond character
+
+    """
+    e_in = np.eye(4)
+
+    G = generators
+    g, g1 = G[0].copy(), G[0].copy()
+    L = np.array([e_in])
+    while not ((g - e_in) < symec).all():
+        L = np.vstack((L, [g]))
+        g = affine_matrix_op(g, g1)
+    for ii in range(len(G)):
+        C = np.array([e_in])
+        L1 = L.copy()
+        more = True
+        while more:
+            more = False
+            for g in list(C):
+                for ss in G[: ii + 1]:
+                    sg = affine_matrix_op(ss, g)
+                    itp = (abs((sg - L).sum(axis=1).sum(axis=1)) < 0.001).any()
+                    if not itp:
+                        if C.ndim == 3:
+                            C = np.vstack((C, [sg]))
+                        else:
+                            C = np.array((C, sg))
+                        if L.ndim == 3:
+                            L = np.vstack(
+                                (
+                                    L,
+                                    np.array(
+                                        [affine_matrix_op(sg, t) for t in L1]
+                                    ),
+                                )
+                            )
+                        else:
+                            L = np.array(
+                                L,
+                                np.array(
+                                    [affine_matrix_op(sg, t) for t in L1]
+                                ),
+                            )
+                        more = True
+    return L
+
+
 def dimino_affine_matrix_and_subsquent(
     generators: np.ndarray, symec: float = 0.001
 ) -> np.ndarray:
@@ -492,7 +553,7 @@ def dimino_affine_matrix_and_subsquent(
     Returns: all the group elements and correspond character
 
     """
-    e_in = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+    e_in = np.eye(4)
 
     G = generators
     g, g1 = G[0].copy(), G[0].copy()
@@ -517,14 +578,13 @@ def dimino_affine_matrix_and_subsquent(
             more = False
             for jj, g in enumerate(list(C)):
                 g_subs = C_subs[jj]
-
                 for kk, ss in enumerate(G[: ii + 1]):
                     ss_subs = [kk + 1]
 
                     sg = affine_matrix_op(ss, g)
                     sg_subs = ss_subs + g_subs
 
-                    itp = ((sg - L).sum(axis=1).sum(axis=1) < 0.001).any()
+                    itp = (abs((sg - L).sum(axis=1).sum(axis=1)) < 0.001).any()
                     if not itp:
                         if C.ndim == 3:
                             C = np.vstack((C, [sg]))
@@ -712,22 +772,17 @@ def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
         itp1 = np.repeat(tmp3, size1, axis=1)
         itp2 = np.tile(tmp3, (1, size1))
         pitp2 = np.tile(ptmp3, (1, size1))
-
         xl = x.tolil()
-
         xl[itp1, itp2] = C.flatten()
         xl[itp1, pitp2] = -I.flatten()  #
-
         M.append(xl)
-
-        print("end itp")
 
     M = scipy.sparse.vstack((M))
     return M
 
 
 def get_sym_constrains_matrices_M_for_conpact_fc(
-    ops, perms_ops, perms_trans, p2s_map, natom_pri, diminsion=3
+    IFC, ops, perms_ops, perms_trans, p2s_map, natom_pri, diminsion=3
 ):
     """
 
@@ -746,6 +801,7 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
     size1 = diminsion**2
     I = np.eye(size1)
     M = []
+    res = 0
 
     idx1 = np.repeat(np.arange(natom_pri), natom)
     idx2 = np.tile(np.arange(natom), natom_pri)
@@ -756,9 +812,11 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
 
     itp1 = np.repeat(tmp3, size1, axis=1)
     itp2 = np.tile(tmp3, (1, size1))
+    res = 0
 
-    # ops = np.array(ops[1:2])
-    # perms_ops = perms_ops[1:2]
+    # ops = np.delete(ops,[18,36,54], axis=0)
+    # perms_ops = np.delete(perms_ops,[18,36,54], axis=0)
+    ops = np.round(ops, 12)
     for ii, op in enumerate(ops):
         print("now run in %s operarion" % ii)
         perm = perms_ops[ii]
@@ -772,14 +830,15 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
         )
 
         if (perm == np.arange(natom)).all():
-            # x[np.arange(size1*(natom**2)), np.arange(size1*(natom**2))] = 1
             M.append(x)
             continue
         pidx1 = perms_trans[:, perm[idx1 * supercell]]
         pindex1 = np.isin(pidx1, p2s_map)
 
-        pidx1 = (pidx1[pindex1] / supercell).astype(np.int32)
-        pidx2 = perms_trans[:, perm[idx2]][pindex1]
+        pidx1 = (pidx1[pindex1] / supercell).astype(
+            np.int32
+        )  # map the index i
+        pidx2 = perms_trans[:, perm[idx2]][pindex1]  # map the index j
 
         ptmp1 = (pidx1 * natom + pidx2) * size1
         ptmp2 = (pidx1 * natom + pidx2 + 1) * size1
@@ -790,8 +849,16 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
 
         xl = x.tolil()
         xl[itp1, itp2] = C.flatten()
-        xl[itp1, pitp2] = -I.flatten()
+        xl[itp1, pitp2] -= I.flatten()
+
+        res += xl.dot(IFC.flatten()).sum()
+        print(res)
+        if abs(res) > 1e-5:
+            print("now run in %s operarion" % ii)
+            print(res)
+            set_trace()
+
         M.append(xl)
-        # set_trace()
+    set_trace()
     M = scipy.sparse.vstack((M))
     return M
