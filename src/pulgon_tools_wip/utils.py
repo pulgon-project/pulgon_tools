@@ -265,6 +265,26 @@ def find_axis_center_of_nanotube(atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
     return atoms
 
 
+def atom_move_z(atom):
+    n_st = atom.copy()
+
+    pos = (
+        np.remainder(
+            atom.get_scaled_positions()
+            - [0, 0, atom.get_scaled_positions()[0][2]],
+            [1, 1, 1],
+        )
+        @ atom.cell
+    )
+
+    atoms = Atoms(
+        cell=n_st.cell,
+        numbers=n_st.numbers,
+        positions=pos,
+    )
+    return atoms
+
+
 def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
     """get the permutation table from symmetry operations
 
@@ -341,7 +361,11 @@ def get_perms_from_ops(atoms, ops_sym, symprec=1e-2):
         tmp_perm = np.zeros((1, len(atoms.numbers)))[0]
         for jj, site in enumerate(atoms):
             pos = (site.scaled_position - [0.5, 0.5, 0]) @ atoms.cell
-            tmp = op.operate(pos)
+            tmp = op.operate(pos) + [
+                0,
+                0,
+                1e-5,
+            ]  # atoms' z components close to 0
             tmp1 = np.remainder(tmp @ np.linalg.inv(atoms.cell), [1, 1, 1])
             idx2 = find_in_coord_list(coords_scaled_center, tmp1, symprec)
 
@@ -617,21 +641,23 @@ def dimino_affine_matrix_and_subsquent(
     return L, L_subs
 
 
-def get_character(qpoints, Zperiod_a, nrot):
+def get_character(qpoints, nrot, ops, order):
     # qpoints = qpoints / Zperiod_a
     # qpoints = qpoints
 
-    sym = []
-    pg1 = [Cn(nrot), sigmaH()]
-    for pg in pg1:
-        tmp = SymmOp.from_rotation_and_translation(pg, [0, 0, 0])
-        sym.append(tmp.affine_matrix)
-    tran = SymmOp.from_rotation_and_translation(Cn(2 * nrot), [0, 0, 1 / 2])
-    sym.append(tran.affine_matrix)
-
-    ops, order = dimino_affine_matrix_and_subsquent(sym)
-    if len(ops) != len(order):
-        logging.ERROR("len(ops) != len(order)")
+    # sym = []
+    # pg1 = [Cn(nrot), sigmaH()]
+    # pg1 = [Cn(nrot)]
+    # for pg in pg1:
+    #     tmp = SymmOp.from_rotation_and_translation(pg, [0, 0, 0])
+    #     sym.append(tmp.affine_matrix)
+    # tran = SymmOp.from_rotation_and_translation(Cn(2 * nrot), [0, 0, 1 / 2])
+    # sym.append(tran.affine_matrix)
+    #
+    # ops, order = dimino_affine_matrix_and_subsquent(sym)
+    #
+    # if len(ops) != len(order):
+    #     logging.ERROR("len(ops) != len(order)")
 
     n, k1, m1, piH = symbols("n k1 m1 piH")
     chara_funcs = line_group_4_sympy(nrot)
