@@ -859,6 +859,5 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
             set_trace()
 
         M.append(xl)
-    set_trace()
     M = scipy.sparse.vstack((M))
     return M
