@@ -250,8 +250,8 @@ def find_axis_center_of_nanotube(atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
         # np.remainder(atom.get_scaled_positions() - center + 0.5, [1, 1, 1])
         np.remainder(
             atom.get_scaled_positions()
-            - [center[0], center[1], 0]
-            + [0.5, 0.5, 0],
+            # - [center[0], center[1], 0]
+            - center + [0.5, 0.5, 0],
             [1, 1, 1],
         )
         @ atom.cell
@@ -361,18 +361,14 @@ def get_perms_from_ops(atoms, ops_sym, symprec=1e-2):
         tmp_perm = np.zeros((1, len(atoms.numbers)))[0]
         for jj, site in enumerate(atoms):
             pos = (site.scaled_position - [0.5, 0.5, 0]) @ atoms.cell
-            tmp = op.operate(pos) + [
-                0,
-                0,
-                1e-5,
-            ]  # atoms' z components close to 0
+            # tmp = op.operate(pos) + [0, 0, 1e-5]  # atoms' z components close to 0
+            tmp = op.operate(pos)
             tmp1 = np.remainder(tmp @ np.linalg.inv(atoms.cell), [1, 1, 1])
             idx2 = find_in_coord_list(coords_scaled_center, tmp1, symprec)
 
             if idx2.size == 0:
-                idx = (coords_scaled_center[:, :2] == tmp1[:2]).all(axis=1)
+                idx = coords_scaled_center[:, 2] == tmp1[2]
                 res = coords_scaled_center[idx]
-
                 set_trace()
                 logging.ERROR("tolerance exceed while calculate perms")
             tmp_perm[jj] = idx2
@@ -510,8 +506,27 @@ def dimino_affine_matrix_and_character(
     return L, np.array(L_chara_trace)
 
 
+def brute_force_generate_group(generators: np.ndarray, symec: float = 0.01):
+    e_in = np.eye(4)
+    G = generators
+    L = np.array([e_in])
+    while True:
+        new_ones = []
+        for g in L:
+            for h in G:
+                gh = affine_matrix_op(g, h)
+                judge = (abs(L - gh) < symec).all(axis=1).all(axis=1).any()
+                if not judge:
+                    new_ones.append(gh)
+        if new_ones:
+            L = np.concatenate((L, new_ones), axis=0)
+        else:
+            break
+    return L
+
+
 def dimino_affine_matrix(
-    generators: np.ndarray, symec: float = 0.001
+    generators: np.ndarray, symec: float = 0.01
 ) -> np.ndarray:
     """
 
@@ -530,6 +545,7 @@ def dimino_affine_matrix(
     while not ((g - e_in) < symec).all():
         L = np.vstack((L, [g]))
         g = affine_matrix_op(g, g1)
+    # set_trace()
     for ii in range(len(G)):
         C = np.array([e_in])
         L1 = L.copy()
@@ -539,7 +555,7 @@ def dimino_affine_matrix(
             for g in list(C):
                 for ss in G[: ii + 1]:
                     sg = affine_matrix_op(ss, g)
-                    itp = (abs((sg - L).sum(axis=1).sum(axis=1)) < 0.001).any()
+                    itp = (abs((sg - L).sum(axis=1).sum(axis=1)) < symec).any()
                     if not itp:
                         if C.ndim == 3:
                             C = np.vstack((C, [sg]))
@@ -861,10 +877,11 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
         pidx1 = perms_trans[:, perm[idx1 * supercell]]
         pindex1 = np.isin(pidx1, p2s_map)
 
-        pidx1 = (pidx1[pindex1] / supercell).astype(
+        # set_trace()
+        pidx1 = (pidx1.T[pindex1.T] / supercell).astype(
             np.int32
         )  # map the index i
-        pidx2 = perms_trans[:, perm[idx2]][pindex1]  # map the index j
+        pidx2 = perms_trans[:, perm[idx2]].T[pindex1.T]  # map the index j
 
         ptmp1 = (pidx1 * natom + pidx2) * size1
         ptmp2 = (pidx1 * natom + pidx2 + 1) * size1
@@ -877,12 +894,17 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
         xl[itp1, itp2] = C.flatten()
         xl[itp1, pitp2] -= I.flatten()
 
-        res += xl.dot(IFC.flatten()).sum()
+        res = abs(xl.dot(IFC.flatten())).sum()
+        # set_trace()
         print(res)
-        if abs(res) > 1e-5:
-            print("now run in %s operarion" % ii)
-            print(res)
+        if abs(res) > 40:
+            tmp = abs(xl.dot(IFC.flatten()))
+            print("max tmp=%s" % max(tmp))
+
+            # tmp1 = xl[itp*9:(itp+1)*9, pitp2[itp][0]:pitp2[itp][-1] + 1].todense() @ IFC.flatten()[pitp2[0][0]:pitp2[0][-1] + 1] + xl[itp*9:(itp+1)*9,itp*9:(itp+1)*9] @ IFC.flatten()[itp*9:(itp+1)*9]
             set_trace()
+
+            print("now run in %s operarion" % ii)
 
         M.append(xl)
     M = scipy.sparse.vstack((M))
