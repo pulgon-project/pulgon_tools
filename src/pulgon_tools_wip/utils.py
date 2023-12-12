@@ -877,7 +877,6 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
         pidx1 = perms_trans[:, perm[idx1 * supercell]]
         pindex1 = np.isin(pidx1, p2s_map)
 
-        # set_trace()
         pidx1 = (pidx1.T[pindex1.T] / supercell).astype(
             np.int32
         )  # map the index i
@@ -897,10 +896,9 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
         res = abs(xl.dot(IFC.flatten())).sum()
         # set_trace()
         print(res)
-        if abs(res) > 40:
+        if abs(res) > 50:
             tmp = abs(xl.dot(IFC.flatten()))
             print("max tmp=%s" % max(tmp))
-
             # tmp1 = xl[itp*9:(itp+1)*9, pitp2[itp][0]:pitp2[itp][-1] + 1].todense() @ IFC.flatten()[pitp2[0][0]:pitp2[0][-1] + 1] + xl[itp*9:(itp+1)*9,itp*9:(itp+1)*9] @ IFC.flatten()[itp*9:(itp+1)*9]
             set_trace()
 
