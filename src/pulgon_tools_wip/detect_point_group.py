@@ -14,7 +14,6 @@
 
 import argparse
 import logging
-from pdb import set_trace
 
 import ase
 import numpy as np
@@ -22,9 +21,15 @@ import pretty_errors
 from ase import Atoms
 from ase.io import read
 from ase.io.vasp import write_vasp
+from ipdb import set_trace
 from pymatgen.core import Molecule
 from pymatgen.core.operations import SymmOp
 from pymatgen.symmetry.analyzer import PointGroupAnalyzer
+
+from pulgon_tools_wip.utils import (
+    brute_force_generate_group,
+    find_axis_center_of_nanotube,
+)
 
 
 class LineGroupAnalyzer(PointGroupAnalyzer):
@@ -56,10 +61,12 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         logging.debug("--------------------start detecting axial point group")
 
         if type(mol) == Atoms:
-            mol = self._find_axis_center_of_nanotube(mol)
+            # mol = self._find_axis_center_of_nanotube(mol)
+            mol = find_axis_center_of_nanotube(mol)
             mol = Molecule(species=mol.numbers, coords=mol.positions)
 
         self.mol = mol
+        self.centered_mol = mol
         self.centered_mol = mol.get_centered_molecule()
 
         self.tol = tolerance
@@ -79,7 +86,6 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self.symmops = [SymmOp(np.eye(4))]
 
         self._check_rot_sym(self._zaxis)
-
         if len(self.rot_sym) > 0:
             logging.debug(
                 "The rot_num along zaxis is: %d" % self.rot_sym[0][1]
@@ -89,7 +95,9 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
 
             if len(self.rot_sym) >= 2:
                 logging.debug("U exist, start detecting dihedral group")
+
                 self._proc_dihedral()
+
             elif len(self.rot_sym) == 1:
                 logging.debug(
                     "U does not exist, leaving Cnh, Cnv and S2n as candidates"
@@ -168,6 +176,20 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
             positions=pos,
         )
         return atoms
+
+    # def get_symmetry_operations(self):
+    #     generators = [op.affine_matrix for op in self.symmops if not np.allclose(op.affine_matrix, np.eye(4))]
+    #     ops = brute_force_generate_group(generators, self.tol)
+    #     ops_sym = [SymmOp(op) for op in ops]
+    #     return ops_sym
+
+    def get_generators(self):
+        generators = [
+            op.affine_matrix
+            for op in self.symmops
+            if not np.allclose(op.affine_matrix, np.eye(4))
+        ]
+        return generators
 
 
 def main():

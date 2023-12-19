@@ -18,18 +18,20 @@ import json
 import logging
 
 import ase
+import cvxpy as cp
 import numpy as np
 import scipy.interpolate
 import scipy.sparse as ss
 import sympy
 from ase import Atoms
 from ipdb import set_trace
+from phonopy.units import VaspToTHz
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
 from scipy.linalg.interpolative import svd
 from sympy import symbols
 
-from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
+# from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
 from pulgon_tools_wip.Irreps_tables import *
 
 
@@ -245,13 +247,12 @@ def find_axis_center_of_nanotube(atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
     """
     n_st = atom.copy()
     center = get_center_of_mass_periodic(atom)
-
     pos = (
         # np.remainder(atom.get_scaled_positions() - center + 0.5, [1, 1, 1])
         np.remainder(
             atom.get_scaled_positions()
-            # - [center[0], center[1], 0]
-            - center + [0.5, 0.5, 0],
+            # - [center[0],center[1],0] + [0.5, 0.5, 0],
+            - center + [0.5, 0.5, 0.5],
             [1, 1, 1],
         )
         @ atom.cell
@@ -361,7 +362,7 @@ def get_perms_from_ops(atoms, ops_sym, symprec=1e-2):
         tmp_perm = np.zeros((1, len(atoms.numbers)))[0]
         for jj, site in enumerate(atoms):
             pos = (site.scaled_position - [0.5, 0.5, 0]) @ atoms.cell
-            # tmp = op.operate(pos) + [0, 0, 1e-5]  # atoms' z components close to 0
+
             tmp = op.operate(pos)
             tmp1 = np.remainder(tmp @ np.linalg.inv(atoms.cell), [1, 1, 1])
             idx2 = find_in_coord_list(coords_scaled_center, tmp1, symprec)
@@ -511,16 +512,15 @@ def brute_force_generate_group(generators: np.ndarray, symec: float = 0.01):
     G = generators
     L = np.array([e_in])
     while True:
-        new_ones = []
+        numL_old = len(L)
         for g in L:
             for h in G:
                 gh = affine_matrix_op(g, h)
                 judge = (abs(L - gh) < symec).all(axis=1).all(axis=1).any()
                 if not judge:
-                    new_ones.append(gh)
-        if new_ones:
-            L = np.concatenate((L, new_ones), axis=0)
-        else:
+                    L = np.concatenate((L, [gh]), axis=0)
+        numL_new = len(L)
+        if numL_old == numL_new:
             break
     return L
 
@@ -545,7 +545,6 @@ def dimino_affine_matrix(
     while not ((g - e_in) < symec).all():
         L = np.vstack((L, [g]))
         g = affine_matrix_op(g, g1)
-    # set_trace()
     for ii in range(len(G)):
         C = np.array([e_in])
         L1 = L.copy()
@@ -559,8 +558,6 @@ def dimino_affine_matrix(
                     if not itp:
                         if C.ndim == 3:
                             C = np.vstack((C, [sg]))
-                        else:
-                            C = np.array((C, sg))
                         if L.ndim == 3:
                             L = np.vstack(
                                 (
@@ -570,14 +567,8 @@ def dimino_affine_matrix(
                                     ),
                                 )
                             )
-                        else:
-                            L = np.array(
-                                L,
-                                np.array(
-                                    [affine_matrix_op(sg, t) for t in L1]
-                                ),
-                            )
                         more = True
+    L = np.unique(L, axis=0)
     return L
 
 
@@ -824,7 +815,7 @@ def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
 
 
 def get_sym_constrains_matrices_M_for_conpact_fc(
-    IFC, ops, perms_ops, perms_trans, p2s_map, natom_pri, diminsion=3
+    IFC, ops_sym, perms_ops, perms_trans, p2s_map, natom_pri, diminsion=3
 ):
     """
 
@@ -858,21 +849,20 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
 
     # ops = np.delete(ops,[18,36,54], axis=0)
     # perms_ops = np.delete(perms_ops,[18,36,54], axis=0)
-    ops = np.round(ops, 12)
-    for ii, op in enumerate(ops):
+    for ii, op in enumerate(ops_sym):
         print("now run in %s operarion" % ii)
         perm = perms_ops[ii]
         C = np.einsum(
             "ij,kl->ikjl",
-            op[:diminsion, :diminsion],
-            op[:diminsion, :diminsion],
+            op.rotation_matrix,
+            op.rotation_matrix,
         ).reshape(size1, size1)
         x = ss.csc_matrix(
             (size1 * natom * natom_pri, size1 * natom * natom_pri)
         )
 
         if (perm == np.arange(natom)).all():
-            M.append(x)
+            # M.append(x.tolil())
             continue
         pidx1 = perms_trans[:, perm[idx1 * supercell]]
         pindex1 = np.isin(pidx1, p2s_map)
@@ -894,16 +884,49 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
         xl[itp1, pitp2] -= I.flatten()
 
         res = abs(xl.dot(IFC.flatten())).sum()
-        # set_trace()
         print(res)
-        if abs(res) > 50:
+
+        if abs(res) > 1:
             tmp = abs(xl.dot(IFC.flatten()))
-            print("max tmp=%s" % max(tmp))
+            tmp1 = np.unique(tmp)[::-1]
+            print("max value equation=%s" % max(tmp))
             # tmp1 = xl[itp*9:(itp+1)*9, pitp2[itp][0]:pitp2[itp][-1] + 1].todense() @ IFC.flatten()[pitp2[0][0]:pitp2[0][-1] + 1] + xl[itp*9:(itp+1)*9,itp*9:(itp+1)*9] @ IFC.flatten()[itp*9:(itp+1)*9]
-            set_trace()
+            M.append(xl.tocsc())
+        else:
+            pass
 
-            print("now run in %s operarion" % ii)
-
-        M.append(xl)
     M = scipy.sparse.vstack((M))
+    M = M.tocsc()
     return M
+
+
+def get_IFCSYM_from_cvxpy_M(M, IFC):
+
+    flat_IFCs = IFC.ravel()
+    x = cp.Variable(IFC.size)
+    cost = cp.sum_squares(x - flat_IFCs)
+    prob = cp.Problem(cp.Minimize(cost), [M @ x == 0])
+    prob.solve()
+    IFC_sym = x.value.reshape(IFC.shape)
+    return IFC_sym
+
+
+def get_freq_and_dis_from_phonopy(phonon, qpoints):
+    frequencies = []
+    distances = []
+    for ii, q in enumerate(qpoints[0]):
+        D = phonon.get_dynamical_matrix_at_q(q)
+        eigvals, eigvecs = np.linalg.eigh(D)
+        eigvals = eigvals.real
+        frequencies.append(
+            np.sqrt(abs(eigvals)) * np.sign(eigvals) * VaspToTHz
+        )
+        if ii == 0:
+            distances.append(0)
+            q_last = q.copy()
+        else:
+            distances.append(
+                np.linalg.norm(np.dot(q - q_last, phonon.supercell.get_cell()))
+            )
+    frequencies = np.array(frequencies).T
+    return frequencies, distances
