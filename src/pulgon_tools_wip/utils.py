@@ -16,6 +16,7 @@ import copy
 import itertools
 import json
 import logging
+import time
 
 import ase
 import cvxpy as cp
@@ -30,6 +31,7 @@ from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
 from scipy.linalg.interpolative import svd
 from sympy import symbols
+from tqdm import tqdm
 
 # from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
 from pulgon_tools_wip.Irreps_tables import *
@@ -525,6 +527,30 @@ def brute_force_generate_group(generators: np.ndarray, symec: float = 0.01):
     return L
 
 
+def brute_force_generate_group_subsquent(
+    generators: np.ndarray, symec: float = 0.01
+):
+    e_in = np.eye(4)
+    G = generators
+    L = np.array([e_in])
+    L_seq = [[0]]
+    while True:
+        numL_old = len(L)
+        for ii, g in enumerate(L):
+            tmp_seq1 = L_seq[ii]
+            for jj, h in enumerate(G):
+                gh = affine_matrix_op(g, h)
+                tmp_seq2 = tmp_seq1 + [jj + 1]
+                judge = (abs(L - gh) < symec).all(axis=1).all(axis=1).any()
+                if not judge:
+                    L = np.concatenate((L, [gh]), axis=0)
+                    L_seq.append(tmp_seq2)
+        numL_new = len(L)
+        if numL_old == numL_new:
+            break
+    return L, L_seq
+
+
 def dimino_affine_matrix(
     generators: np.ndarray, symec: float = 0.01
 ) -> np.ndarray:
@@ -648,95 +674,22 @@ def dimino_affine_matrix_and_subsquent(
     return L, L_subs
 
 
-def get_character(qpoints, nrot, ops, order):
-    # qpoints = qpoints / Zperiod_a
-    # qpoints = qpoints
-
-    # sym = []
-    # pg1 = [Cn(nrot), sigmaH()]
-    # pg1 = [Cn(nrot)]
-    # for pg in pg1:
-    #     tmp = SymmOp.from_rotation_and_translation(pg, [0, 0, 0])
-    #     sym.append(tmp.affine_matrix)
-    # tran = SymmOp.from_rotation_and_translation(Cn(2 * nrot), [0, 0, 1 / 2])
-    # sym.append(tran.affine_matrix)
-    #
-    # ops, order = dimino_affine_matrix_and_subsquent(sym)
-    #
-    # if len(ops) != len(order):
-    #     logging.ERROR("len(ops) != len(order)")
-
-    n, k1, m1, piH = symbols("n k1 m1 piH")
-    chara_funcs = line_group_4_sympy(nrot)
-
-    m_irrep = range(-8, 10)
-    character_q = []
-    for ii, qz in enumerate(qpoints):
-        character = []
-        for jj, tmp_m in enumerate(m_irrep):
-            print("Run in character qz=%s, m=%s" % (ii, jj - 8))
-
-            # ops, ops_chara = dimino_affine_matrix_and_character(sym, chara[0])
-            if ii == 0:
-                chara_func1 = chara_funcs[0]
-                chara_order = np.hstack(
-                    (chara_func1[0], chara_func1[2:], chara_func1[1])
-                )
-
-                res = []
-                for tmp_order in order:
-                    tmp = np.prod(chara_order[tmp_order]).evalf(
-                        subs={n: nrot, k1: qz, m1: tmp_m, piH: 1}
-                    )
-                    res.append(tmp)
-                res = np.array(res).astype(np.complex128)
-                character.append(res)
-            else:
-                chara_func1 = chara_funcs[1]
-                chara_order = np.array(
-                    (
-                        chara_func1[0],
-                        chara_func1[2],
-                        chara_func1[3],
-                        chara_func1[1],
-                    )
-                )
-                res = []
-                for tmp1 in order:
-                    if len(tmp1) == 1:
-                        # res.append(sympy.simplify(np.trace(chara_order[tmp1][0])).evalf(subs={n:nrot, k1:qz, m1:tmp_m}) )
-                        res.append(
-                            np.trace(chara_order[tmp1][0]).evalf(
-                                subs={n: nrot, k1: qz, m1: tmp_m}
-                            )
-                        )
-                    else:
-                        tmp_matrices = chara_order[tmp1]
-                        tmp_mat = tmp_matrices[0]
-                        for idx in range(1, len(tmp1)):
-                            tmp_mat = np.dot(tmp_mat, tmp_matrices[idx])
-                        res.append(
-                            np.trace(tmp_mat).evalf(
-                                subs={n: nrot, k1: qz, m1: tmp_m}
-                            )
-                        )
-
-                res = np.array(res).astype(np.complex128)
-                character.append(res)
-
-        character_q.append(character)
-    return character_q, ops
+def get_character(qpoints, nrot, order, family, a):
+    characters, paras_values, paras_symbols = line_group_sympy(
+        family, qpoints, nrot, a, order
+    )
+    return characters, paras_values, paras_symbols
 
 
-def fast_orth(A, maxrank):
+def fast_orth(A, maxrank, num):
     """Reimplementation of scipy.linalg.orth() which takes only the vectors with
     values almost equal to the maximum, and returns at most maxrank vectors.
     """
     u, s, vh = svd(A, maxrank)
     reference = s[0]
-    return u[:, :9]  # Todo: correct the number
+    return u[:, :num]  # Todo: correct the number
     # for i in range(s.size):
-    #     if abs(reference - s[i]) > 0.1 * reference:
+    #     if abs(reference - s[i]) > 0.8 * reference:
     #         return u[:, :i]
     # return u
 
@@ -886,14 +839,11 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
         res = abs(xl.dot(IFC.flatten())).sum()
         print(res)
 
-        if abs(res) > 1:
+        if abs(res) > 1e-5:
             tmp = abs(xl.dot(IFC.flatten()))
             tmp1 = np.unique(tmp)[::-1]
             print("max value equation=%s" % max(tmp))
-            # tmp1 = xl[itp*9:(itp+1)*9, pitp2[itp][0]:pitp2[itp][-1] + 1].todense() @ IFC.flatten()[pitp2[0][0]:pitp2[0][-1] + 1] + xl[itp*9:(itp+1)*9,itp*9:(itp+1)*9] @ IFC.flatten()[itp*9:(itp+1)*9]
             M.append(xl.tocsc())
-        else:
-            pass
 
     M = scipy.sparse.vstack((M))
     M = M.tocsc()
@@ -901,12 +851,12 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
 
 
 def get_IFCSYM_from_cvxpy_M(M, IFC):
-
     flat_IFCs = IFC.ravel()
     x = cp.Variable(IFC.size)
     cost = cp.sum_squares(x - flat_IFCs)
     prob = cp.Problem(cp.Minimize(cost), [M @ x == 0])
     prob.solve()
+
     IFC_sym = x.value.reshape(IFC.shape)
     return IFC_sym
 

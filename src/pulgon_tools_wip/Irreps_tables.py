@@ -14,6 +14,7 @@
 
 import argparse
 import itertools
+import logging
 import math
 import typing
 from pdb import set_trace
@@ -23,6 +24,7 @@ import pretty_errors
 import sympy
 from sympy import symbols
 from sympy.ntheory.factor_ import totient
+from tqdm import tqdm
 
 
 def _cal_irrep_trace(irreps: list, symprec: float = 1e-3) -> list:
@@ -326,54 +328,6 @@ def line_group_3(
         print("error of input:")
         for tmp in message:
             print(tmp)
-
-
-def line_group_4_sympy(
-    n: int,
-    # k1: float,
-) -> CharacterDataset:
-    """T(a)Cnh"""
-    n, k1, m1, piH = symbols("n k1 m1 piH")
-
-    func0 = sympy.Matrix(
-        [
-            1,
-            sympy.exp(1j * m1 * sympy.pi / n),
-            sympy.exp(1j * m1 * 2 * sympy.pi / n),
-            piH,
-        ]
-    )
-
-    func1 = [
-        sympy.Matrix([[1, 0], [0, 1]]),
-        sympy.Matrix(
-            [
-                [
-                    sympy.exp(1j * (m1 * sympy.pi / n + k1 / 2)),
-                    0,
-                ],
-                [
-                    0,
-                    sympy.exp(1j * (m1 * sympy.pi / n - k1 / 2)),
-                ],
-            ]
-        ),
-        sympy.Matrix(
-            [
-                [
-                    sympy.exp(1j * m1 * 2 * sympy.pi / n),
-                    0,
-                ],
-                [
-                    0,
-                    sympy.exp(1j * m1 * 2 * sympy.pi / n),
-                ],
-            ]
-        ),
-        sympy.Matrix([[0, 1], [1, 0]]),
-    ]
-    func = [func0, func1]
-    return func
 
 
 # @register_func
@@ -2309,6 +2263,223 @@ def line_group_13(
         print("error of input:")
         for tmp in message:
             print(tmp)
+
+
+def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
+    if family == 4:
+        n, k1, m1, piH = symbols("n k1 m1 piH")
+
+        func0 = sympy.Matrix(
+            [
+                1,
+                sympy.exp(1j * m1 * sympy.pi / n),
+                sympy.exp(1j * m1 * 2 * sympy.pi / n),
+                piH,
+            ]
+        )
+
+        func1 = [
+            sympy.Matrix([[1, 0], [0, 1]]),
+            sympy.Matrix(
+                [
+                    [
+                        sympy.exp(1j * (m1 * sympy.pi / n + k1 / 2)),
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(1j * (m1 * sympy.pi / n - k1 / 2)),
+                    ],
+                ]
+            ),
+            sympy.Matrix(
+                [
+                    [
+                        sympy.exp(1j * m1 * 2 * sympy.pi / n),
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(1j * m1 * 2 * sympy.pi / n),
+                    ],
+                ]
+            ),
+            sympy.Matrix([[0, 1], [1, 0]]),
+        ]
+        func = [func0, func1]
+        paras = [n, k1, m1, piH]
+    elif family == 13:
+        n, k1, m1, f, piU, piV, piH = symbols("n k1 m1 f piU piV piH")
+        func0 = sympy.Matrix(
+            [
+                1,
+                sympy.exp(1j * m1 * sympy.pi / n),
+                1,
+                piU,
+                piV,
+            ]
+        )
+
+        func1 = [
+            sympy.Matrix(
+                [
+                    [1, 0],
+                    [
+                        0,
+                        1,
+                    ],
+                ]
+            ),
+            sympy.Matrix(
+                [
+                    [sympy.exp(1j * m1 * sympy.pi / n), 0],
+                    [0, sympy.exp(-1j * m1 * sympy.pi / n)],
+                ]
+            ),
+            sympy.Matrix(
+                [
+                    [
+                        sympy.exp(1j * 2 * m1 * sympy.pi / n),
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(-1j * 2 * m1 * sympy.pi / n),
+                    ],
+                ]
+            ),
+            sympy.Matrix(
+                [
+                    [
+                        0,
+                        piH,
+                    ],
+                    [
+                        piH,
+                        0,
+                    ],
+                ]
+            ),
+            sympy.Matrix([[0, 1], [1, 0]]),
+        ]
+        func2 = [
+            sympy.Matrix([[1, 0], [0, 1]]),
+            sympy.Matrix(
+                [
+                    [sympy.exp(1j * (m1 * sympy.pi / n + k1 * f)), 0],
+                    [0, sympy.exp(1j * (m1 * sympy.pi / n - k1 * f))],
+                ]
+            ),
+            sympy.Matrix([[0, 1], [1, 0]]),
+            sympy.Matrix([[0, piV], [piV, 0]]),
+            sympy.Matrix([[piV, 0], [0, piV]]),
+        ]
+        func3 = [
+            sympy.Matrix([[1, 0], [0, 1]]),
+            sympy.Matrix([[-1, 0], [0, 1]]),
+            sympy.Matrix([[-1, 0], [0, -1]]),
+            sympy.Matrix([[piU, 0], [0, piU]]),
+            sympy.Matrix([[0, 1], [1, 0]]),
+        ]
+        func4 = [
+            sympy.Matrix(
+                [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
+            ),
+            sympy.Matrix(
+                [
+                    [sympy.exp(1j * (m1 * sympy.pi / n + k1 * f)), 0, 0, 0],
+                    [0, sympy.exp(1j * (-m1 * sympy.pi / n + k1 * f)), 0, 0],
+                    [0, 0, sympy.exp(1j * (m1 * sympy.pi / n - k1 * f)), 0],
+                    [0, 0, 0, sympy.exp(1j * (-m1 * sympy.pi / n - k1 * f))],
+                ]
+            ),
+            sympy.Matrix(
+                [
+                    [sympy.exp(1j * 2 * sympy.pi * m1 / n), 0, 0, 0],
+                    [0, sympy.exp(-1j * 2 * sympy.pi * m1 / n), 0, 0],
+                    [0, 0, sympy.exp(1j * 2 * sympy.pi * m1 / n), 0],
+                    [0, 0, 0, sympy.exp(-1j * 2 * sympy.pi * m1 / n)],
+                ]
+            ),
+            sympy.Matrix(
+                [[0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0]]
+            ),
+            sympy.Matrix(
+                [[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
+            ),
+        ]
+        func = [func0, func1, func2, func3, func4]
+
+        n_value = [int(nrot / 2)]
+        m1_value = list(range(0, int(nrot / 2) + 1))
+        f_value = [a / 2]
+        paras_values = list(
+            itertools.product(
+                *[qpoints, m1_value, n_value, f_value, [-1], [-1], [-1]]
+            )
+        )
+        # paras_values = list(itertools.product(*[qpoints, m1_value, n_value, f_value, [-1, 1], [-1, 1], [-1, 1]]))
+        paras_symbol = [k1, m1, n, f, piU, piV, piH]
+
+        print("Now getting characters:")
+        characters = []
+        for ii, paras_value in enumerate(tqdm(paras_values)):
+            tmp_k1, tmp_m1, tmp_n, tmp_f, tmppiU, tmppiV, tmppiH = paras_value
+
+            if np.isclose(tmp_k1, 0, atol=symprec):
+                if tmp_m1 == 0 or tmp_m1 == tmp_n:
+                    fc = func[0]
+                elif 0 < tmp_m1 < tmp_n:
+                    fc = func[1]
+                else:
+                    logging.ERROR("Wrong value for m1")
+            elif np.isclose(tmp_k1, np.pi, atol=symprec):
+                if np.isclose(tmp_m1, tmp_n / 2, atol=symprec):
+                    fc = func[3]
+                elif np.isclose(tmp_m1, 0, atol=symprec):
+                    fc = func[2]
+                elif 0 < tmp_m1 < tmp_n / 2:
+                    fc = func[4]
+                else:
+                    logging.ERROR("Wrong value for m1")
+            elif 0 < tmp_k1 < np.pi:
+                if np.isclose(tmp_m1, 0, atol=symprec) or np.isclose(
+                    tmp_m1, tmp_n, atol=symprec
+                ):
+                    fc = func[2]
+                elif 0 < tmp_m1 < tmp_n:
+                    fc = func[4]
+                else:
+                    logging.ERROR("Wrong value for m1")
+            else:
+                logging.ERROR("Wrong value for k1")
+
+            res = []
+            for tmp_order in order:
+                for jj, tmp in enumerate(tmp_order):
+                    if jj == 0:
+                        tmp0 = fc[tmp]
+                    else:
+                        tmp0 = tmp0 * fc[tmp]
+
+                tmp1 = tmp0.evalf(
+                    subs={
+                        k1: tmp_k1,
+                        m1: tmp_m1,
+                        n: tmp_n,
+                        f: tmp_f,
+                        piU: tmppiU,
+                        piV: tmppiV,
+                        piH: tmppiH,
+                    }
+                )
+                if tmp1.is_Matrix:
+                    res.append(tmp1.trace())
+                else:
+                    res.append(tmp1)
+            res = np.array(res).astype(np.complex128)
+            characters.append(res)
+    return characters, paras_values, paras_symbol
 
 
 def main():

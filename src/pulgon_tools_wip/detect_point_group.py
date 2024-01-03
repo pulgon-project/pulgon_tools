@@ -86,6 +86,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self.symmops = [SymmOp(np.eye(4))]
 
         self._check_rot_sym(self._zaxis)
+
         if len(self.rot_sym) > 0:
             logging.debug(
                 "The rot_num along zaxis is: %d" % self.rot_sym[0][1]
