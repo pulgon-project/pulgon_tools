@@ -800,8 +800,13 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
     itp2 = np.tile(tmp3, (1, size1))
     res = 0
 
-    # ops = np.delete(ops,[18,36,54], axis=0)
-    # perms_ops = np.delete(perms_ops,[18,36,54], axis=0)
+    # set_trace()
+    ops_sym = np.array(ops_sym)
+    perms_ops = np.array(perms_ops)
+    # ops_sym = np.delete(ops_sym,[0,1,2], axis=0)
+    # perms_ops = np.delete(perms_ops,[0,1,2], axis=0)
+    # ops_sym = ops_sym[10:]
+    # perms_ops = perms_ops[10:]
     for ii, op in enumerate(ops_sym):
         print("now run in %s operarion" % ii)
         perm = perms_ops[ii]
@@ -836,14 +841,28 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
         xl[itp1, itp2] = C.flatten()
         xl[itp1, pitp2] -= I.flatten()
 
+        # xl = xl.transpose()
+        # res1 = np.sort(abs(xl.dot(IFC.flatten())))[::-1]
+        # res2 = abs(xl.dot(IFC.flatten()))
         res = abs(xl.dot(IFC.flatten())).sum()
-        print(res)
+        # print("res1:", res1)
+        print("res:", res)
+        # set_trace()
 
-        if abs(res) > 1e-5:
-            tmp = abs(xl.dot(IFC.flatten()))
-            tmp1 = np.unique(tmp)[::-1]
-            print("max value equation=%s" % max(tmp))
-            M.append(xl.tocsc())
+        # res2 = abs(tmp1-res1).sum()
+        # tmp_res1 = res1.copy()
+        # tmp_res2 = res2.copy()
+        #
+        # tmp_xl = xl.copy()
+        # tmp_C = C.copy()
+        # tmp_itp2 = itp2.copy()
+        # tmp_pitp2 = pitp2.copy()
+
+        # if abs(res) > 1e-5:
+        #     tmp = abs(xl.dot(IFC.flatten()))
+        #     tmp1 = np.unique(tmp)[::-1]
+        #     print("max value equation=%s" % max(tmp))
+        M.append(xl.tocsc())
 
     M = scipy.sparse.vstack((M))
     M = M.tocsc()
