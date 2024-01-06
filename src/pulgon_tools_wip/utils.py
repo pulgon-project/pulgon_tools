@@ -800,13 +800,12 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
     itp2 = np.tile(tmp3, (1, size1))
     res = 0
 
-    # set_trace()
     ops_sym = np.array(ops_sym)
     perms_ops = np.array(perms_ops)
     # ops_sym = np.delete(ops_sym,[0,1,2], axis=0)
     # perms_ops = np.delete(perms_ops,[0,1,2], axis=0)
-    # ops_sym = ops_sym[10:]
-    # perms_ops = perms_ops[10:]
+    # ops_sym = ops_sym[[0,2]]
+    # perms_ops = perms_ops[[0,2]]
     for ii, op in enumerate(ops_sym):
         print("now run in %s operarion" % ii)
         perm = perms_ops[ii]
@@ -822,18 +821,33 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
         if (perm == np.arange(natom)).all():
             # M.append(x.tolil())
             continue
-        pidx1 = perms_trans[:, perm[idx1 * supercell]]
+
+        pidx1 = np.repeat(perms_trans[:, perm[p2s_map]], natom, axis=1)
         pindex1 = np.isin(pidx1, p2s_map)
 
-        pidx1 = (pidx1.T[pindex1.T] / supercell).astype(
+        # set_trace()
+        # pidx11 = (pidx1.T[pindex1.T] / supercell).astype(np.int32)  # map the index i
+        # pidx22 = perms_trans[:, perm[idx2]].T[pindex1.T]  # map the index j
+        # pidx1 = (pidx1[pindex1] / supercell).astype(np.int32)
+        # pidx2 = perms_trans[:, perm[idx2]][pindex1]  # map the index j
+
+        row_indices, col_indices = np.where(pindex1 == True)
+        sorted_col_indices = np.argsort(col_indices)
+        pidx1 = (
+            pidx1[
+                row_indices[sorted_col_indices],
+                col_indices[sorted_col_indices],
+            ]
+            / supercell
+        ).astype(
             np.int32
-        )  # map the index i
-        pidx2 = perms_trans[:, perm[idx2]].T[pindex1.T]  # map the index j
+        )  # i / supercell
+        pidx2 = perms_trans[:, perm[idx2]][
+            row_indices[sorted_col_indices], col_indices[sorted_col_indices]
+        ]  # map the index j
 
         ptmp1 = (pidx1 * natom + pidx2) * size1
         ptmp2 = (pidx1 * natom + pidx2 + 1) * size1
-
-        # ptmp3 = np.array([np.arange(ptmp1[ii], ptmp2[ii]) for ii in range(len(ptmp1))])
         ptmp3 = np.linspace(ptmp1, ptmp2, size1 + 1).astype(np.int64)[:-1, :].T
         pitp2 = np.tile(ptmp3, (1, size1))
 
@@ -841,28 +855,21 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
         xl[itp1, itp2] = C.flatten()
         xl[itp1, pitp2] -= I.flatten()
 
-        # xl = xl.transpose()
-        # res1 = np.sort(abs(xl.dot(IFC.flatten())))[::-1]
-        # res2 = abs(xl.dot(IFC.flatten()))
         res = abs(xl.dot(IFC.flatten())).sum()
-        # print("res1:", res1)
-        print("res:", res)
-        # set_trace()
+        print(res)
+        if abs(res) > 1e-5:
+            tmp = abs(xl.dot(IFC.flatten()))
+            tmp1 = np.unique(tmp)[::-1]
 
-        # res2 = abs(tmp1-res1).sum()
-        # tmp_res1 = res1.copy()
-        # tmp_res2 = res2.copy()
-        #
-        # tmp_xl = xl.copy()
-        # tmp_C = C.copy()
-        # tmp_itp2 = itp2.copy()
-        # tmp_pitp2 = pitp2.copy()
+            itp = np.where(np.isclose(tmp, tmp[1], atol=1e-6))[0]
+            xl1 = xl[itp]
 
-        # if abs(res) > 1e-5:
-        #     tmp = abs(xl.dot(IFC.flatten()))
-        #     tmp1 = np.unique(tmp)[::-1]
-        #     print("max value equation=%s" % max(tmp))
-        M.append(xl.tocsc())
+            # print("itp:",itp)
+            # print("data:", xl1.data)
+            # print("xl1 rows:", xl1.rows)
+            print("max value equation=%s" % max(tmp))
+            M.append(xl.tocsc())
+            # set_trace()
 
     M = scipy.sparse.vstack((M))
     M = M.tocsc()
@@ -875,7 +882,6 @@ def get_IFCSYM_from_cvxpy_M(M, IFC):
     cost = cp.sum_squares(x - flat_IFCs)
     prob = cp.Problem(cp.Minimize(cost), [M @ x == 0])
     prob.solve()
-
     IFC_sym = x.value.reshape(IFC.shape)
     return IFC_sym
 
