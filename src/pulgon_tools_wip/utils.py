@@ -914,17 +914,7 @@ def _calc_dists(atoms, tolerance=1e-3):
     return (dmin, nequi, shifts)
 
 
-def get_continum_constrains_matrices_M_for_conpact_fc(path, dirs):
-    qpoints, connections = get_band_qpoints_and_path_connections(
-        path, npoints=101
-    )
-    path_yaml = os.path.join(dirs, "phonopy.yaml")
-    path_force_set = os.path.join(dirs, "FORCE_SETS")
-    phonon = phonopy.load(
-        phonopy_yaml=path_yaml,
-        force_sets_filename=path_force_set,
-        is_compact_fc=True,
-    )
+def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
 
     IFC = phonon.force_constants.copy()
     scell = phonon.supercell
