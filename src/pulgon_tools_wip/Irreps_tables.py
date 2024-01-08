@@ -2477,6 +2477,7 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
                     res.append(tmp1.trace())
                 else:
                     res.append(tmp1)
+                # res.append(tmp1)
             res = np.array(res).astype(np.complex128)
             characters.append(res)
     return characters, paras_values, paras_symbol

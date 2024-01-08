@@ -16,16 +16,21 @@ import copy
 import itertools
 import json
 import logging
+import os.path
 import time
 
 import ase
 import cvxpy as cp
 import numpy as np
+import phonopy
+import scipy as sp
 import scipy.interpolate
 import scipy.sparse as ss
+import scipy.spatial.distance
 import sympy
 from ase import Atoms
 from ipdb import set_trace
+from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
 from phonopy.units import VaspToTHz
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
@@ -686,10 +691,10 @@ def fast_orth(A, maxrank, num):
     values almost equal to the maximum, and returns at most maxrank vectors.
     """
     u, s, vh = svd(A, maxrank)
-    reference = s[0]
+    # reference = s[0]
     return u[:, :num]  # Todo: correct the number
     # for i in range(s.size):
-    #     if abs(reference - s[i]) > 0.8 * reference:
+    #     if abs(reference - s[i]) > 0.05 * reference:
     #         return u[:, :i]
     # return u
 
@@ -804,8 +809,8 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
     perms_ops = np.array(perms_ops)
     # ops_sym = np.delete(ops_sym,[0,1,2], axis=0)
     # perms_ops = np.delete(perms_ops,[0,1,2], axis=0)
-    # ops_sym = ops_sym[[0,2]]
-    # perms_ops = perms_ops[[0,2]]
+    # ops_sym = ops_sym[[0,1,2]]
+    # perms_ops = perms_ops[[0,1,2]]
     for ii, op in enumerate(ops_sym):
         print("now run in %s operarion" % ii)
         perm = perms_ops[ii]
@@ -868,12 +873,210 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
             # print("data:", xl1.data)
             # print("xl1 rows:", xl1.rows)
             print("max value equation=%s" % max(tmp))
-            M.append(xl.tocsc())
-            # set_trace()
+        M.append(xl.tocsc())
+        # set_trace()
 
     M = scipy.sparse.vstack((M))
     M = M.tocsc()
     return M
+
+
+def _calc_dists(atoms, tolerance=1e-3):
+    """
+    Return the distances between atoms in the supercell, their
+    degeneracies and the associated displacements along OZ.
+    """
+    MIN_DELTA = -1
+    MAX_DELTA = 1
+    positions = atoms.positions
+    cell = atoms.cell
+    n_satoms = positions.shape[0]
+    d2s = np.empty((MAX_DELTA - MIN_DELTA + 1, n_satoms, n_satoms))
+
+    # TODO: This could not be enough and eventually we should do a proper check
+    # for the shortest distance.
+    for j, j_c in enumerate(range(MIN_DELTA, MAX_DELTA + 1)):
+        shifted_positions = positions + (j_c * cell[2, :])[np.newaxis, :]
+        d2s[j, :, :] = sp.spatial.distance.cdist(
+            positions, shifted_positions, "sqeuclidean"
+        )
+        # d2s[j, :, :] = sp.spatial.distance.cdist(positions, shifted_positions)
+    d2min = d2s.min(axis=0)
+    dmin = np.sqrt(d2min)
+    degenerate = np.abs(d2s - d2min) < tolerance
+    nequi = degenerate.sum(axis=0, dtype=int)
+
+    maxequi = nequi.max()
+    shifts = np.empty((n_satoms, n_satoms, maxequi))
+    sorting = np.argsort(np.logical_not(degenerate), axis=0)
+    shifts = np.transpose(sorting[:maxequi, :, :], (1, 2, 0)).astype(np.intc)
+    shifts = np.asarray(range(MIN_DELTA, MAX_DELTA + 1))[shifts]
+    return (dmin, nequi, shifts)
+
+
+def get_continum_constrains_matrices_M_for_conpact_fc(path, dirs):
+    qpoints, connections = get_band_qpoints_and_path_connections(
+        path, npoints=101
+    )
+    path_yaml = os.path.join(dirs, "phonopy.yaml")
+    path_force_set = os.path.join(dirs, "FORCE_SETS")
+    phonon = phonopy.load(
+        phonopy_yaml=path_yaml,
+        force_sets_filename=path_force_set,
+        is_compact_fc=True,
+    )
+
+    IFC = phonon.force_constants.copy()
+    scell = phonon.supercell
+
+    symbols = scell.symbols
+    cell = scell.cell
+    positions = (
+        (scell.scaled_positions + np.asarray([0.5, 0.5, 0.0])[np.newaxis, :])
+        % 1.0
+    ) @ cell
+    # positions = ((scell.get_scaled_positions() + np.asarray([0.5, 0.5, 0.0])[np.newaxis, :]) % 1.0) @ cell
+
+    ase_atoms = ase.Atoms(symbols, positions, cell=cell, pbc=True)
+    dists, degeneracy, shifts = _calc_dists(ase_atoms)
+    n_satoms = len(symbols)
+
+    # %%
+    average_delta = np.zeros((n_satoms, n_satoms, 3))
+    for i in range(n_satoms):
+        for j in range(n_satoms):
+            n_elements = degeneracy[i, j]
+            # n_elements=1
+            for i_d in range(n_elements):
+                average_delta[i, j, :] += (
+                    positions[j, :]
+                    - positions[i, :]
+                    + shifts[i, j, i_d] * cell[2, :]
+                )
+            average_delta[i, j, :] /= n_elements
+
+    average_pos = scell.scaled_positions @ cell
+
+    # %%
+    average_products = np.zeros((n_satoms, n_satoms, 3, 3))
+    for i in range(n_satoms):
+        for j in range(n_satoms):
+            n_elements = degeneracy[i, j]
+            # n_elements=1
+            for i_d in range(n_elements):
+                delta = (
+                    positions[j, :]
+                    - positions[i, :]
+                    + shifts[i, j, i_d] * cell[2, :]
+                )
+                average_products[i, j, :, :] += np.outer(delta, delta)
+            average_products[i, j, :, :] /= n_elements
+
+    M1 = ss.coo_array(([]))
+
+    # Append the acoustic sum rules originating from translations.
+    n_atoms, n_satoms = IFC.shape[:2]
+    n_rows = M1.shape[0]
+    rows = M1.row.tolist()
+    cols = M1.col.tolist()
+    data = M1.data.tolist()
+
+    # translational sum rules
+    for i in range(n_atoms):
+        for alpha in range(3):
+            for beta in range(3):
+                for j in range(n_satoms):
+                    rows.append(n_rows)
+                    cols.append(
+                        np.ravel_multi_index((i, j, alpha, beta), IFC.shape)
+                    )
+                    data.append(1.0)
+                n_rows += 1
+
+    # The same but for rotations (Born-Huang).
+    positions = phonon.supercell.positions
+    for i in range(n_atoms):
+        for alpha in range(3):
+            for beta in range(3):
+                for gamma in range(3):
+                    for j in range(n_satoms):
+                        r_ij = average_delta[phonon.primitive.p2s_map[i], j]
+                        rows.append(n_rows)
+                        cols.append(
+                            np.ravel_multi_index(
+                                (i, j, alpha, beta), IFC.shape
+                            )
+                        )
+                        data.append(r_ij[gamma])
+                        # data.append(positions[j][gamma])
+                        # data.append(average_pos[j][gamma])
+
+                        rows.append(n_rows)
+                        cols.append(
+                            np.ravel_multi_index(
+                                (i, j, alpha, gamma), IFC.shape
+                            )
+                        )
+                        data.append(-r_ij[beta])
+                        # data.append(-positions[j][beta])
+                        # data.append(-average_pos[j][beta])
+                    # set_trace()
+                    n_rows += 1
+    # set_trace()
+
+    # And fthe Huang invariances, also for rotation.
+    for alpha in range(3):
+        for beta in range(3):
+            for gamma in range(3):
+                for delta in range(3):
+                    for i in range(n_atoms):
+                        for j in range(n_satoms):
+                            products = average_products[
+                                phonon.primitive.p2s_map[i], j
+                            ]
+                            rows.append(n_rows)
+                            cols.append(
+                                np.ravel_multi_index(
+                                    (i, j, alpha, beta), IFC.shape
+                                )
+                            )
+                            data.append(products[gamma, delta])
+                            rows.append(n_rows)
+                            cols.append(
+                                np.ravel_multi_index(
+                                    (i, j, gamma, delta), IFC.shape
+                                )
+                            )
+                            data.append(-products[alpha, beta])
+                    n_rows += 1
+
+    # Make sure the IFC matrix is symmetric.
+    for i in range(n_atoms):
+        for j in range(n_atoms):
+            for alpha in range(3):
+                for beta in range(3):
+                    rows.append(n_rows)
+                    cols.append(
+                        np.ravel_multi_index(
+                            (i, phonon.primitive.p2s_map[j], alpha, beta),
+                            IFC.shape,
+                        )
+                    )
+
+                    data.append(1.0)
+                    rows.append(n_rows)
+                    cols.append(
+                        np.ravel_multi_index(
+                            (j, phonon.primitive.p2s_map[i], beta, alpha),
+                            IFC.shape,
+                        )
+                    )
+                    data.append(-1.0)
+                    n_rows += 1
+
+    # Rebuild the sparse matrix.
+    M1 = ss.coo_array((data, (rows, cols)), shape=(n_rows, IFC.size))
+    return M1
 
 
 def get_IFCSYM_from_cvxpy_M(M, IFC):
