@@ -92,6 +92,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
                 "The rot_num along zaxis is: %d" % self.rot_sym[0][1]
             )
             logging.debug("Start detecting U")
+
             self._check_perpendicular_r2_axis(self._zaxis)
 
             if len(self.rot_sym) >= 2:

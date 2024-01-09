@@ -2267,7 +2267,7 @@ def line_group_13(
 
 def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
     if family == 4:
-        n, k1, m1, piH = symbols("n k1 m1 piH")
+        k1, m1, n, piH = symbols("k1 m1 n piH")
 
         func0 = sympy.Matrix(
             [
@@ -2306,8 +2306,54 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
             ),
             sympy.Matrix([[0, 1], [1, 0]]),
         ]
+
         func = [func0, func1]
-        paras = [n, k1, m1, piH]
+
+        n_value = [nrot]
+        m1_value = list(range(-nrot + 1, nrot + 1))
+
+        paras_values = list(
+            itertools.product(*[qpoints, m1_value, n_value, [1]])  #
+        )
+        paras_symbol = [k1, m1, n, piH]
+
+        print("Now getting characters:")
+        characters = []
+        for ii, paras_value in enumerate(tqdm(paras_values)):
+            tmp_k1, tmp_m1, tmp_n, tmppiH = paras_value
+
+            if np.isclose(tmp_k1, 0, atol=symprec):
+                fc = func[0]
+            else:
+                fc = func[1]
+                # set_trace()
+
+            res = []
+            for tmp_order in order:
+                for jj, tmp in enumerate(tmp_order):
+                    if jj == 0:
+                        tmp0 = fc[tmp]
+                    else:
+                        tmp0 = tmp0 * fc[tmp]
+
+                tmp1 = tmp0.evalf(
+                    subs={
+                        k1: tmp_k1,
+                        m1: tmp_m1,
+                        n: tmp_n,
+                        piH: tmppiH,
+                    }
+                )
+                if tmp1.is_Matrix:
+                    # res.append(tmp1.trace()/tmp1.shape[0])
+                    res.append(tmp1.trace())
+                else:
+                    res.append(tmp1)
+                # res.append(tmp1)
+            res = np.array(res).astype(np.complex128)
+            characters.append(res)
+            # set_trace()
+
     elif family == 13:
         n, k1, m1, f, piU, piV, piH = symbols("n k1 m1 f piU piV piH")
         func0 = sympy.Matrix(
@@ -2415,10 +2461,17 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
         f_value = [a / 2]
         paras_values = list(
             itertools.product(
-                *[qpoints, m1_value, n_value, f_value, [-1], [-1], [-1]]
+                *[
+                    qpoints,
+                    m1_value,
+                    n_value,
+                    f_value,
+                    [-1, 1],
+                    [-1, 1],
+                    [-1, 1],
+                ]
             )
         )
-        # paras_values = list(itertools.product(*[qpoints, m1_value, n_value, f_value, [-1, 1], [-1, 1], [-1, 1]]))
         paras_symbol = [k1, m1, n, f, piU, piV, piH]
 
         print("Now getting characters:")

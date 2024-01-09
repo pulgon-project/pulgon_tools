@@ -259,7 +259,7 @@ def find_axis_center_of_nanotube(atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
         np.remainder(
             atom.get_scaled_positions()
             # - [center[0],center[1],0] + [0.5, 0.5, 0],
-            - center + [0.5, 0.5, 0.5],
+            - center + [0.5, 0.5, 0],
             [1, 1, 1],
         )
         @ atom.cell
@@ -772,6 +772,49 @@ def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
     return M
 
 
+def _one_constrains(
+    x, natom_pri, natom, perm, perms_trans, p2s_map, size1, C, I, supercell
+):
+    idx1 = np.repeat(np.arange(natom_pri), natom)
+    idx2 = np.tile(np.arange(natom), natom_pri)
+
+    tmp1 = (idx1 * natom + idx2) * size1
+    tmp2 = (idx1 * natom + idx2 + 1) * size1
+    tmp3 = np.linspace(tmp1, tmp2, size1 + 1).astype(np.int64)[:-1, :].T
+
+    itp1 = np.repeat(tmp3, size1, axis=1)
+    itp2 = np.tile(tmp3, (1, size1))
+
+    pidx1 = np.repeat(perms_trans[:, perm[p2s_map]], natom, axis=1)
+    pindex1 = np.isin(pidx1, p2s_map)
+
+    row_indices, col_indices = np.where(pindex1 == True)
+    sorted_col_indices = np.argsort(col_indices)
+    pidx1 = (
+        pidx1[
+            row_indices[sorted_col_indices],
+            col_indices[sorted_col_indices],
+        ]
+        / supercell
+    ).astype(
+        np.int32
+    )  # i / supercell
+    pidx2 = perms_trans[:, perm[idx2]][
+        row_indices[sorted_col_indices], col_indices[sorted_col_indices]
+    ]  # map the index j
+
+    ptmp1 = (pidx1 * natom + pidx2) * size1
+    ptmp2 = (pidx1 * natom + pidx2 + 1) * size1
+    ptmp3 = np.linspace(ptmp1, ptmp2, size1 + 1).astype(np.int64)[:-1, :].T
+    pitp2 = np.tile(ptmp3, (1, size1))
+
+    xl = x.tolil()
+    xl[itp1, itp2] = C.flatten()
+    xl[itp1, pitp2] -= I.flatten()
+
+    return xl
+
+
 def get_sym_constrains_matrices_M_for_conpact_fc(
     IFC, ops_sym, perms_ops, perms_trans, p2s_map, natom_pri, diminsion=3
 ):
@@ -792,25 +835,9 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
     size1 = diminsion**2
     I = np.eye(size1)
     M = []
-    res = 0
-
-    idx1 = np.repeat(np.arange(natom_pri), natom)
-    idx2 = np.tile(np.arange(natom), natom_pri)
-
-    tmp1 = (idx1 * natom + idx2) * size1
-    tmp2 = (idx1 * natom + idx2 + 1) * size1
-    tmp3 = np.linspace(tmp1, tmp2, size1 + 1).astype(np.int64)[:-1, :].T
-
-    itp1 = np.repeat(tmp3, size1, axis=1)
-    itp2 = np.tile(tmp3, (1, size1))
-    res = 0
 
     ops_sym = np.array(ops_sym)
     perms_ops = np.array(perms_ops)
-    # ops_sym = np.delete(ops_sym,[0,1,2], axis=0)
-    # perms_ops = np.delete(perms_ops,[0,1,2], axis=0)
-    # ops_sym = ops_sym[[0,1,2]]
-    # perms_ops = perms_ops[[0,1,2]]
     for ii, op in enumerate(ops_sym):
         print("now run in %s operarion" % ii)
         perm = perms_ops[ii]
@@ -819,65 +846,62 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
             op.rotation_matrix,
             op.rotation_matrix,
         ).reshape(size1, size1)
-        x = ss.csc_matrix(
-            (size1 * natom * natom_pri, size1 * natom * natom_pri)
-        )
+        # x = ss.coo_matrix((size1 * natom * natom_pri, size1 * natom * natom_pri))
+        # xl = _one_constrains(x, natom_pri, natom, perm, perms_trans, p2s_map, size1, C, I, supercell)
 
+        rows, cols, data = [], [], []
         if (perm == np.arange(natom)).all():
             # M.append(x.tolil())
             continue
+        for i in range(natom_pri):
+            image_i = perms_trans[:, perm[p2s_map[i]]]
+            idx = np.isin(image_i, p2s_map)
+            image_i = image_i[idx].item()
+            for j in range(natom):
+                image_j = perms_trans[:, perm[j]][idx].item()
+                tmp1 = np.ravel_multi_index((i, j), (natom_pri, natom)) * size1
+                tmp2 = (
+                    np.ravel_multi_index(
+                        (np.where(p2s_map == image_i)[0].item(), image_j),
+                        (natom_pri, natom),
+                    )
+                    * size1
+                )
 
-        pidx1 = np.repeat(perms_trans[:, perm[p2s_map]], natom, axis=1)
-        pindex1 = np.isin(pidx1, p2s_map)
+                if tmp1 == tmp2:  # I and C have the same position
+                    rows.extend(
+                        np.repeat(np.arange(tmp1, tmp1 + size1), size1)
+                    )
+                    cols.extend(np.tile(np.arange(tmp1, tmp1 + size1), size1))
+                    data.extend((C - I).flatten())
 
-        # set_trace()
-        # pidx11 = (pidx1.T[pindex1.T] / supercell).astype(np.int32)  # map the index i
-        # pidx22 = perms_trans[:, perm[idx2]].T[pindex1.T]  # map the index j
-        # pidx1 = (pidx1[pindex1] / supercell).astype(np.int32)
-        # pidx2 = perms_trans[:, perm[idx2]][pindex1]  # map the index j
+                else:
+                    rows.extend(
+                        np.repeat(np.arange(tmp1, tmp1 + size1), size1)
+                    )
+                    cols.extend(np.tile(np.arange(tmp1, tmp1 + size1), size1))
+                    data.extend(C.flatten())
 
-        row_indices, col_indices = np.where(pindex1 == True)
-        sorted_col_indices = np.argsort(col_indices)
-        pidx1 = (
-            pidx1[
-                row_indices[sorted_col_indices],
-                col_indices[sorted_col_indices],
-            ]
-            / supercell
-        ).astype(
-            np.int32
-        )  # i / supercell
-        pidx2 = perms_trans[:, perm[idx2]][
-            row_indices[sorted_col_indices], col_indices[sorted_col_indices]
-        ]  # map the index j
+                    rows.extend(
+                        np.repeat(np.arange(tmp1, tmp1 + size1), size1)
+                    )
+                    cols.extend(np.tile(np.arange(tmp2, tmp2 + size1), size1))
+                    data.extend(-I.flatten())
 
-        ptmp1 = (pidx1 * natom + pidx2) * size1
-        ptmp2 = (pidx1 * natom + pidx2 + 1) * size1
-        ptmp3 = np.linspace(ptmp1, ptmp2, size1 + 1).astype(np.int64)[:-1, :].T
-        pitp2 = np.tile(ptmp3, (1, size1))
-
-        xl = x.tolil()
-        xl[itp1, itp2] = C.flatten()
-        xl[itp1, pitp2] -= I.flatten()
+        xl = ss.coo_array((data, (rows, cols)), shape=(IFC.size, IFC.size))
 
         res = abs(xl.dot(IFC.flatten())).sum()
         print(res)
         if abs(res) > 1e-5:
             tmp = abs(xl.dot(IFC.flatten()))
-            tmp1 = np.unique(tmp)[::-1]
-
-            itp = np.where(np.isclose(tmp, tmp[1], atol=1e-6))[0]
-            xl1 = xl[itp]
-
-            # print("itp:",itp)
-            # print("data:", xl1.data)
-            # print("xl1 rows:", xl1.rows)
             print("max value equation=%s" % max(tmp))
-        M.append(xl.tocsc())
-        # set_trace()
+            M.append(xl.tocsc())
 
-    M = scipy.sparse.vstack((M))
-    M = M.tocsc()
+    if len(M) != 0:
+        M = ss.vstack((M))
+        M = M.tocsc()
+    else:
+        M = ss.csc_matrix([])
     return M
 
 
