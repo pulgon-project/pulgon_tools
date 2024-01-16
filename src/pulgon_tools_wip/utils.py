@@ -816,7 +816,7 @@ def _one_constrains(
 
 
 def get_sym_constrains_matrices_M_for_conpact_fc(
-    IFC, ops_sym, perms_ops, perms_trans, p2s_map, natom_pri, diminsion=3
+    IFC, ops_sym, perms_ops, perms_trans, p2s_map, natom_pri, dimension=3
 ):
     """
 
@@ -825,14 +825,13 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
     :param perms_trans:
     :param p2s_map:
     :param natom_pri:
-    :param diminsion:
+    :param dimension:
     :return:
 
     """
 
     natom = perms_ops.shape[1]
-    supercell = perms_trans.shape[0]
-    size1 = diminsion**2
+    size1 = dimension**2
     I = np.eye(size1)
     M = []
 
@@ -841,67 +840,49 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
     for ii, op in enumerate(ops_sym):
         print("now run in %s operarion" % ii)
         perm = perms_ops[ii]
+        size1 = dimension * dimension
         C = np.einsum(
             "ij,kl->ikjl",
             op.rotation_matrix,
             op.rotation_matrix,
         ).reshape(size1, size1)
-        # x = ss.coo_matrix((size1 * natom * natom_pri, size1 * natom * natom_pri))
-        # xl = _one_constrains(x, natom_pri, natom, perm, perms_trans, p2s_map, size1, C, I, supercell)
 
         rows, cols, data = [], [], []
-        if (perm == np.arange(natom)).all():
-            # M.append(x.tolil())
-            continue
         for i in range(natom_pri):
             image_i = perms_trans[:, perm[p2s_map[i]]]
             idx = np.isin(image_i, p2s_map)
             image_i = image_i[idx].item()
             for j in range(natom):
                 image_j = perms_trans[:, perm[j]][idx].item()
-                tmp1 = np.ravel_multi_index((i, j), (natom_pri, natom)) * size1
-                tmp2 = (
-                    np.ravel_multi_index(
-                        (np.where(p2s_map == image_i)[0].item(), image_j),
-                        (natom_pri, natom),
-                    )
-                    * size1
+                tmp1 = np.ravel_multi_index(
+                    (i, j, 0, 0), (natom_pri, natom, dimension, dimension)
+                )
+                tmp2 = np.ravel_multi_index(
+                    (np.where(p2s_map == image_i)[0].item(), image_j, 0, 0),
+                    (natom_pri, natom, dimension, dimension),
                 )
 
-                if tmp1 == tmp2:  # I and C have the same position
-                    rows.extend(
-                        np.repeat(np.arange(tmp1, tmp1 + size1), size1)
-                    )
-                    cols.extend(np.tile(np.arange(tmp1, tmp1 + size1), size1))
-                    data.extend((C - I).flatten())
+                rows.extend(np.repeat(np.arange(tmp1, tmp1 + size1), size1))
+                cols.extend(np.tile(np.arange(tmp1, tmp1 + size1), size1))
+                data.extend(C.flatten())
 
-                else:
-                    rows.extend(
-                        np.repeat(np.arange(tmp1, tmp1 + size1), size1)
-                    )
-                    cols.extend(np.tile(np.arange(tmp1, tmp1 + size1), size1))
-                    data.extend(C.flatten())
-
-                    rows.extend(
-                        np.repeat(np.arange(tmp1, tmp1 + size1), size1)
-                    )
-                    cols.extend(np.tile(np.arange(tmp2, tmp2 + size1), size1))
-                    data.extend(-I.flatten())
+                rows.extend(np.repeat(np.arange(tmp1, tmp1 + size1), size1))
+                cols.extend(np.tile(np.arange(tmp2, tmp2 + size1), size1))
+                data.extend(-I.flatten())
 
         xl = ss.coo_array((data, (rows, cols)), shape=(IFC.size, IFC.size))
+        xl = xl.tocsc()
 
         res = abs(xl.dot(IFC.flatten())).sum()
         print(res)
-        if abs(res) > 1e-5:
-            tmp = abs(xl.dot(IFC.flatten()))
-            print("max value equation=%s" % max(tmp))
-            M.append(xl.tocsc())
+        if res > 10:
+            set_trace()
 
-    if len(M) != 0:
-        M = ss.vstack((M))
-        M = M.tocsc()
-    else:
-        M = ss.csc_matrix([])
+        tmp = abs(xl.dot(IFC.flatten()))
+        print("max value equation=%s" % max(tmp))
+        M.append(xl)
+
+    M = ss.vstack((M))
     return M
 
 
