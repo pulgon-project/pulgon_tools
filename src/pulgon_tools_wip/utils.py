@@ -691,8 +691,8 @@ def fast_orth(A, maxrank, num):
     values almost equal to the maximum, and returns at most maxrank vectors.
     """
     u, s, vh = svd(A, maxrank)
-    # reference = s[0]
     return u[:, :num]  # Todo: correct the number
+    # reference = s[0]
     # for i in range(s.size):
     #     if abs(reference - s[i]) > 0.05 * reference:
     #         return u[:, :i]
@@ -875,8 +875,8 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
 
         res = abs(xl.dot(IFC.flatten())).sum()
         print(res)
-        if res > 10:
-            set_trace()
+        # if res < 1e-8:
+        # set_trace()
 
         tmp = abs(xl.dot(IFC.flatten()))
         print("max value equation=%s" % max(tmp))
@@ -1103,3 +1103,23 @@ def get_freq_and_dis_from_phonopy(phonon, qpoints):
             )
     frequencies = np.array(frequencies).T
     return frequencies, distances
+
+
+def get_independent_atoms(perms):
+    atom_num = []
+    if perms.ndim == 2:
+        for line in perms.T:
+            atom_num.append(np.unique(line)[0])
+        return np.unique(atom_num)
+    else:
+        return perms
+
+
+def get_site_symmetry(atom_num, perms_ops, ops_sym):
+    site_symmetry = []
+    for num in atom_num:
+        idx = np.where(perms_ops[:, num] == num)[0]
+        site_symmetry.append(
+            np.array([ops_sym[ii].rotation_matrix for ii in idx])
+        )
+    return site_symmetry

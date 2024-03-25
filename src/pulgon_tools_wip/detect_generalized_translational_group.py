@@ -19,7 +19,6 @@ from pdb import set_trace
 
 import ase.io.vasp
 import numpy as np
-import pretty_errors
 from ase import Atoms
 from ase.io import read
 from ase.io.vasp import read_vasp, write_vasp

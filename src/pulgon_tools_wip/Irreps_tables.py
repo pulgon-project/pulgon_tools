@@ -20,7 +20,6 @@ import typing
 from pdb import set_trace
 
 import numpy as np
-import pretty_errors
 import sympy
 from sympy import symbols
 from sympy.ntheory.factor_ import totient
@@ -2266,6 +2265,91 @@ def line_group_13(
 
 
 def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
+    if family == 2:
+        k1, m1, n, piH = symbols("k1 m1 n piH")
+        func0 = sympy.Matrix(
+            [
+                1,
+                sympy.exp(1j * k1 * a),
+                piH * sympy.exp(1j * m1 * sympy.pi / n),
+            ]
+        )
+        func1 = [
+            sympy.Matrix([[1, 0], [0, 1]]),
+            sympy.Matrix(
+                [
+                    [
+                        sympy.exp(1j * k1 * a),
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(-1j * k1 * a),
+                    ],
+                ]
+            ),
+            sympy.Matrix(
+                [
+                    [
+                        0,
+                        sympy.exp(1j * m1 * 2 * sympy.pi / n),
+                    ],
+                    [
+                        1,
+                        0,
+                    ],
+                ]
+            ),
+        ]
+
+        func = [func0, func1]
+
+        n_value = [nrot]
+        m1_value = list(range(int(-nrot / 2) + 1, int(nrot / 2) + 1))
+
+        paras_values = list(
+            itertools.product(*[qpoints, m1_value, n_value, [-1, 1]])  #
+        )
+        paras_symbol = [k1, m1, n, piH]
+
+        print("Now getting characters:")
+        characters = []
+        for ii, paras_value in enumerate(tqdm(paras_values)):
+            tmp_k1, tmp_m1, tmp_n, tmp_piH = paras_value
+
+            if np.isclose(tmp_k1, 0, atol=symprec) or np.isclose(
+                tmp_k1, np.pi / a, atol=symprec
+            ):
+                fc = func[0]
+            else:
+                fc = func[1]
+            res = []
+            for tmp_order in order:
+                for jj, tmp in enumerate(tmp_order):
+
+                    if jj == 0:
+                        tmp0 = fc[tmp]
+                    else:
+                        tmp0 = tmp0 * fc[tmp]
+
+                tmp1 = tmp0.evalf(
+                    subs={
+                        k1: tmp_k1,
+                        m1: tmp_m1,
+                        n: tmp_n,
+                        piH: tmp_piH,
+                    },
+                )
+
+                if tmp1.is_Matrix:
+                    # res.append(tmp1.trace()/tmp1.shape[0])
+                    res.append(tmp1.trace())
+                else:
+                    res.append(tmp1)
+                # res.append(tmp1)
+            res = np.array(res).astype(np.complex128)
+            characters.append(res)
+
     if family == 4:
         k1, m1, n, piH = symbols("k1 m1 n piH")
 
@@ -2283,12 +2367,12 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
             sympy.Matrix(
                 [
                     [
-                        sympy.exp(1j * (m1 * sympy.pi / n + k1 / 2)),
+                        sympy.exp(1j * (m1 * sympy.pi / n + k1 * a / 2)),
                         0,
                     ],
                     [
                         0,
-                        sympy.exp(1j * (m1 * sympy.pi / n - k1 / 2)),
+                        sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2)),
                     ],
                 ]
             ),
@@ -2313,24 +2397,23 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
         m1_value = list(range(-nrot + 1, nrot + 1))
 
         paras_values = list(
-            itertools.product(*[qpoints, m1_value, n_value, [1]])  #
+            itertools.product(*[qpoints, m1_value, n_value, [-1, 1]])  #
         )
         paras_symbol = [k1, m1, n, piH]
 
         print("Now getting characters:")
         characters = []
         for ii, paras_value in enumerate(tqdm(paras_values)):
-            tmp_k1, tmp_m1, tmp_n, tmppiH = paras_value
+            tmp_k1, tmp_m1, tmp_n, tmp_piH = paras_value
 
             if np.isclose(tmp_k1, 0, atol=symprec):
                 fc = func[0]
             else:
                 fc = func[1]
-                # set_trace()
-
             res = []
             for tmp_order in order:
                 for jj, tmp in enumerate(tmp_order):
+
                     if jj == 0:
                         tmp0 = fc[tmp]
                     else:
@@ -2341,9 +2424,10 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
                         k1: tmp_k1,
                         m1: tmp_m1,
                         n: tmp_n,
-                        piH: tmppiH,
-                    }
+                        piH: tmp_piH,
+                    },
                 )
+
                 if tmp1.is_Matrix:
                     # res.append(tmp1.trace()/tmp1.shape[0])
                     res.append(tmp1.trace())
@@ -2352,7 +2436,6 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
                 # res.append(tmp1)
             res = np.array(res).astype(np.complex128)
             characters.append(res)
-            # set_trace()
 
     elif family == 13:
         n, k1, m1, f, piU, piV, piH = symbols("n k1 m1 f piU piV piH")

@@ -17,7 +17,6 @@ import logging
 
 import ase
 import numpy as np
-import pretty_errors
 from ase import Atoms
 from ase.io import read
 from ase.io.vasp import write_vasp
@@ -66,7 +65,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
             mol = Molecule(species=mol.numbers, coords=mol.positions)
 
         self.mol = mol
-        self.centered_mol = mol
+        # self.centered_mol = mol
         self.centered_mol = mol.get_centered_molecule()
 
         self.tol = tolerance
