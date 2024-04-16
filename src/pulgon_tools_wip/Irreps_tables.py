@@ -2265,17 +2265,18 @@ def line_group_13(
 
 
 def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
+
     if family == 2:
         k1, m1, n, piH = symbols("k1 m1 n piH")
         func0 = sympy.Matrix(
             [
-                1,
+                # 1,
                 sympy.exp(1j * k1 * a),
                 piH * sympy.exp(1j * m1 * sympy.pi / n),
             ]
         )
         func1 = [
-            sympy.Matrix([[1, 0], [0, 1]]),
+            # sympy.Matrix([[1, 0], [0, 1]]),
             sympy.Matrix(
                 [
                     [
