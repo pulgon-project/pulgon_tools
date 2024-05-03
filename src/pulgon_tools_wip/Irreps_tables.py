@@ -2313,9 +2313,10 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
         )
         paras_symbol = [k1, m1, n, piH]
 
-        print("Now getting characters:")
+        # print("Now getting characters:")
         characters = []
-        for ii, paras_value in enumerate(tqdm(paras_values)):
+        # for ii, paras_value in enumerate(tqdm(paras_values)):
+        for ii, paras_value in enumerate(paras_values):
             tmp_k1, tmp_m1, tmp_n, tmp_piH = paras_value
 
             if np.isclose(tmp_k1, 0, atol=symprec) or np.isclose(
@@ -2396,15 +2397,15 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
 
         n_value = [nrot]
         m1_value = list(range(-nrot + 1, nrot + 1))
+        # m1_value = list(range(-nrot, nrot))
 
         paras_values = list(
             itertools.product(*[qpoints, m1_value, n_value, [-1, 1]])  #
         )
         paras_symbol = [k1, m1, n, piH]
 
-        print("Now getting characters:")
         characters = []
-        for ii, paras_value in enumerate(tqdm(paras_values)):
+        for ii, paras_value in enumerate(paras_values):
             tmp_k1, tmp_m1, tmp_n, tmp_piH = paras_value
 
             if np.isclose(tmp_k1, 0, atol=symprec):
@@ -2430,11 +2431,10 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
                 )
 
                 if tmp1.is_Matrix:
-                    # res.append(tmp1.trace()/tmp1.shape[0])
                     res.append(tmp1.trace())
                 else:
                     res.append(tmp1)
-                # res.append(tmp1)
+
             res = np.array(res).astype(np.complex128)
             characters.append(res)
 

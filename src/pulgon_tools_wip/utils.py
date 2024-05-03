@@ -391,6 +391,7 @@ def get_perms_from_ops(atoms, ops_sym, symprec=1e-2):
 
 def get_matrices(atoms, ops_sym):
     perms_table = get_perms_from_ops(atoms, ops_sym)
+
     natoms = len(atoms.numbers)
     matrices = []
     for ii, perm in enumerate(perms_table):
@@ -535,6 +536,16 @@ def brute_force_generate_group(generators: np.ndarray, symec: float = 0.01):
 def brute_force_generate_group_subsquent(
     generators: np.ndarray, symec: float = 0.01
 ):
+    """generate all the group elements by brute force algorithm
+
+    Args:
+        generators: The most basic elements used to generate complete groups
+        symec: tolerance
+
+    Returns:
+        L: all group elements
+        L_seq: the multiplication order with the generators
+    """
     e_in = np.eye(4)
     G = generators
     L = np.array([e_in])
@@ -690,8 +701,16 @@ def fast_orth(A, maxrank, num):
     """Reimplementation of scipy.linalg.orth() which takes only the vectors with
     values almost equal to the maximum, and returns at most maxrank vectors.
     """
-    u, s, vh = svd(A, maxrank)
-    return u[:, :num]  # Todo: correct the number
+    # if maxrank==A.shape[0]:
+    #     u, s, vh = scipy.linalg.interpolative.svd(A, maxrank)
+    # else:
+    #     u, s, vh = scipy.linalg.interpolative.svd(A, maxrank+5)
+    # u, s, vh = scipy.linalg.interpolative.svd(A, maxrank)
+    # u, s, vh = scipy.linalg.svd(A)
+    u, s, vh = np.linalg.svd(A)
+    error = 1 - np.abs(s[num - 1] - s[num]) / np.abs(s[num - 1])
+    return u[:, :num], error  # Todo: correct the number
+    # return eigenvecs  # Todo: correct the number
     # reference = s[0]
     # for i in range(s.size):
     #     if abs(reference - s[i]) > 0.05 * reference:
