@@ -2348,7 +2348,6 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
                     res.append(tmp1.trace())
                 else:
                     res.append(tmp1)
-                # res.append(tmp1)
             res = np.array(res).astype(np.complex128)
             characters.append(res)
 
@@ -2370,11 +2369,13 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
                 [
                     [
                         sympy.exp(1j * (m1 * sympy.pi / n + k1 * a / 2)),
+                        # sympy.exp(1j * (m1 * sympy.pi / n)),
                         0,
                     ],
                     [
                         0,
                         sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2)),
+                        # sympy.exp(1j * (m1 * sympy.pi / n)),
                     ],
                 ]
             ),
@@ -2398,6 +2399,90 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
         n_value = [nrot]
         m1_value = list(range(-nrot + 1, nrot + 1))
         # m1_value = list(range(-nrot, nrot))
+
+        paras_values = list(
+            itertools.product(*[qpoints, m1_value, n_value, [-1, 1]])  #
+        )
+        paras_symbol = [k1, m1, n, piH]
+
+        characters = []
+        for ii, paras_value in enumerate(paras_values):
+            tmp_k1, tmp_m1, tmp_n, tmp_piH = paras_value
+
+            if np.isclose(tmp_k1, 0, atol=symprec):
+                fc = func[0]
+            else:
+                fc = func[1]
+            res = []
+            for tmp_order in order:
+                for jj, tmp in enumerate(tmp_order):
+
+                    if jj == 0:
+                        tmp0 = fc[tmp]
+                    else:
+                        tmp0 = tmp0 * fc[tmp]
+
+                tmp1 = tmp0.evalf(
+                    subs={
+                        k1: tmp_k1,
+                        m1: tmp_m1,
+                        n: tmp_n,
+                        piH: tmp_piH,
+                    },
+                )
+
+                if tmp1.is_Matrix:
+                    res.append(tmp1.trace())
+                else:
+                    res.append(tmp1)
+
+            res = np.array(res).astype(np.complex128)
+            characters.append(res)
+
+    elif family == 5:
+        Q, n, k1, m1, f, piU = symbols("n k1 m1 f piU piV piH")
+
+        func0 = sympy.Matrix(
+            [
+                1,
+                sympy.exp(1j * (m1 * sympy.pi / n + m1 * 2 * sympy.pi / Q)),
+                sympy.exp(1j * m1 * 2 * sympy.pi / n),
+                piU,
+            ]
+        )
+
+        func1 = [
+            sympy.Matrix([[1, 0], [0, 1]]),
+            sympy.Matrix(
+                [
+                    [
+                        sympy.exp(1j * (k1 * f + m1 * 2 * sympy.pi / Q)),
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(-1j * (k1 * f + m1 * 2 * sympy.pi / Q)),
+                    ],
+                ]
+            ),
+            sympy.Matrix(
+                [
+                    [
+                        sympy.exp(1j * m1 * 2 * sympy.pi / n),
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(-1j * m1 * 2 * sympy.pi / n),
+                    ],
+                ]
+            ),
+            sympy.Matrix([[0, 1], [1, 0]]),
+        ]
+        func = [func0, func1]
+
+        n_value = [nrot]
+        m1_value = list(range(-nrot + 1, nrot + 1))
 
         paras_values = list(
             itertools.product(*[qpoints, m1_value, n_value, [-1, 1]])  #
@@ -2615,6 +2700,94 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
                 else:
                     res.append(tmp1)
                 # res.append(tmp1)
+            res = np.array(res).astype(np.complex128)
+            characters.append(res)
+    return characters, paras_values, paras_symbol
+
+
+def line_group_numerical(family, qpoints, nrot, a, order, symprec=1e-8):
+    if family == 4:
+        k1, m1, n, piH = symbols("k1 m1 n piH")
+
+        func0 = sympy.Matrix(
+            [
+                1,
+                sympy.exp(1j * m1 * sympy.pi / n),
+                sympy.exp(1j * m1 * 2 * sympy.pi / n),
+                piH,
+            ]
+        )
+        func1 = [
+            sympy.Matrix([[1, 0], [0, 1]]),
+            sympy.Matrix(
+                [
+                    [
+                        sympy.exp(1j * (m1 * sympy.pi / n + k1 * a / 2)),
+                        # sympy.exp(1j * (m1 * sympy.pi / n)),
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2)),
+                        # sympy.exp(1j * (m1 * sympy.pi / n)),
+                    ],
+                ]
+            ),
+            sympy.Matrix(
+                [
+                    [
+                        sympy.exp(1j * m1 * 2 * sympy.pi / n),
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(1j * m1 * 2 * sympy.pi / n),
+                    ],
+                ]
+            ),
+            sympy.Matrix([[0, 1], [1, 0]]),
+        ]
+        func = [func0, func1]
+
+        n_value = [nrot]
+        m1_value = list(range(-nrot + 1, nrot + 1))
+        # m1_value = list(range(-nrot, nrot))
+
+        paras_values = list(
+            itertools.product(*[qpoints, m1_value, n_value, [-1, 1]])  #
+        )
+        paras_symbol = [k1, m1, n, piH]
+
+        characters = []
+        for ii, paras_value in enumerate(paras_values):
+            tmp_k1, tmp_m1, tmp_n, tmp_piH = paras_value
+
+            if np.isclose(tmp_k1, 0, atol=symprec):
+                fc = func[0]
+            else:
+                fc = func[1]
+            res = []
+            for tmp_order in order:
+                for jj, tmp in enumerate(tmp_order):
+
+                    if jj == 0:
+                        tmp0 = fc[tmp]
+                    else:
+                        tmp0 = tmp0 * fc[tmp]
+
+                tmp1 = tmp0.evalf(
+                    subs={
+                        k1: tmp_k1,
+                        m1: tmp_m1,
+                        n: tmp_n,
+                        piH: tmp_piH,
+                    },
+                )
+
+                if tmp1.is_Matrix:
+                    res.append(tmp1.trace())
+                else:
+                    res.append(tmp1)
             res = np.array(res).astype(np.complex128)
             characters.append(res)
     return characters, paras_values, paras_symbol

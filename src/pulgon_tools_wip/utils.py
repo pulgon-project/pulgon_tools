@@ -254,6 +254,7 @@ def find_axis_center_of_nanotube(atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
     """
     n_st = atom.copy()
     center = get_center_of_mass_periodic(atom)
+
     pos = (
         # np.remainder(atom.get_scaled_positions() - center + 0.5, [1, 1, 1])
         np.remainder(
@@ -349,7 +350,7 @@ def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
     return perms_table, sym_operations
 
 
-def get_perms_from_ops(atoms, ops_sym, symprec=1e-2):
+def get_perms_from_ops(atoms, ops_sym, symprec=1e-2, round=4):
     """get the permutation table from symmetry operations
 
     Args:
@@ -359,9 +360,11 @@ def get_perms_from_ops(atoms, ops_sym, symprec=1e-2):
     Returns: permutation table
     """
     natoms = len(atoms.numbers)
+    # coords_scaled = np.round(atoms.get_scaled_positions(), round)
     coords_scaled = atoms.get_scaled_positions()
+    # coords_scaled_center = np.remainder(coords_scaled - [0.5, 0.5, 0], [1,1,1])
     coords_scaled_center = np.remainder(
-        coords_scaled - [0.5, 0.5, 0], [1, 1, 1]
+        np.round(coords_scaled, round) - [0.5, 0.5, 0], [1, 1, 1]
     )
 
     perms = []
@@ -371,7 +374,11 @@ def get_perms_from_ops(atoms, ops_sym, symprec=1e-2):
             pos = (site.scaled_position - [0.5, 0.5, 0]) @ atoms.cell
 
             tmp = op.operate(pos)
-            tmp1 = np.remainder(tmp @ np.linalg.inv(atoms.cell), [1, 1, 1])
+            # tmp1 = np.remainder(np.round(tmp @ np.linalg.inv(atoms.cell), round), [1, 1, 1])
+            # tmp1 = np.remainder(tmp @ np.linalg.inv(atoms.cell), [1, 1, 1])
+            tmp1 = np.remainder(
+                np.round(tmp @ np.linalg.inv(atoms.cell), round), [1, 1, 1]
+            )
             idx2 = find_in_coord_list(coords_scaled_center, tmp1, symprec)
 
             if idx2.size == 0:
@@ -410,14 +417,15 @@ def affine_matrix_op(af1, af2):
     """Definition of group multiplication
 
     Args:
-        af1:
-        af2:
+        af1: group element 1
+        af2: group element 2
 
     Returns:
 
     """
-    ro = af1[:3, :3] @ af2[:3, :3]
-    tran = np.remainder(af1[:3, 3] + af2[:3, 3], [1, 1, 1])
+    ro = af2[:3, :3] @ af1[:3, :3]
+    # tran = np.remainder(af1[:3, 3] + af2[:3, 3], [1, 1, 1])
+    tran = np.remainder(af2[:3, 3] + af2[:3, :3] @ af1[:3, 3], [1, 1, 1])
     af = np.eye(4)
     af[:3, :3] = ro
     af[:3, 3] = tran
@@ -544,7 +552,7 @@ def brute_force_generate_group_subsquent(
 
     Returns:
         L: all group elements
-        L_seq: the multiplication order with the generators
+        L_seq: the multiplication order of the generators
     """
     e_in = np.eye(4)
     G = generators
@@ -701,15 +709,14 @@ def fast_orth(A, maxrank, num):
     """Reimplementation of scipy.linalg.orth() which takes only the vectors with
     values almost equal to the maximum, and returns at most maxrank vectors.
     """
-    # if maxrank==A.shape[0]:
-    #     u, s, vh = scipy.linalg.interpolative.svd(A, maxrank)
-    # else:
-    #     u, s, vh = scipy.linalg.interpolative.svd(A, maxrank+5)
     # u, s, vh = scipy.linalg.interpolative.svd(A, maxrank)
     # u, s, vh = scipy.linalg.svd(A)
     u, s, vh = np.linalg.svd(A)
     error = 1 - np.abs(s[num - 1] - s[num]) / np.abs(s[num - 1])
-    return u[:, :num], error  # Todo: correct the number
+
+    # if error > 0.5:
+    #     set_trace()
+    return u[:, :num], error
     # return eigenvecs  # Todo: correct the number
     # reference = s[0]
     # for i in range(s.size):
