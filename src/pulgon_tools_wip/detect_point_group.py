@@ -85,14 +85,14 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self.symmops = [SymmOp(np.eye(4))]
 
         self._check_rot_sym(self._zaxis)
-        if len(self.rot_sym) > 0:
+        # if len(self.rot_sym) > 0 and self.rot_sym[0][1]!=1:     # modify the case when i==1
+        if len(self.rot_sym) > 0:  # modify the case when i==1
             logging.debug(
                 "The rot_num along zaxis is: %d" % self.rot_sym[0][1]
             )
             logging.debug("Start detecting U")
 
             self._check_perpendicular_r2_axis(self._zaxis)
-
             if len(self.rot_sym) >= 2:
                 logging.debug("U exist, start detecting dihedral group")
 

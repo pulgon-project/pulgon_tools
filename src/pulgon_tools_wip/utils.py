@@ -424,7 +424,7 @@ def affine_matrix_op(af1, af2):
 
     """
     ro = af2[:3, :3] @ af1[:3, :3]
-    # tran = np.remainder(af1[:3, 3] + af2[:3, 3], [1, 1, 1])
+    # tran = np.remainder(af2[:3, 3] + af1[:3, 3], [1, 1, 1])
     tran = np.remainder(af2[:3, 3] + af2[:3, :3] @ af1[:3, 3], [1, 1, 1])
     af = np.eye(4)
     af[:3, :3] = ro
@@ -698,9 +698,9 @@ def dimino_affine_matrix_and_subsquent(
     return L, L_subs
 
 
-def get_character(qpoints, nrot, order, family, a):
+def get_character(DictParams, symprec=1e-8):
     characters, paras_values, paras_symbols = line_group_sympy(
-        family, qpoints, nrot, a, order
+        DictParams, symprec
     )
     return characters, paras_values, paras_symbols
 
@@ -710,10 +710,10 @@ def fast_orth(A, maxrank, num):
     values almost equal to the maximum, and returns at most maxrank vectors.
     """
     # u, s, vh = scipy.linalg.interpolative.svd(A, maxrank)
-    # u, s, vh = scipy.linalg.svd(A)
-    u, s, vh = np.linalg.svd(A)
+    u, s, vh = scipy.linalg.svd(A)
+    # u, s, vh = np.linalg.svd(A)
     error = 1 - np.abs(s[num - 1] - s[num]) / np.abs(s[num - 1])
-
+    # set_trace()
     # if error > 0.5:
     #     set_trace()
     return u[:, :num], error

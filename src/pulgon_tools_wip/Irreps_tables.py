@@ -2264,9 +2264,14 @@ def line_group_13(
             print(tmp)
 
 
-def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
-
+def line_group_sympy(DictParams, symprec=1e-8):
+    family = DictParams["family"]
     if family == 2:
+        qpoints = DictParams["qpoints"]
+        nrot = DictParams["nrot"]
+        a = DictParams["a"]
+        order = DictParams["order"]
+
         k1, m1, n, piH = symbols("k1 m1 n piH")
         func0 = sympy.Matrix(
             [
@@ -2305,11 +2310,12 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
 
         func = [func0, func1]
 
+        qps_value = [qpoints]
         n_value = [nrot]
         m1_value = list(range(int(-nrot / 2) + 1, int(nrot / 2) + 1))
 
         paras_values = list(
-            itertools.product(*[qpoints, m1_value, n_value, [-1, 1]])  #
+            itertools.product(*[qps_value, m1_value, n_value, [-1, 1]])  #
         )
         paras_symbol = [k1, m1, n, piH]
 
@@ -2352,8 +2358,12 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
             characters.append(res)
 
     if family == 4:
-        k1, m1, n, piH = symbols("k1 m1 n piH")
+        qpoints = DictParams["qpoints"]
+        nrot = DictParams["nrot"]
+        a = DictParams["a"]
+        order = DictParams["order"]
 
+        k1, m1, n, piH = symbols("k1 m1 n piH")
         func0 = sympy.Matrix(
             [
                 1,
@@ -2396,12 +2406,13 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
 
         func = [func0, func1]
 
+        qps_value = [qpoints]
         n_value = [nrot]
         m1_value = list(range(-nrot + 1, nrot + 1))
-        # m1_value = list(range(-nrot, nrot))
+        piH_value = [-1, 1]
 
         paras_values = list(
-            itertools.product(*[qpoints, m1_value, n_value, [-1, 1]])  #
+            itertools.product(*[qps_value, m1_value, n_value, piH_value])  #
         )
         paras_symbol = [k1, m1, n, piH]
 
@@ -2416,7 +2427,6 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
             res = []
             for tmp_order in order:
                 for jj, tmp in enumerate(tmp_order):
-
                     if jj == 0:
                         tmp0 = fc[tmp]
                     else:
@@ -2433,19 +2443,27 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
 
                 if tmp1.is_Matrix:
                     res.append(tmp1.trace())
+                    # res.append(tmp1)
                 else:
                     res.append(tmp1)
-
             res = np.array(res).astype(np.complex128)
             characters.append(res)
 
     elif family == 5:
-        Q, n, k1, m1, f, piU = symbols("n k1 m1 f piU piV piH")
+        qpoints = DictParams["qpoints"]
+        nrot = DictParams["nrot"]
+        a = DictParams["a"]
+        order = DictParams["order"]
+        q = DictParams["q"]
+        r = DictParams["r"]
+        f_value = DictParams["f"]
+        p = DictParams["p"]
 
+        Q, n, k1, m1, f, piU = symbols("Q n k1 m1 f piU")
         func0 = sympy.Matrix(
             [
                 1,
-                sympy.exp(1j * (m1 * sympy.pi / n + m1 * 2 * sympy.pi / Q)),
+                sympy.exp(1j * (k1 * f + m1 * 2 * sympy.pi / Q)),
                 sympy.exp(1j * m1 * 2 * sympy.pi / n),
                 piU,
             ]
@@ -2481,22 +2499,41 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
         ]
         func = [func0, func1]
 
+        Q_value = [q / r]
         n_value = [nrot]
-        m1_value = list(range(-nrot + 1, nrot + 1))
+        qps_value = [qpoints]
+        # m1_value = list(range(-q/2 + 1, q/2 + 1))
+        m1_value = frac_range(-q / 2, q / 2, left=False, right=True)
+        f_value = [f_value]
+        piU_value = [-1, 1]
 
         paras_values = list(
-            itertools.product(*[qpoints, m1_value, n_value, [-1, 1]])  #
+            itertools.product(
+                *[Q_value, n_value, qps_value, m1_value, f_value, piU_value]
+            )
         )
-        paras_symbol = [k1, m1, n, piH]
+        paras_symbol = [Q, n, k1, m1, f, piU]
 
         characters = []
         for ii, paras_value in enumerate(paras_values):
-            tmp_k1, tmp_m1, tmp_n, tmp_piH = paras_value
-
-            if np.isclose(tmp_k1, 0, atol=symprec):
+            tmp_Q, tmp_n, tmp_k1, tmp_m1, tmp_f, tmp_piU = paras_value
+            if np.isclose(tmp_k1, 0, atol=symprec) and (
+                (
+                    np.isclose(tmp_m1, 0, atol=symprec)
+                    or np.isclose(tmp_m1, q / 2, atol=symprec)
+                )
+            ):
+                fc = func[0]
+            elif np.isclose(tmp_k1, np.pi / a, atol=symprec) and (
+                (
+                    np.isclose(tmp_m1, -p / 2, atol=symprec)
+                    or np.isclose(tmp_m1, (q - p) / 2, atol=symprec)
+                )
+            ):
                 fc = func[0]
             else:
                 fc = func[1]
+
             res = []
             for tmp_order in order:
                 for jj, tmp in enumerate(tmp_order):
@@ -2505,13 +2542,14 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
                         tmp0 = fc[tmp]
                     else:
                         tmp0 = tmp0 * fc[tmp]
-
                 tmp1 = tmp0.evalf(
                     subs={
+                        Q: tmp_Q,
+                        n: tmp_n,
                         k1: tmp_k1,
                         m1: tmp_m1,
-                        n: tmp_n,
-                        piH: tmp_piH,
+                        f: tmp_f,
+                        piU: tmp_piU,
                     },
                 )
 
@@ -2524,6 +2562,11 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
             characters.append(res)
 
     elif family == 13:
+        qpoints = DictParams["qpoints"]
+        nrot = DictParams["nrot"]
+        a = DictParams["a"]
+        order = DictParams["order"]
+
         n, k1, m1, f, piU, piV, piH = symbols("n k1 m1 f piU piV piH")
         func0 = sympy.Matrix(
             [
@@ -2539,10 +2582,7 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
             sympy.Matrix(
                 [
                     [1, 0],
-                    [
-                        0,
-                        1,
-                    ],
+                    [0, 1],
                 ]
             ),
             sympy.Matrix(
@@ -2605,7 +2645,7 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
                     [sympy.exp(1j * (m1 * sympy.pi / n + k1 * f)), 0, 0, 0],
                     [0, sympy.exp(1j * (-m1 * sympy.pi / n + k1 * f)), 0, 0],
                     [0, 0, sympy.exp(1j * (m1 * sympy.pi / n - k1 * f)), 0],
-                    [0, 0, 0, sympy.exp(1j * (-m1 * sympy.pi / n - k1 * f))],
+                    [0, 0, 0, sympy.exp(-1j * (m1 * sympy.pi / n + k1 * f))],
                 ]
             ),
             sympy.Matrix(
@@ -2625,13 +2665,16 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
         ]
         func = [func0, func1, func2, func3, func4]
 
-        n_value = [int(nrot / 2)]
-        m1_value = list(range(0, int(nrot / 2) + 1))
+        qps_value = [qpoints]
+        n_value = [nrot]
+        m1_value = list(range(0, nrot + 1))
+        # m1_value = list(range(-nrot + 1, nrot + 1))
         f_value = [a / 2]
+
         paras_values = list(
             itertools.product(
                 *[
-                    qpoints,
+                    qps_value,
                     m1_value,
                     n_value,
                     f_value,
@@ -2645,35 +2688,38 @@ def line_group_sympy(family, qpoints, nrot, a, order, symprec=1e-8):
 
         print("Now getting characters:")
         characters = []
-        for ii, paras_value in enumerate(tqdm(paras_values)):
+        for ii, paras_value in enumerate(paras_values):
             tmp_k1, tmp_m1, tmp_n, tmp_f, tmppiU, tmppiV, tmppiH = paras_value
 
             if np.isclose(tmp_k1, 0, atol=symprec):
-                if tmp_m1 == 0 or tmp_m1 == tmp_n:
+                if np.isclose(np.abs(tmp_m1), 0) or np.isclose(
+                    np.abs(tmp_m1), tmp_n
+                ):
                     fc = func[0]
-                elif 0 < tmp_m1 < tmp_n:
+                elif 0 < np.abs(tmp_m1) < tmp_n:
                     fc = func[1]
                 else:
                     logging.ERROR("Wrong value for m1")
-            elif np.isclose(tmp_k1, np.pi, atol=symprec):
-                if np.isclose(tmp_m1, tmp_n / 2, atol=symprec):
+            elif np.isclose(np.abs(tmp_k1), np.pi / a, atol=symprec):
+                if np.isclose(np.abs(tmp_m1), tmp_n / 2, atol=symprec):
                     fc = func[3]
-                elif np.isclose(tmp_m1, 0, atol=symprec):
+                elif np.isclose(np.abs(tmp_m1), 0, atol=symprec):
                     fc = func[2]
-                elif 0 < tmp_m1 < tmp_n / 2:
+                elif 0 < np.abs(tmp_m1) < tmp_n / 2:
                     fc = func[4]
                 else:
                     logging.ERROR("Wrong value for m1")
-            elif 0 < tmp_k1 < np.pi:
-                if np.isclose(tmp_m1, 0, atol=symprec) or np.isclose(
-                    tmp_m1, tmp_n, atol=symprec
+            elif 0 < np.abs(tmp_k1) < np.pi / a:
+                if np.isclose(np.abs(tmp_m1), 0, atol=symprec) or np.isclose(
+                    np.abs(tmp_m1), tmp_n, atol=symprec
                 ):
                     fc = func[2]
-                elif 0 < tmp_m1 < tmp_n:
+                elif 0 < np.abs(tmp_m1) < tmp_n:
                     fc = func[4]
                 else:
                     logging.ERROR("Wrong value for m1")
             else:
+                # set_trace()
                 logging.ERROR("Wrong value for k1")
 
             res = []
