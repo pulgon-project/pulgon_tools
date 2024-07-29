@@ -61,7 +61,6 @@ class CyclicGroupAnalyzer:
         logging.debug(
             "--------------------start detecting generalized translational group"
         )
-
         alongOZ = self._check_if_along_OZ(atom)
         if alongOZ == False:
             logging.error(
@@ -86,7 +85,9 @@ class CyclicGroupAnalyzer:
     def _analyze(self) -> None:
         """print all possible monomers and their cyclic group"""
         monomer, potential_trans = self._potential_translation()
+
         logging.debug("There are %d monomer" % len(monomer))
+
         (
             self.cyclic_group,
             self.monomers,

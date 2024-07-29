@@ -36,6 +36,8 @@ from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
 from scipy.linalg.interpolative import svd
 from sympy import symbols
+from sympy.physics.quantum import TensorProduct
+from tensorly.decomposition import parafac
 from tqdm import tqdm
 
 # from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
@@ -408,9 +410,228 @@ def get_matrices(atoms, ops_sym):
             matrix[3 * idx : 3 * (idx + 1), 3 * jj : 3 * (jj + 1)] = ops_sym[
                 ii
             ].rotation_matrix.copy()
-            # matrix[4 * idx : 4 * (idx + 1), 4 * jj : 4 * (jj + 1)] = ops_sym[ii].affine_matrix.copy()
+
         matrices.append(matrix)
     return matrices
+
+
+def get_modified_projector(DictParams, atom, D):
+    family = DictParams["family"]
+
+    if family == 4:
+        nrot = DictParams["nrot"]
+        g_rot = DictParams["generator_rot"]
+        g_tran = DictParams["generator_tran"]
+
+        ops_car_apg = []
+        for s in range(nrot):
+            for j in range(2):
+                rot = np.linalg.matrix_power(
+                    g_rot[0].rotation_matrix, s
+                ) @ np.linalg.matrix_power(g_rot[1].rotation_matrix, j)
+                tran = (
+                    g_rot[0].translation_vector * s
+                    + g_rot[1].translation_vector * j
+                ) * atom.cell[2, 2]
+                op = SymmOp.from_rotation_and_translation(
+                    rotation_matrix=rot, translation_vec=tran
+                )
+                ops_car_apg.append(op)
+        matrices_apg = get_matrices(atom, ops_car_apg)
+
+        # res, err = [], []
+        # for ii in range(len(matrices_apg)):
+        #     tmp1 = np.array_equal(np.dot(D, matrices_apg[ii]), np.dot(matrices_apg[ii], D))
+        #     tmp2 = np.abs(np.dot(D, matrices_apg[ii]) - np.dot(matrices_apg[ii], D)).sum()
+        #
+        #     res.append(tmp1)
+        #     err.append(tmp2)
+        # set_trace()
+
+        ops_car_cyc = [
+            SymmOp.from_rotation_and_translation(
+                rotation_matrix=g_tran[0].rotation_matrix,
+                translation_vec=g_tran[0].translation_vector * atom.cell[2, 2],
+            )
+        ]
+        matrices_cyc = get_matrices(atom, ops_car_cyc)
+        # m1_range = list(range(-nrot + 1, nrot + 1))
+        # m1_range = list(range(1, nrot + 1))
+        m1_range = list(range(-nrot + 1, 1))
+
+        basis, dimensions = [], []
+        for tmp_m1 in m1_range:
+            Dmu_rot_conj, Dmu_tran_conj = get_modified_Dmu(
+                DictParams, tmp_m1, symprec=1e-6
+            )
+
+            ###### generate the projector for axial point group ########
+            num_modes = 0
+            for ii in range(len(Dmu_rot_conj)):
+                if ii == 0:
+                    projector = TensorProduct(
+                        Dmu_rot_conj[ii], matrices_apg[ii]
+                    )
+                else:
+                    projector += TensorProduct(
+                        Dmu_rot_conj[ii], matrices_apg[ii]
+                    )
+
+                if Dmu_rot_conj[ii].ndim != 0:
+                    num_modes += (
+                        Dmu_rot_conj[ii].trace() * matrices_apg[ii].trace()
+                    )
+                else:
+                    num_modes += Dmu_rot_conj[ii] * matrices_apg[ii].trace()
+
+            num_modes = int(num_modes.real / (2 * nrot))
+            projector_apg = projector / (2 * nrot)
+
+            ###### generate the projector for cyclic group ######
+            projector_cyc = TensorProduct(Dmu_tran_conj, matrices_cyc[0])
+            # projector_cyc2 = np.tensordot(Dmu_tran_conj, matrices_cyc[0], axes=0)
+
+            # projector_cyc2 = np.einsum("ij,kl->ijkl",Dmu_tran_conj, matrices_cyc[0])
+            # projector_cyc2 = projector_cyc2.transpose(0,2,1,3).reshape(projector_cyc2.shape[0]*projector_cyc2.shape[2], projector_cyc2.shape[0]*projector_cyc2.shape[2])
+            # res = (projector_cyc1==projector_cyc2).all()
+
+            # eigenvectors,eigenvalues,_ = scipy.linalg.svd(projector_cyc)
+            # eigenprojectors = []
+            # for i in range(len(eigenvalues)):
+            #     v = eigenvectors[:, i]
+            #     P = np.outer(v, v.conj())
+            #     eigenprojectors.append(P)
+            # eigenprojectors = np.array(eigenprojectors)
+            # mask_eig = np.isclose(eigenvalues, 1, atol=1e-5)
+            # projector_cyc1 =  eigenprojectors[mask_eig].sum(axis=0)
+
+            # projector = projector_cyc1 @ projector_apg
+            # projector = eigenvectors @ projector_apg
+            projector = projector_cyc @ projector_apg.conj()
+            # projector = projector_apg
+
+            u, s, vh = scipy.linalg.svd(projector)
+            error = 1 - np.abs(s[num_modes - 1] - s[num_modes]) / np.abs(
+                s[num_modes - 1]
+            )
+
+            # print("m=%s" % tmp_m1, "error=%s" % error)
+            if error > 0.05:
+                logging.ERROR("the error is lager than 0.05")
+
+            if Dmu_tran_conj.ndim == 0:
+                # set_trace()
+                basis.append(u[:, :num_modes])
+                dimensions.append(num_modes)
+            else:
+                tmp_basis = u[:, :num_modes]
+                tmp_basis1 = np.array(np.array_split(tmp_basis, 2, axis=0))
+                # tmp_basis1 = tmp_basis1[0] + tmp_basis1[1]
+
+                # tmp_basis1 = np.array(np.array_split(tmp_basis1, 2, axis=1))[0]
+                # basis_Dmu = Dmu_rot_conj[ii]
+                # basis_Dmu = scipy.linalg.orth(Dmu_rot_conj[ii])
+                # basis_Dmu = np.abs(basis_Dmu).reshape(-1)
+                basis_Dmu = np.array([[0, 1], [1, 0]])
+                basis_block1 = np.einsum(
+                    "ij,jlm->ilm", basis_Dmu[0][np.newaxis], tmp_basis1
+                )[0]
+                # basis_partial_scalar_product = np.tensordot(basis_Dmu, basis_block, axes=([0, 1], [0, 1]))
+
+                basis.append(basis_block1)
+                dimensions.append(basis_block1.shape[1])
+    elif family == 2:
+        nrot = DictParams["nrot"]
+        g_rot = DictParams["generator_rot"]
+        g_tran = DictParams["generator_tran"]
+
+        ops_car_apg = []
+        for s in range(2 * nrot):
+            rot = np.linalg.matrix_power(g_rot[0].rotation_matrix, s)
+            tran = (g_rot[0].translation_vector * s) * atom.cell[2, 2]
+            op = SymmOp.from_rotation_and_translation(
+                rotation_matrix=rot, translation_vec=tran
+            )
+            ops_car_apg.append(op)
+        matrices_apg = get_matrices(atom, ops_car_apg)
+
+        ops_car_cyc = [
+            SymmOp.from_rotation_and_translation(
+                rotation_matrix=g_tran[0].rotation_matrix,
+                translation_vec=g_tran[0].translation_vector * atom.cell[2, 2],
+            )
+        ]
+        matrices_cyc = get_matrices(atom, ops_car_cyc)
+        m1_range = list(range(int(-nrot / 2 + 1), int(nrot / 2 + 1)))
+
+        basis, dimensions = [], []
+        for tmp_m1 in m1_range:
+            Dmu_rot_conj, Dmu_tran_conj = get_modified_Dmu(
+                DictParams, tmp_m1, symprec=1e-6
+            )
+            ###### generate the projector for axial point group ########
+            num_modes = 0
+            tmp = []
+            for ii in range(len(Dmu_rot_conj)):
+                if ii == 0:
+                    projector = TensorProduct(
+                        matrices_apg[ii], Dmu_rot_conj[ii]
+                    )
+                else:
+                    projector += TensorProduct(
+                        matrices_apg[ii], Dmu_rot_conj[ii]
+                    )
+
+                if Dmu_rot_conj[ii].ndim != 0:
+                    num_modes += (
+                        Dmu_rot_conj[ii].trace() * matrices_apg[ii].trace()
+                    )
+                    tmp.append(matrices_apg[ii].trace())
+                else:
+                    num_modes += Dmu_rot_conj[ii] * matrices_apg[ii].trace()
+
+            num_modes = int(num_modes.real / (2 * nrot))
+            projector_apg = projector / (2 * nrot)
+
+            ###### generate the projector for cyclic group ######
+            projector_cyc = TensorProduct(matrices_cyc[0], Dmu_tran_conj)
+            # projector_cyc2 = np.einsum("ij,kl->ijkl",Dmu_tran_conj, matrices_cyc[0])
+            # projector_cyc2 = projector_cyc2.transpose(0,2,1,3).reshape(projector_cyc2.shape[0]*projector_cyc2.shape[2], projector_cyc2.shape[0]*projector_cyc2.shape[2])
+
+            # projector = projector_cyc1 @ projector_apg
+            # projector = eigenvectors @ projector_apg
+            # projector = projector_cyc @ projector_apg
+            projector = projector_apg
+
+            u, s, vh = scipy.linalg.svd(projector)
+            error = 1 - np.abs(s[num_modes - 1] - s[num_modes]) / np.abs(
+                s[num_modes - 1]
+            )
+
+            if error > 0.05:
+                # set_trace()
+                logging.ERROR("the error is lager than 0.05")
+
+            if Dmu_tran_conj.ndim == 0:
+                basis.append(u[:, :num_modes])
+                dimensions.append(num_modes)
+            else:
+                tmp_basis = u[:, :num_modes]
+                tmp_basis1 = np.array(np.array_split(tmp_basis, 2, axis=0))
+                basis_Dmu = np.array([[0, 1], [1, 0]])
+
+                basis_block1 = np.einsum(
+                    "ij,jlm->ilm", basis_Dmu[0][np.newaxis], tmp_basis1
+                )[0]
+                # basis_partial_scalar_product = np.tensordot(basis_Dmu, basis_block, axes=([0, 1], [0, 1]))
+
+                basis.append(basis_block1)
+                dimensions.append(basis_block1.shape[1])
+
+    adapted = np.concatenate(basis, axis=1)
+    # if adapted.shape[0] != adapted.shape[1]:
+    #     set_trace()
+    return adapted, dimensions
 
 
 def affine_matrix_op(af1, af2):
@@ -705,24 +926,14 @@ def get_character(DictParams, symprec=1e-8):
     return characters, paras_values, paras_symbols
 
 
-def fast_orth(A, maxrank, num):
+def fast_orth(A, num):
     """Reimplementation of scipy.linalg.orth() which takes only the vectors with
     values almost equal to the maximum, and returns at most maxrank vectors.
     """
     # u, s, vh = scipy.linalg.interpolative.svd(A, maxrank)
     u, s, vh = scipy.linalg.svd(A)
-    # u, s, vh = np.linalg.svd(A)
     error = 1 - np.abs(s[num - 1] - s[num]) / np.abs(s[num - 1])
-    # set_trace()
-    # if error > 0.5:
-    #     set_trace()
     return u[:, :num], error
-    # return eigenvecs  # Todo: correct the number
-    # reference = s[0]
-    # for i in range(s.size):
-    #     if abs(reference - s[i]) > 0.05 * reference:
-    #         return u[:, :i]
-    # return u
 
 
 def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
