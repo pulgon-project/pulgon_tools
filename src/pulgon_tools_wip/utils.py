@@ -410,6 +410,7 @@ def get_matrices(atoms, ops_sym):
             matrix[3 * idx : 3 * (idx + 1), 3 * jj : 3 * (jj + 1)] = ops_sym[
                 ii
             ].rotation_matrix.copy()
+            # matrix[3 * idx : 3 * (idx + 1), 3 * jj : 3 * (jj + 1)] = ops_rotation[ii]
 
         matrices.append(matrix)
     return matrices
@@ -645,8 +646,11 @@ def affine_matrix_op(af1, af2):
 
     """
     ro = af2[:3, :3] @ af1[:3, :3]
-    # tran = np.remainder(af2[:3, 3] + af1[:3, 3], [1, 1, 1])
-    tran = np.remainder(af2[:3, 3] + af2[:3, :3] @ af1[:3, 3], [1, 1, 1])
+    # ro1 = af1[:3, :3] @ af2[:3, :3]
+    test_tran = np.remainder(af2[:3, 3] + af2[:3, :3] @ af1[:3, 3], [1, 1, 1])
+    tran = np.remainder(af2[:3, 3] + af1[:3, 3], [1, 1, 1])
+    if (test_tran - tran).sum() > 1e-5:
+        set_trace()
     af = np.eye(4)
     af[:3, :3] = ro
     af[:3, 3] = tran

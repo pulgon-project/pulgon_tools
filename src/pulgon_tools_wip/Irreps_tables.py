@@ -339,6 +339,8 @@ def line_group_sympy(DictParams, symprec=1e-6):
                         tmp0 = fc[tmp]
                     else:
                         tmp0 = tmp0 * fc[tmp]
+                        # tmp0 = fc[tmp] * tmp0
+                        set_trace()
                 if len(paras_symbol) == 4:
                     tmp1 = tmp0.evalf(
                         subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piH: -1}
@@ -480,9 +482,10 @@ def line_group_sympy(DictParams, symprec=1e-6):
         func = [func0, func1]
         qps_value = [qpoint]
         n_value = [nrot]
-        m1_value = list(range(-nrot + 1, nrot + 1))
-        piH_value = [-1, 1]
 
+        m1_value = list(range(-nrot + 1, nrot + 1))
+
+        piH_value = [-1, 1]
         if np.isclose(qpoint, 0, atol=symprec):
             fc = func[0]
             paras_symbol = [k1, m1, n, piH]
@@ -511,7 +514,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     tmp1 = tmp0.evalf(subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n})
                     res.append(tmp1)
             characters.append(np.array(res).astype(np.complex128))
-        # characters = np.array(characters).astype(np.complex128)
     if family == 6:
         qpoint = DictParams["qpoints"]
         nrot = DictParams["nrot"]
@@ -582,7 +584,8 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     if jj == 0:
                         tmp0 = fc[tmp]
                     else:
-                        tmp0 = tmp0 * fc[tmp]
+                        # tmp0 = tmp0 * fc[tmp]
+                        tmp0 = fc[tmp] * tmp0
                 if len(paras_symbol) == 4:
                     tmp1 = tmp0.evalf(
                         subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piV: -1}
@@ -596,7 +599,96 @@ def line_group_sympy(DictParams, symprec=1e-6):
             characters.append(np.array(res).astype(np.complex128))
         # characters = np.array(characters).astype(np.complex128)
 
-    elif family == 13:
+    if family == 8:
+        qpoint = DictParams["qpoints"]
+        nrot = DictParams["nrot"]
+        a = DictParams["a"]
+        order = DictParams["order"]
+
+        k1, m1, n, piV = symbols("k1 m1 n piH")
+        func0 = sympy.Matrix(
+            [
+                1,
+                # sympy.exp(1j * (m1 * sympy.pi / n + k1 * a / 2)),
+                sympy.exp(1j * (m1 * sympy.pi / n)),
+                1,
+                piV,
+            ]
+        )
+
+        func1 = [
+            sympy.Matrix([[1, 0], [0, 1]]),
+            sympy.Matrix(
+                [
+                    [
+                        # sympy.exp(1j * (k1 * a / 2 + m1 * sympy.pi / n)),
+                        sympy.exp(1j * (m1 * sympy.pi / n)),
+                        0,
+                    ],
+                    [
+                        0,
+                        # sympy.exp(1j * (k1 * a / 2 - m1 * sympy.pi / n)),
+                        sympy.exp(1j * (-m1 * sympy.pi / n)),
+                    ],
+                ]
+            ),
+            sympy.Matrix(
+                [
+                    [
+                        sympy.exp(1j * m1 * 2 * sympy.pi / n),
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(-1j * m1 * 2 * sympy.pi / n),
+                    ],
+                ]
+            ),
+            sympy.Matrix([[0, 1], [1, 0]]),
+        ]
+
+        func = [func0, func1]
+        qps_value = [qpoint]
+        n_value = [nrot]
+
+        m1_value = list(range(0, nrot + 1))
+
+        paras_values = list(itertools.product(*[qps_value, m1_value, n_value]))
+        characters = []
+        for ii, paras_value in enumerate(paras_values):
+            tmp_k1, tmp_m1, tmp_n = paras_value
+
+            if np.isclose(tmp_m1, 0, atol=symprec) or np.isclose(
+                tmp_m1, nrot, atol=symprec
+            ):
+                fc = func[0]
+                paras_symbol = [k1, m1, n, piV]
+            else:
+                fc = func[1]
+                paras_symbol = [k1, m1, n]
+
+            res = []
+            for tmp_order in order:
+                for jj, tmp in enumerate(tmp_order):
+                    if jj == 0:
+                        tmp0 = fc[tmp]
+                    else:
+                        # tmp0 = tmp0 * fc[tmp]
+                        tmp0 = fc[tmp] * tmp0
+                if len(paras_symbol) == 4:
+                    tmp1 = tmp0.evalf(
+                        subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piV: -1}
+                    ) + tmp0.evalf(
+                        subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piV: 1}
+                    )
+                    res.append(tmp1)
+                else:
+                    tmp1 = tmp0.evalf(subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n})
+
+                    res.append(tmp1)
+            characters.append(np.array(res).astype(np.complex128))
+
+    if family == 13:
         qpoints = DictParams["qpoints"]
         nrot = DictParams["nrot"]
         a = DictParams["a"]

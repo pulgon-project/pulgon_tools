@@ -29,6 +29,8 @@ from pymatgen.util.coord import find_in_coord_list
 
 from pulgon_tools_wip.utils import get_num_of_decimal, refine_cell
 
+# from torchgen.native_function_generation import self_to_out_signature
+
 
 class CyclicGroupAnalyzer:
     """A class to analyze the generalized translational group (cyclic group)
@@ -87,7 +89,6 @@ class CyclicGroupAnalyzer:
         monomer, potential_trans = self._potential_translation()
 
         logging.debug("There are %d monomer" % len(monomer))
-
         (
             self.cyclic_group,
             self.monomers,
@@ -176,6 +177,8 @@ class CyclicGroupAnalyzer:
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]
         )
         for ii, monomer in enumerate(monomer_atoms):
+
+            # set_trace()
             logging.debug("---Start deticting NO.%d monomer" % (ii + 1))
             tran = potential_tans[ii]
             ind = int(np.round(1 / tran, self._round_symprec))
@@ -328,7 +331,6 @@ class CyclicGroupAnalyzer:
                     )
                 itp1 = itp1 and np.array(itp3).all()
                 itp2 = itp2 and np.array(itp4).all()
-
                 if not (itp1 or itp2):
                     break
                 if itp1:
