@@ -416,7 +416,25 @@ def get_matrices(atoms, ops_sym):
     return matrices
 
 
-def get_modified_projector(DictParams, atom, D):
+def get_matrices_withPhase(atoms, ops_sym, qpoint):
+    perms_table = get_perms_from_ops(atoms, ops_sym)
+
+    natoms = len(atoms.numbers)
+    matrices = []
+    for ii, perm in enumerate(perms_table):
+        matrix = np.zeros((3 * natoms, 3 * natoms)).astype(np.complex128)
+        phasefacter = ops_sym[ii].translation_vector[2]
+
+        for jj in range(natoms):
+            idx = perm[jj]
+            matrix[3 * idx : 3 * (idx + 1), 3 * jj : 3 * (jj + 1)] = ops_sym[
+                ii
+            ].rotation_matrix.copy() * np.exp(1j * qpoint * phasefacter)
+        matrices.append(matrix)
+    return matrices
+
+
+def get_modified_projector(DictParams, atom):
     family = DictParams["family"]
 
     if family == 4:
