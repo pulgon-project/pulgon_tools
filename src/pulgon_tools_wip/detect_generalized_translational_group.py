@@ -20,6 +20,7 @@ from pdb import set_trace
 import ase.io.vasp
 import numpy as np
 from ase import Atoms
+from ase.build.tools import rotation_matrix
 from ase.io import read
 from ase.io.vasp import read_vasp, write_vasp
 from pymatgen.core import Molecule
@@ -531,6 +532,27 @@ class CyclicGroupAnalyzer:
         """Returns a PointGroup object for the molecule."""
         return self.cyclic_group, self.monomers, self._sym_operations
 
+    def get_generators(self):
+        if len(self._sym_operations) == 1:
+            return self._sym_operations[0].affine_matrix
+        else:
+            # logging.WARNING("The number of sym_operations is not unique, we choose the first one")
+            # op = SymmOp.from_rotation_and_translation(rotation_matrix=self._sym_operations[0][1].rotation_matrix,
+            #                                           translation_vec=self._sym_operations[0][1].translation_vector @ np.linalg.inv(self._atom.cell) % 1)
+            op = SymmOp.from_rotation_and_translation(
+                rotation_matrix=self._sym_operations[0][1].rotation_matrix,
+                translation_vec=[
+                    0,
+                    0,
+                    (
+                        self._sym_operations[0][1].translation_vector
+                        @ np.linalg.inv(self._atom.cell)
+                        % 1
+                    )[2],
+                ],
+            )
+            return op.affine_matrix
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -539,7 +561,6 @@ def main():
     parser.add_argument(
         "filename", help="path to the file from which coordinates will be read"
     )
-
     args = parser.parse_args()
 
     st_name = args.filename

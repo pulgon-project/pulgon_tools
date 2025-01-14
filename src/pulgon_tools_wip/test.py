@@ -1,8 +1,16 @@
+import re
+
 import numpy as np
 import pytest
-from ase.io.vasp import write_vasp
+from ase.io.vasp import read_vasp, write_vasp
 from ipdb import set_trace
+from numpy.linalg.linalg import eigvals
+from sympy.printing.octave import print_octave_code
 
+from pulgon_tools_wip.detect_generalized_translational_group import (
+    CyclicGroupAnalyzer,
+)
+from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
 from pulgon_tools_wip.generate_structures import (
     Cn,
     S2n,
@@ -13,50 +21,41 @@ from pulgon_tools_wip.generate_structures import (
     sigmaH,
     sigmaV,
 )
+from pulgon_tools_wip.line_group_table import get_family_Num_from_sym_symbol
+from pulgon_tools_wip.utils import get_symbols_from_ops
 
 
-def pre_processing(pos_cylin, generators):
-    if pos_cylin.ndim == 1:
-        pos = np.array(
-            [
-                pos_cylin[0] * np.cos(pos_cylin[1]),
-                pos_cylin[0] * np.sin(pos_cylin[1]),
-                pos_cylin[2],
-            ]
-        )
-    else:
-        pos = np.array(
-            [
-                pos_cylin[:, 0] * np.cos(pos_cylin[:, 1]),
-                pos_cylin[:, 0] * np.sin(pos_cylin[:, 1]),
-                pos_cylin[:, 2],
-            ]
-        )
-        pos = pos.T
-    rot_sym = dimino(generators, symec=4)
-    monomer_pos = []
-    for sym in rot_sym:
-        if pos.ndim == 1:
-            monomer_pos.append(np.dot(sym, pos.reshape(pos.shape[0], 1)).T[0])
-        else:
-            monomer_pos.extend([np.dot(sym, line) for line in pos])
-    monomer_pos = np.array(monomer_pos)
-    return monomer_pos
+def lingroupfamily(poscar):
+    cyclic = CyclicGroupAnalyzer(poscar, tolerance=1e-2)
+    trans_sym = cyclic.cyclic_group[0]
+    obj = LineGroupAnalyzer(poscar)
+    rota_sym = obj.sch_symbol
+
+    print(trans_sym)
+    print(rota_sym)
+
+    family = get_family_Num_from_sym_symbol(trans_sym, rota_sym)
+    print("family:", family)
 
 
-def test_st3():
-    """(I|q),Cn,sigmaH"""
-    """(I|a),Cn,sigmaV"""
-    motif = np.array([3, np.pi / 24, 1])
-    generators = np.array([Cn(6), sigmaV()])
-    cyclic = {"T_Q": [1, 3]}
+def symop_symbol(poscar):
+    cyclic = CyclicGroupAnalyzer(poscar, tolerance=1e-2)
+    obj = LineGroupAnalyzer(poscar)
 
-    monomer_pos = pre_processing(motif, generators)
-    st = generate_line_group_structure(monomer_pos, cyclic)
+    sch, _, op_trans = cyclic.get_cyclic_group_and_op()
+    op_rotas = obj.get_generators()
 
-    write_vasp("st6.vasp", st)
-    set_trace()
+    res = get_symbols_from_ops(op_rotas)
+    print(res)
 
 
 if __name__ == "__main__":
-    test_st3()
+    # poscar = read_vasp("../../test/data/9-9-AM")
+    # poscar = read_vasp("../../test/data/12-12-AM")
+    # poscar = read_vasp("../../test/data/24-0-ZZ")
+    # poscar = read_vasp("../../test/data/C4h")
+    # poscar = read_vasp("../../test/data/C4v")
+    poscar = read_vasp("../../test/data/C6u")
+    # poscar = read_vasp("../../test/data/C4")
+    lingroupfamily(poscar)
+    symop_symbol(poscar)

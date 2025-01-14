@@ -456,11 +456,13 @@ def line_group_sympy(DictParams, symprec=1e-6):
                 [
                     [
                         sympy.exp(1j * (m1 * sympy.pi / n + k1 * a / 2)),
+                        # sympy.exp(1j * (m1 * sympy.pi / n)),
                         0,
                     ],
                     [
                         0,
                         sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2)),
+                        # sympy.exp(1j * (m1 * sympy.pi / n)),
                     ],
                 ]
             ),
@@ -524,25 +526,25 @@ def line_group_sympy(DictParams, symprec=1e-6):
         func0 = sympy.Matrix(
             [
                 1,
-                # sympy.exp(1j * k1 * a),
+                sympy.exp(1j * k1 * a),
                 sympy.exp(1j * m1 * 2 * sympy.pi / n),
                 piV,
             ]
         )
         func1 = [
             sympy.Matrix([[1, 0], [0, 1]]),
-            # sympy.Matrix(
-            #     [
-            #         [
-            #             sympy.exp(1j * k1 * a),
-            #             0,
-            #         ],
-            #         [
-            #             0,
-            #             sympy.exp(1j * k1 * a),
-            #         ],
-            #     ]
-            # ),
+            sympy.Matrix(
+                [
+                    [
+                        sympy.exp(1j * k1 * a),
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(1j * k1 * a),
+                    ],
+                ]
+            ),
             sympy.Matrix(
                 [
                     [
@@ -598,7 +600,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     res.append(tmp1)
             characters.append(np.array(res).astype(np.complex128))
         # characters = np.array(characters).astype(np.complex128)
-
     if family == 8:
         qpoint = DictParams["qpoints"]
         nrot = DictParams["nrot"]
@@ -686,7 +687,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     tmp1 = tmp0.evalf(subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n})
                     res.append(tmp1)
             characters.append(np.array(res).astype(np.complex128))
-
     if family == 13:
         qpoints = DictParams["qpoints"]
         nrot = DictParams["nrot"]

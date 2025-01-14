@@ -210,19 +210,19 @@ def get_num_of_decimal(num: float) -> int:
     return len(np.format_float_positional(num).split(".")[1])
 
 
-def get_symcell(monomer: Atoms) -> Atoms:
-    """based on the point group symmetry of monomer, return the symcell
-
-    Args:
-        monomer:
-
-    Returns: symcell
-
-    """
-    apg = LineGroupAnalyzer(monomer)
-    equ = list(apg.get_equivalent_atoms()["eq_sets"].keys())
-    # sym = apg.get_symmetry_operations()
-    return monomer[equ]
+# def get_symcell(monomer: Atoms) -> Atoms:
+#     """based on the point group symmetry of monomer, return the symcell
+#
+#     Args:
+#         monomer:
+#
+#     Returns: symcell
+#
+#     """
+#     apg = LineGroupAnalyzer(monomer)
+#     equ = list(apg.get_equivalent_atoms()["eq_sets"].keys())
+#     # sym = apg.get_symmetry_operations()
+#     return monomer[equ]
 
 
 def get_center_of_mass_periodic(atom):
@@ -410,8 +410,6 @@ def get_matrices(atoms, ops_sym):
             matrix[3 * idx : 3 * (idx + 1), 3 * jj : 3 * (jj + 1)] = ops_sym[
                 ii
             ].rotation_matrix.copy()
-            # matrix[3 * idx : 3 * (idx + 1), 3 * jj : 3 * (jj + 1)] = ops_rotation[ii]
-
         matrices.append(matrix)
     return matrices
 
@@ -665,10 +663,10 @@ def affine_matrix_op(af1, af2):
     """
     ro = af2[:3, :3] @ af1[:3, :3]
     # ro1 = af1[:3, :3] @ af2[:3, :3]
-    test_tran = np.remainder(af2[:3, 3] + af2[:3, :3] @ af1[:3, 3], [1, 1, 1])
-    tran = np.remainder(af2[:3, 3] + af1[:3, 3], [1, 1, 1])
-    if (test_tran - tran).sum() > 1e-5:
-        set_trace()
+    tran = np.remainder(af2[:3, 3] + af2[:3, :3] @ af1[:3, 3], [1, 1, 1])
+    # tran = np.remainder(af2[:3, 3] + af1[:3, 3], [1, 1, 1])
+    # if (test_tran - tran).sum() > 1e-5:
+    #     set_trace()
     af = np.eye(4)
     af[:3, :3] = ro
     af[:3, 3] = tran
@@ -1382,3 +1380,61 @@ def get_site_symmetry(atom_num, perms_ops, ops_sym):
             np.array([ops_sym[ii].rotation_matrix for ii in idx])
         )
     return site_symmetry
+
+
+def get_symbols_from_ops(ops_sym):
+    """
+    Get the symbols of point group operations from the rotation matrix.
+
+    Args:
+        ops_sym: A list of rotation matrix of symmetry operations.
+
+    Returns:
+        symbols: A list of point group symbols.
+
+    Notes:
+        The point group operations are as follows:
+        E: Identity
+        sigmaH: Reflection in the horizontal mirror plane.
+        sigmaV: Reflection in the vertical mirror plane.
+        U: Reflection in the plane perpendicular to the axis.
+        Cn: Rotation by 2 * pi / n about the axis.
+        Sn: Rotation by 2 * pi / n about the axis followed by reflection in the plane perpendicular to the axis.
+    """
+    symbols = []
+    for op in ops_sym:
+        op_ro = op[:3, :3]
+
+        val1, _ = np.linalg.eig(op_ro)
+        itp1 = np.isclose(val1, 1, atol=1e-4)
+        itp2 = np.isclose(val1, -1, atol=1e-4)
+
+        if np.logical_or(itp1, itp2).all():  # test if it is a reflection h,v,U
+            if itp1.sum() == 3:
+                symbols.append("E")
+            elif itp1.sum() == 2 and itp2.sum() == 1:
+                tmp = np.where(itp2)[0].item()
+                if tmp == 2:
+                    symbols.append("sigmaH")
+                else:
+                    symbols.append("sigmaV")
+            elif itp1.sum() == 1 and itp2.sum() == 2 and itp2[2]:
+                symbols.append("U")
+            else:
+                logging.ERROR("The Eigvenvalues are very strange")
+        else:  # test if it is a rotation Cn
+            tmp = 1 / (-np.log(val1) / 2 / np.pi * 1j)[:2]
+
+            if np.isclose(
+                tmp[0].real, abs(tmp[1].real), atol=1e-4
+            ) and np.isclose(val1[2].real, 1, atol=1e-4):
+                num = int(np.round(tmp[0].real))
+                symbols.append("C%d" % num)
+            elif np.isclose(
+                tmp[0].real, abs(tmp[1].real), atol=1e-4
+            ) and np.isclose(val1[2].real, -1, atol=1e-4):
+                num = int(np.round(tmp[0].real))
+                symbols.append("S%d" % num)
+            else:
+                logging.ERROR("The Eigvenvalues are very strange")
+    return symbols

@@ -192,6 +192,12 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         return generators
 
 
+def get_symcell(monomer: Atoms) -> Atoms:
+    apg = LineGroupAnalyzer(monomer)
+    equ = list(apg.get_equivalent_atoms()["eq_sets"].keys())
+    return monomer[equ]
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Try to detect the line group of a system"

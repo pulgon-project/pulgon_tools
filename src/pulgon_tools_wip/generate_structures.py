@@ -266,7 +266,7 @@ def main():
     monomer_pos = np.array(monomer_pos)
 
     st = generate_line_group_structure(monomer_pos, cg, symec=3)
-    write_vasp("%s" % st_name, st, direct=True, sort=True, long_format=False)
+    write_vasp("%s" % st_name, st, direct=True, sort=True)
 
 
 if __name__ == "__main__":
