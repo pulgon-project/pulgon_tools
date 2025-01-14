@@ -352,12 +352,7 @@ def get_perms_from_ops(atoms: Atoms, ops_sym, symprec=1e-2, round=4):
 
     Returns: permutation table
     """
-    natoms = len(atoms.numbers)
-    # coords_scaled = np.round(atoms.get_scaled_positions(), round)
-    coords_scaled = atoms.get_scaled_positions()
-    # coords_scaled_center = np.remainder(coords_scaled - [0.5, 0.5, 0], [1,1,1])
     invcell = np.linalg.inv(atoms.cell)
-    com_scaled = atoms.get_center_of_mass() @ invcell
     coords_center = atoms.positions - atoms.get_center_of_mass()
     coords_scaled_center = coords_center @ invcell
     coords_scaled_center[coords_center @ invcell >= 0.5] -= 1
@@ -373,22 +368,18 @@ def get_perms_from_ops(atoms: Atoms, ops_sym, symprec=1e-2, round=4):
         operated_scaled[operated @ invcell >= 0.5] -= 1
         operated_scaled[operated @ invcell <= -0.5] += 1
         operated = operated_scaled @ atoms.cell
-        # print(operated)
         for aid in range(len(coords_center)):
             equivalents = np.where(
                 np.linalg.norm(operated[aid] - coords_center, axis=1) < symprec
             )[0]
-            # print(equivalents)
             if len(equivalents) == 1:
                 for eq in equivalents:
                     perms[-1].append(eq)
             else:
                 print(ii, aid)
-                # raise ValueError
-                set_trace()
-    # print(perms)
+                raise ValueError
+                # set_trace()
     perms_table = np.array(perms).astype(np.int32)
-    # print(perms_table)
     return perms_table
 
 
