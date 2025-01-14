@@ -193,9 +193,7 @@ def frac_range(
 
     """
     close = list(
-        range(
-            np.ceil(start).astype(np.int32), np.floor(end).astype(np.int32) + 1
-        )
+        range(np.ceil(start).astype(np.int32), np.floor(end).astype(np.int32) + 1)
     )
     if left == False:
         if close[0] - start < symprec:
@@ -232,10 +230,8 @@ def get_center_of_mass_periodic(atom):
     mass = atom.get_masses()
     mtheta = (
         np.arctan2(
-            (-np.sin(theta) * np.expand_dims(mass, axis=1)).sum(axis=0)
-            / len(theta),
-            (-np.cos(theta) * np.expand_dims(mass, axis=1)).sum(axis=0)
-            / len(theta),
+            (-np.sin(theta) * np.expand_dims(mass, axis=1)).sum(axis=0) / len(theta),
+            (-np.cos(theta) * np.expand_dims(mass, axis=1)).sum(axis=0) / len(theta),
         )
         + np.pi
     )
@@ -281,8 +277,7 @@ def atom_move_z(atom):
 
     pos = (
         np.remainder(
-            atom.get_scaled_positions()
-            - [0, 0, atom.get_scaled_positions()[0][2]],
+            atom.get_scaled_positions() - [0, 0, atom.get_scaled_positions()[0][2]],
             [1, 1, 1],
         )
         @ atom.cell
@@ -311,18 +306,14 @@ def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
     combs = list(itertools.product(point_group_ops, cyclic_group_ops))
     coords_car = atoms.positions
     coords_scaled = atoms.get_scaled_positions()
-    coords_car_center = (
-        atoms.get_scaled_positions() - [0.5, 0.5, 0.5]
-    ) @ atoms.cell
+    coords_car_center = (atoms.get_scaled_positions() - [0.5, 0.5, 0.5]) @ atoms.cell
 
     perms, rotation_matrix, translation_vector = [], [], []
     for ii, op in enumerate(combs):
         tmp_perm = np.ones((1, len(atoms.numbers)))[0]
         op1, op2 = op
         rotation_matrix.append(op1.rotation_matrix @ op2.rotation_matrix)
-        translation_vector.append(
-            op1.translation_vector + op2.translation_vector
-        )
+        translation_vector.append(op1.translation_vector + op2.translation_vector)
 
         for jj, site in enumerate(atoms):
             pos = (site.scaled_position - [0.5, 0.5, 0.5]) @ atoms.cell
@@ -352,7 +343,7 @@ def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
     return perms_table, sym_operations
 
 
-def get_perms_from_ops(atoms, ops_sym, symprec=1e-2, round=4):
+def get_perms_from_ops(atoms: Atoms, ops_sym, symprec=1e-2, round=4):
     """get the permutation table from symmetry operations
 
     Args:
@@ -365,41 +356,44 @@ def get_perms_from_ops(atoms, ops_sym, symprec=1e-2, round=4):
     # coords_scaled = np.round(atoms.get_scaled_positions(), round)
     coords_scaled = atoms.get_scaled_positions()
     # coords_scaled_center = np.remainder(coords_scaled - [0.5, 0.5, 0], [1,1,1])
-    coords_scaled_center = np.remainder(
-        np.round(coords_scaled, round) - [0.5, 0.5, 0], [1, 1, 1]
-    )
+    invcell = np.linalg.inv(atoms.cell)
+    com_scaled = atoms.get_center_of_mass() @ invcell
+    coords_center = atoms.positions - atoms.get_center_of_mass()
+    coords_scaled_center = coords_center @ invcell
+    coords_scaled_center[coords_center @ invcell >= 0.5] -= 1
+    coords_scaled_center[coords_center @ invcell <= -0.5] += 1
+    coords_center = coords_scaled_center @ atoms.cell
 
     perms = []
     for ii, op in enumerate(ops_sym):
-        tmp_perm = np.zeros((1, len(atoms.numbers)))[0]
-        for jj, site in enumerate(atoms):
-            pos = (site.scaled_position - [0.5, 0.5, 0]) @ atoms.cell
-
-            tmp = op.operate(pos)
-            # tmp1 = np.remainder(np.round(tmp @ np.linalg.inv(atoms.cell), round), [1, 1, 1])
-            # tmp1 = np.remainder(tmp @ np.linalg.inv(atoms.cell), [1, 1, 1])
-            tmp1 = np.remainder(
-                np.round(tmp @ np.linalg.inv(atoms.cell), round), [1, 1, 1]
-            )
-            idx2 = find_in_coord_list(coords_scaled_center, tmp1, symprec)
-
-            if idx2.size == 0:
-                idx = coords_scaled_center[:, 2] == tmp1[2]
-                res = coords_scaled_center[idx]
+        perms.append([])
+        operated = op.operate_multi(coords_center)
+        operated_scaled = operated @ invcell
+        # to me this seems much safer than the use of remainder - no floating point issues
+        operated_scaled[operated @ invcell >= 0.5] -= 1
+        operated_scaled[operated @ invcell <= -0.5] += 1
+        operated = operated_scaled @ atoms.cell
+        # print(operated)
+        for aid in range(len(coords_center)):
+            equivalents = np.where(
+                np.linalg.norm(operated[aid] - coords_center, axis=1) < symprec
+            )[0]
+            # print(equivalents)
+            if len(equivalents) == 1:
+                for eq in equivalents:
+                    perms[-1].append(eq)
+            else:
+                print(ii, aid)
+                # raise ValueError
                 set_trace()
-                logging.ERROR("tolerance exceed while calculate perms")
-            tmp_perm[jj] = idx2
-
-        idx = len(np.unique(tmp_perm))
-        if idx != natoms:
-            logging.ERROR("perms numebr != natoms")
-        perms.append(tmp_perm)
+    # print(perms)
     perms_table = np.array(perms).astype(np.int32)
+    # print(perms_table)
     return perms_table
 
 
-def get_matrices(atoms, ops_sym):
-    perms_table = get_perms_from_ops(atoms, ops_sym)
+def get_matrices(atoms, ops_sym, symprec=1e-5):
+    perms_table = get_perms_from_ops(atoms, ops_sym, symprec=symprec)
 
     natoms = len(atoms.numbers)
     matrices = []
@@ -414,8 +408,8 @@ def get_matrices(atoms, ops_sym):
     return matrices
 
 
-def get_matrices_withPhase(atoms, ops_sym, qpoint):
-    perms_table = get_perms_from_ops(atoms, ops_sym)
+def get_matrices_withPhase(atoms, ops_sym, qpoint, symprec=1e-5):
+    perms_table = get_perms_from_ops(atoms, ops_sym, symprec=symprec)
 
     natoms = len(atoms.numbers)
     matrices = []
@@ -447,8 +441,7 @@ def get_modified_projector(DictParams, atom):
                     g_rot[0].rotation_matrix, s
                 ) @ np.linalg.matrix_power(g_rot[1].rotation_matrix, j)
                 tran = (
-                    g_rot[0].translation_vector * s
-                    + g_rot[1].translation_vector * j
+                    g_rot[0].translation_vector * s + g_rot[1].translation_vector * j
                 ) * atom.cell[2, 2]
                 op = SymmOp.from_rotation_and_translation(
                     rotation_matrix=rot, translation_vec=tran
@@ -486,18 +479,12 @@ def get_modified_projector(DictParams, atom):
             num_modes = 0
             for ii in range(len(Dmu_rot_conj)):
                 if ii == 0:
-                    projector = TensorProduct(
-                        Dmu_rot_conj[ii], matrices_apg[ii]
-                    )
+                    projector = TensorProduct(Dmu_rot_conj[ii], matrices_apg[ii])
                 else:
-                    projector += TensorProduct(
-                        Dmu_rot_conj[ii], matrices_apg[ii]
-                    )
+                    projector += TensorProduct(Dmu_rot_conj[ii], matrices_apg[ii])
 
                 if Dmu_rot_conj[ii].ndim != 0:
-                    num_modes += (
-                        Dmu_rot_conj[ii].trace() * matrices_apg[ii].trace()
-                    )
+                    num_modes += Dmu_rot_conj[ii].trace() * matrices_apg[ii].trace()
                 else:
                     num_modes += Dmu_rot_conj[ii] * matrices_apg[ii].trace()
 
@@ -591,18 +578,12 @@ def get_modified_projector(DictParams, atom):
             tmp = []
             for ii in range(len(Dmu_rot_conj)):
                 if ii == 0:
-                    projector = TensorProduct(
-                        matrices_apg[ii], Dmu_rot_conj[ii]
-                    )
+                    projector = TensorProduct(matrices_apg[ii], Dmu_rot_conj[ii])
                 else:
-                    projector += TensorProduct(
-                        matrices_apg[ii], Dmu_rot_conj[ii]
-                    )
+                    projector += TensorProduct(matrices_apg[ii], Dmu_rot_conj[ii])
 
                 if Dmu_rot_conj[ii].ndim != 0:
-                    num_modes += (
-                        Dmu_rot_conj[ii].trace() * matrices_apg[ii].trace()
-                    )
+                    num_modes += Dmu_rot_conj[ii].trace() * matrices_apg[ii].trace()
                     tmp.append(matrices_apg[ii].trace())
                 else:
                     num_modes += Dmu_rot_conj[ii] * matrices_apg[ii].trace()
@@ -735,24 +716,17 @@ def dimino_affine_matrix_and_character(
                             L = np.vstack(
                                 (
                                     L,
-                                    np.array(
-                                        [affine_matrix_op(sg, t) for t in L1]
-                                    ),
+                                    np.array([affine_matrix_op(sg, t) for t in L1]),
                                 )
                             )
                             tmp = np.array(
-                                [
-                                    np.dot(sg_chara, t_chara)
-                                    for t_chara in L1_chara
-                                ]
+                                [np.dot(sg_chara, t_chara) for t_chara in L1_chara]
                             )
                             L_chara = np.vstack((L_chara, tmp))
                         else:
                             L = np.array(
                                 L,
-                                np.array(
-                                    [affine_matrix_op(sg, t) for t in L1]
-                                ),
+                                np.array([affine_matrix_op(sg, t) for t in L1]),
                             )
                         more = True
     L_chara_trace = []
@@ -782,9 +756,7 @@ def brute_force_generate_group(generators: np.ndarray, symec: float = 0.01):
     return L
 
 
-def brute_force_generate_group_subsquent(
-    generators: np.ndarray, symec: float = 0.01
-):
+def brute_force_generate_group_subsquent(generators: np.ndarray, symec: float = 0.01):
     """generate all the group elements by brute force algorithm
 
     Args:
@@ -816,9 +788,7 @@ def brute_force_generate_group_subsquent(
     return L, L_seq
 
 
-def dimino_affine_matrix(
-    generators: np.ndarray, symec: float = 0.01
-) -> np.ndarray:
+def dimino_affine_matrix(generators: np.ndarray, symec: float = 0.01) -> np.ndarray:
     """
 
     Args:
@@ -853,9 +823,7 @@ def dimino_affine_matrix(
                             L = np.vstack(
                                 (
                                     L,
-                                    np.array(
-                                        [affine_matrix_op(sg, t) for t in L1]
-                                    ),
+                                    np.array([affine_matrix_op(sg, t) for t in L1]),
                                 )
                             )
                         more = True
@@ -918,9 +886,7 @@ def dimino_affine_matrix_and_subsquent(
                             L = np.vstack(
                                 (
                                     L,
-                                    np.array(
-                                        [affine_matrix_op(sg, t) for t in L1]
-                                    ),
+                                    np.array([affine_matrix_op(sg, t) for t in L1]),
                                 )
                             )
                             tmp = [sg_subs + t_subs for t_subs in L1_subs]
@@ -929,9 +895,7 @@ def dimino_affine_matrix_and_subsquent(
                         else:
                             L = np.array(
                                 L,
-                                np.array(
-                                    [affine_matrix_op(sg, t) for t in L1]
-                                ),
+                                np.array([affine_matrix_op(sg, t) for t in L1]),
                             )
                             tmp = [sg_subs + t_subs for t_subs in L1_subs]
                             L_subs = L_subs + tmp
@@ -940,9 +904,7 @@ def dimino_affine_matrix_and_subsquent(
 
 
 def get_character(DictParams, symprec=1e-8):
-    characters, paras_values, paras_symbols = line_group_sympy(
-        DictParams, symprec
-    )
+    characters, paras_values, paras_symbols = line_group_sympy(DictParams, symprec)
     return characters, paras_values, paras_symbols
 
 
@@ -1184,8 +1146,7 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
     symbols = scell.symbols
     cell = scell.cell
     positions = (
-        (scell.scaled_positions + np.asarray([0.5, 0.5, 0.0])[np.newaxis, :])
-        % 1.0
+        (scell.scaled_positions + np.asarray([0.5, 0.5, 0.0])[np.newaxis, :]) % 1.0
     ) @ cell
     # positions = ((scell.get_scaled_positions() + np.asarray([0.5, 0.5, 0.0])[np.newaxis, :]) % 1.0) @ cell
 
@@ -1201,9 +1162,7 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
             # n_elements=1
             for i_d in range(n_elements):
                 average_delta[i, j, :] += (
-                    positions[j, :]
-                    - positions[i, :]
-                    + shifts[i, j, i_d] * cell[2, :]
+                    positions[j, :] - positions[i, :] + shifts[i, j, i_d] * cell[2, :]
                 )
             average_delta[i, j, :] /= n_elements
 
@@ -1217,9 +1176,7 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
             # n_elements=1
             for i_d in range(n_elements):
                 delta = (
-                    positions[j, :]
-                    - positions[i, :]
-                    + shifts[i, j, i_d] * cell[2, :]
+                    positions[j, :] - positions[i, :] + shifts[i, j, i_d] * cell[2, :]
                 )
                 average_products[i, j, :, :] += np.outer(delta, delta)
             average_products[i, j, :, :] /= n_elements
@@ -1239,9 +1196,7 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
             for beta in range(3):
                 for j in range(n_satoms):
                     rows.append(n_rows)
-                    cols.append(
-                        np.ravel_multi_index((i, j, alpha, beta), IFC.shape)
-                    )
+                    cols.append(np.ravel_multi_index((i, j, alpha, beta), IFC.shape))
                     data.append(1.0)
                 n_rows += 1
 
@@ -1255,9 +1210,7 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
                         r_ij = average_delta[phonon.primitive.p2s_map[i], j]
                         rows.append(n_rows)
                         cols.append(
-                            np.ravel_multi_index(
-                                (i, j, alpha, beta), IFC.shape
-                            )
+                            np.ravel_multi_index((i, j, alpha, beta), IFC.shape)
                         )
                         data.append(r_ij[gamma])
                         # data.append(positions[j][gamma])
@@ -1265,9 +1218,7 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
 
                         rows.append(n_rows)
                         cols.append(
-                            np.ravel_multi_index(
-                                (i, j, alpha, gamma), IFC.shape
-                            )
+                            np.ravel_multi_index((i, j, alpha, gamma), IFC.shape)
                         )
                         data.append(-r_ij[beta])
                         # data.append(-positions[j][beta])
@@ -1283,21 +1234,15 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
                 for delta in range(3):
                     for i in range(n_atoms):
                         for j in range(n_satoms):
-                            products = average_products[
-                                phonon.primitive.p2s_map[i], j
-                            ]
+                            products = average_products[phonon.primitive.p2s_map[i], j]
                             rows.append(n_rows)
                             cols.append(
-                                np.ravel_multi_index(
-                                    (i, j, alpha, beta), IFC.shape
-                                )
+                                np.ravel_multi_index((i, j, alpha, beta), IFC.shape)
                             )
                             data.append(products[gamma, delta])
                             rows.append(n_rows)
                             cols.append(
-                                np.ravel_multi_index(
-                                    (i, j, gamma, delta), IFC.shape
-                                )
+                                np.ravel_multi_index((i, j, gamma, delta), IFC.shape)
                             )
                             data.append(-products[alpha, beta])
                     n_rows += 1
@@ -1348,9 +1293,7 @@ def get_freq_and_dis_from_phonopy(phonon, qpoints):
         D = phonon.get_dynamical_matrix_at_q(q)
         eigvals, eigvecs = np.linalg.eigh(D)
         eigvals = eigvals.real
-        frequencies.append(
-            np.sqrt(abs(eigvals)) * np.sign(eigvals) * VaspToTHz
-        )
+        frequencies.append(np.sqrt(abs(eigvals)) * np.sign(eigvals) * VaspToTHz)
         if ii == 0:
             distances.append(0)
             q_last = q.copy()
@@ -1376,9 +1319,7 @@ def get_site_symmetry(atom_num, perms_ops, ops_sym):
     site_symmetry = []
     for num in atom_num:
         idx = np.where(perms_ops[:, num] == num)[0]
-        site_symmetry.append(
-            np.array([ops_sym[ii].rotation_matrix for ii in idx])
-        )
+        site_symmetry.append(np.array([ops_sym[ii].rotation_matrix for ii in idx]))
     return site_symmetry
 
 
@@ -1425,14 +1366,14 @@ def get_symbols_from_ops(ops_sym):
         else:  # test if it is a rotation Cn
             tmp = 1 / (-np.log(val1) / 2 / np.pi * 1j)[:2]
 
-            if np.isclose(
-                tmp[0].real, abs(tmp[1].real), atol=1e-4
-            ) and np.isclose(val1[2].real, 1, atol=1e-4):
+            if np.isclose(tmp[0].real, abs(tmp[1].real), atol=1e-4) and np.isclose(
+                val1[2].real, 1, atol=1e-4
+            ):
                 num = int(np.round(tmp[0].real))
                 symbols.append("C%d" % num)
-            elif np.isclose(
-                tmp[0].real, abs(tmp[1].real), atol=1e-4
-            ) and np.isclose(val1[2].real, -1, atol=1e-4):
+            elif np.isclose(tmp[0].real, abs(tmp[1].real), atol=1e-4) and np.isclose(
+                val1[2].real, -1, atol=1e-4
+            ):
                 num = int(np.round(tmp[0].real))
                 symbols.append("S%d" % num)
             else:
