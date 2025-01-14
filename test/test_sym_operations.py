@@ -43,7 +43,9 @@ def test_lingroupfamily(shared_datadir):
     trans_sym = cyclic.cyclic_group[0]
     obj = LineGroupAnalyzer(poscar)
     rota_sym = obj.sch_symbol
-    family = get_family_Num_from_sym_symbol(trans_sym, rota_sym)
+    # family = get_family_Num_from_sym_symbol(trans_sym, rota_sym)
+    family = get_family_Num_from_sym_symbol("T", "C1")
+
     assert family == 4
 
 

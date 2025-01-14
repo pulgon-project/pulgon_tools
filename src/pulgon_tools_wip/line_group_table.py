@@ -29,7 +29,7 @@ def get_family_Num_from_sym_symbol(trans_sym, rota_sym):
     family_map = {
         "T": {
             "S": 2,
-            "C": {"h": 3, "v": 6},
+            "C": {"h": 3, "v": 6, "digit": 1},
             "D": {"d": 9, "h": 11},
         },
         "T'": {
