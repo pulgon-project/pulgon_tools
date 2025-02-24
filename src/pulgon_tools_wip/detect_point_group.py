@@ -69,6 +69,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self.centered_mol = mol.get_centered_molecule()
 
         self.tol = tolerance
+        self.mat_tol = tolerance
         self._zaxis = np.array([0, 0, 1])
 
         self._analyze()

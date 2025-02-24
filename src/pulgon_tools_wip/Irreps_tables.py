@@ -353,7 +353,7 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     res.append(tmp1)
             characters.append(np.array(res).astype(np.complex128))
         # characters = np.array(characters).astype(np.complex128)
-    if family == 3:
+    elif family == 3:
         qpoint = DictParams["qpoints"]
         nrot = DictParams["nrot"]
         a = DictParams["a"]
@@ -434,7 +434,7 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     res.append(tmp1)
             characters.append(np.array(res).astype(np.complex128))
         # characters = np.array(characters).astype(np.complex128)
-    if family == 4:
+    elif family == 4:
         qpoint = DictParams["qpoints"]
         nrot = DictParams["nrot"]
         a = DictParams["a"]
@@ -516,7 +516,7 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     tmp1 = tmp0.evalf(subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n})
                     res.append(tmp1)
             characters.append(np.array(res).astype(np.complex128))
-    if family == 6:
+    elif family == 6:
         qpoint = DictParams["qpoints"]
         nrot = DictParams["nrot"]
         a = DictParams["a"]
@@ -600,7 +600,7 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     res.append(tmp1)
             characters.append(np.array(res).astype(np.complex128))
         # characters = np.array(characters).astype(np.complex128)
-    if family == 8:
+    elif family == 8:
         qpoint = DictParams["qpoints"]
         nrot = DictParams["nrot"]
         a = DictParams["a"]
@@ -687,7 +687,7 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     tmp1 = tmp0.evalf(subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n})
                     res.append(tmp1)
             characters.append(np.array(res).astype(np.complex128))
-    if family == 13:
+    elif family == 13:
         qpoints = DictParams["qpoints"]
         nrot = DictParams["nrot"]
         a = DictParams["a"]
@@ -874,6 +874,8 @@ def line_group_sympy(DictParams, symprec=1e-6):
                 # res.append(tmp1)
             res = np.array(res).astype(np.complex128)
             characters.append(res)
+    else:
+        raise NotImplementedError("Family %d is not supported yet" % family)
     return characters, paras_values, paras_symbol
 
 
