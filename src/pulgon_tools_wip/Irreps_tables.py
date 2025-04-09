@@ -455,14 +455,16 @@ def line_group_sympy(DictParams, symprec=1e-6):
             sympy.Matrix(
                 [
                     [
-                        sympy.exp(1j * (m1 * sympy.pi / n + k1 * a / 2)),
-                        # sympy.exp(1j * (m1 * sympy.pi / n)),
+                        # sympy.exp(1j * (m1 * sympy.pi / n + k1 * a / 2)),
+                        # sympy.exp(1j * (k1 * a / 2 + m1 * sympy.pi / n)),
+                        sympy.exp(1j * (m1 * sympy.pi / n)),
                         0,
                     ],
                     [
                         0,
-                        sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2)),
-                        # sympy.exp(1j * (m1 * sympy.pi / n)),
+                        # sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2)),
+                        # sympy.exp(1j * (k1 * a / 2 - m1 * sympy.pi / n)),
+                        sympy.exp(1j * (m1 * sympy.pi / n)),
                     ],
                 ]
             ),
@@ -489,10 +491,12 @@ def line_group_sympy(DictParams, symprec=1e-6):
 
         piH_value = [-1, 1]
         if np.isclose(qpoint, 0, atol=symprec):
-            fc = func[0]
+            idx_fc = 0
+            fc = func[idx_fc]
             paras_symbol = [k1, m1, n, piH]
         else:
-            fc = func[1]
+            idx_fc = 1
+            fc = func[idx_fc]
             paras_symbol = [k1, m1, n]
         paras_values = list(itertools.product(*[qps_value, m1_value, n_value]))
         characters = []
@@ -504,8 +508,8 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     if jj == 0:
                         tmp0 = fc[tmp]
                     else:
-                        tmp0 = tmp0 * fc[tmp]
-                if len(paras_symbol) == 4:
+                        tmp0 = fc[tmp] * tmp0
+                if idx_fc == 0:
                     tmp1 = tmp0.evalf(
                         subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piH: -1}
                     ) + tmp0.evalf(
@@ -688,11 +692,10 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     res.append(tmp1)
             characters.append(np.array(res).astype(np.complex128))
     elif family == 13:
-        qpoints = DictParams["qpoints"]
+        qpoint = DictParams["qpoints"]
         nrot = DictParams["nrot"]
         a = DictParams["a"]
         order = DictParams["order"]
-
         n, k1, m1, f, piU, piV, piH = symbols("n k1 m1 f piU piV piH")
         func0 = sympy.Matrix(
             [
@@ -703,7 +706,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
                 piV,
             ]
         )
-
         func1 = [
             sympy.Matrix(
                 [
@@ -747,8 +749,8 @@ def line_group_sympy(DictParams, symprec=1e-6):
             sympy.Matrix([[1, 0], [0, 1]]),
             sympy.Matrix(
                 [
-                    [sympy.exp(1j * (m1 * sympy.pi / n + k1 * f)), 0],
-                    [0, sympy.exp(1j * (m1 * sympy.pi / n - k1 * f))],
+                    [sympy.exp(1j * (m1 * sympy.pi / n + k1 * a / 2)), 0],
+                    [0, sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2))],
                 ]
             ),
             sympy.Matrix([[0, 1], [1, 0]]),
@@ -768,10 +770,30 @@ def line_group_sympy(DictParams, symprec=1e-6):
             ),
             sympy.Matrix(
                 [
-                    [sympy.exp(1j * (m1 * sympy.pi / n + k1 * f)), 0, 0, 0],
-                    [0, sympy.exp(1j * (-m1 * sympy.pi / n + k1 * f)), 0, 0],
-                    [0, 0, sympy.exp(1j * (m1 * sympy.pi / n - k1 * f)), 0],
-                    [0, 0, 0, sympy.exp(-1j * (m1 * sympy.pi / n + k1 * f))],
+                    [
+                        sympy.exp(1j * (m1 * sympy.pi / n + k1 * a / 2)),
+                        0,
+                        0,
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(1j * (-m1 * sympy.pi / n + k1 * a / 2)),
+                        0,
+                        0,
+                    ],
+                    [
+                        0,
+                        0,
+                        sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2)),
+                        0,
+                    ],
+                    [
+                        0,
+                        0,
+                        0,
+                        sympy.exp(-1j * (m1 * sympy.pi / n + k1 * a / 2)),
+                    ],
                 ]
             ),
             sympy.Matrix(
@@ -789,63 +811,63 @@ def line_group_sympy(DictParams, symprec=1e-6):
                 [[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
             ),
         ]
+
         func = [func0, func1, func2, func3, func4]
-
-        qps_value = [qpoints]
+        qps_value = [qpoint]
         n_value = [nrot]
-        m1_value = list(range(0, nrot + 1))
-        # m1_value = list(range(-nrot + 1, nrot + 1))
+
+        if np.isclose(np.abs(qpoint), np.pi / a, atol=symprec):
+            m1_value = list(range(0, np.floor(nrot / 2 + 1).astype(np.int32)))
+        else:
+            # m1_value = list(range(0, np.floor(nrot / 2 + 1).astype(np.int32)))
+            m1_value = list(range(0, nrot + 1))
+
         f_value = [a / 2]
-
-        paras_values = list(
-            itertools.product(
-                *[
-                    qps_value,
-                    m1_value,
-                    n_value,
-                    f_value,
-                    [-1, 1],
-                    [-1, 1],
-                    [-1, 1],
-                ]
-            )
-        )
-        paras_symbol = [k1, m1, n, f, piU, piV, piH]
-
-        print("Now getting characters:")
+        # paras_values = list(itertools.product(*[qps_value, m1_value, n_value, f_value]))
+        paras_values = list(itertools.product(*[qps_value, m1_value, n_value]))
         characters = []
         for ii, paras_value in enumerate(paras_values):
-            tmp_k1, tmp_m1, tmp_n, tmp_f, tmppiU, tmppiV, tmppiH = paras_value
-
+            tmp_k1, tmp_m1, tmp_n = paras_value
+            # tmp_k1, tmp_m1, tmp_n  = paras_value
             if np.isclose(tmp_k1, 0, atol=symprec):
                 if np.isclose(np.abs(tmp_m1), 0) or np.isclose(
                     np.abs(tmp_m1), tmp_n
                 ):
-                    fc = func[0]
+                    idx_fc = 0
+                    fc = func[idx_fc]
+                    paras_symbol = [k1, m1, piU, piV]
                 elif 0 < np.abs(tmp_m1) < tmp_n:
-                    fc = func[1]
-                else:
-                    logging.ERROR("Wrong value for m1")
+                    idx_fc = 1
+                    fc = func[idx_fc]
+                    paras_symbol = [k1, m1, piH]
             elif np.isclose(np.abs(tmp_k1), np.pi / a, atol=symprec):
                 if np.isclose(np.abs(tmp_m1), tmp_n / 2, atol=symprec):
-                    fc = func[3]
+                    idx_fc = 3
+                    fc = func[idx_fc]
+                    paras_symbol = [piU]
                 elif np.isclose(np.abs(tmp_m1), 0, atol=symprec):
-                    fc = func[2]
+                    idx_fc = 2
+                    fc = func[idx_fc]
+                    paras_symbol = [k1, m1, piV]
                 elif 0 < np.abs(tmp_m1) < tmp_n / 2:
-                    fc = func[4]
-                else:
-                    logging.ERROR("Wrong value for m1")
+                    idx_fc = 4
+                    fc = func[idx_fc]
+                    paras_symbol = [k1, m1, n]
             elif 0 < np.abs(tmp_k1) < np.pi / a:
                 if np.isclose(np.abs(tmp_m1), 0, atol=symprec) or np.isclose(
                     np.abs(tmp_m1), tmp_n, atol=symprec
                 ):
-                    fc = func[2]
+                    idx_fc = 2
+                    fc = func[idx_fc]
+                    paras_symbol = [k1, m1, piV]
+                    # paras_symbol = [k1, m1, n, f, piU, piV]
+
                 elif 0 < np.abs(tmp_m1) < tmp_n:
-                    fc = func[4]
-                else:
-                    logging.ERROR("Wrong value for m1")
+                    idx_fc = 4
+                    fc = func[idx_fc]
+                    paras_symbol = [k1, m1]
             else:
-                # set_trace()
+                set_trace()
                 logging.ERROR("Wrong value for k1")
 
             res = []
@@ -854,119 +876,71 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     if jj == 0:
                         tmp0 = fc[tmp]
                     else:
-                        tmp0 = tmp0 * fc[tmp]
+                        tmp0 = fc[tmp] * tmp0
 
-                tmp1 = tmp0.evalf(
-                    subs={
-                        k1: tmp_k1,
-                        m1: tmp_m1,
-                        n: tmp_n,
-                        f: tmp_f,
-                        piU: tmppiU,
-                        piV: tmppiV,
-                        piH: tmppiH,
-                    }
-                )
-                if tmp1.is_Matrix:
-                    res.append(tmp1.trace())
-                else:
+                if idx_fc == 0:
+                    tmp1 = (
+                        tmp0.evalf(
+                            subs={
+                                k1: tmp_k1,
+                                m1: tmp_m1,
+                                n: tmp_n,
+                                piV: -1,
+                                piU: 1,
+                            }
+                        )
+                        + tmp0.evalf(
+                            subs={
+                                k1: tmp_k1,
+                                m1: tmp_m1,
+                                n: tmp_n,
+                                piV: 1,
+                                piU: 1,
+                            }
+                        )
+                        + tmp0.evalf(
+                            subs={
+                                k1: tmp_k1,
+                                m1: tmp_m1,
+                                n: tmp_n,
+                                piV: -1,
+                                piU: -1,
+                            }
+                        )
+                        + tmp0.evalf(
+                            subs={
+                                k1: tmp_k1,
+                                m1: tmp_m1,
+                                n: tmp_n,
+                                piV: 1,
+                                piU: -1,
+                            }
+                        )
+                    )
                     res.append(tmp1)
-                # res.append(tmp1)
-            res = np.array(res).astype(np.complex128)
-            characters.append(res)
+                elif idx_fc == 1:
+                    tmp1 = tmp0.evalf(
+                        subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piH: -1}
+                    ) + tmp0.evalf(
+                        subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piH: 1}
+                    )
+                    res.append(tmp1)
+                elif idx_fc == 2:
+                    tmp1 = tmp0.evalf(
+                        subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piV: -1}
+                    ) + tmp0.evalf(
+                        subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piV: 1}
+                    )
+                    res.append(tmp1)
+                elif idx_fc == 3:
+                    tmp1 = tmp0.evalf(subs={piU: -1}) + tmp0.evalf(
+                        subs={piU: 1}
+                    )
+                    res.append(tmp1)
+                elif idx_fc == 4:
+                    tmp1 = tmp0.evalf(subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n})
+                    res.append(tmp1)
+            characters.append(np.array(res).astype(np.complex128))
     else:
         raise NotImplementedError("Family %d is not supported yet" % family)
     return characters, paras_values, paras_symbol
-
-
-# def get_IR_matrix(DictParams, symprec=1e-6):
-#     family = DictParams["family"]
-#
-#     if family == 8:
-#         qpoint = DictParams["qpoints"]
-#         nrot = DictParams["nrot"]
-#         a = DictParams["a"]
-#         order = DictParams["order"]
-#
-#         k1, m1, n, piV = symbols("k1 m1 n piV")
-#         func0 = sympy.Matrix(
-#             [
-#                 1,
-#                 # sympy.exp(1j * (k1 * a / 2 + m1 * sympy.pi / n)),
-#                 sympy.exp(1j * (m1 * sympy.pi / n)),
-#                 1,
-#                 piV,
-#             ]
-#         )
-#
-#         func1 = [
-#             sympy.Matrix([[1, 0], [0, 1]]),
-#             sympy.Matrix(
-#                 [
-#                     [
-#                         # sympy.exp(1j * (k1 * a / 2 + m1 * sympy.pi / n)),
-#                         sympy.exp(1j * (m1 * sympy.pi / n)),
-#                         0,
-#                     ],
-#                     [
-#                         0,
-#                         # sympy.exp(1j * (k1 * a / 2 - m1 * sympy.pi / n)),
-#                         sympy.exp(1j * (-m1 * sympy.pi / n)),
-#                     ],
-#                 ]
-#             ),
-#             sympy.Matrix(
-#                 [
-#                     [
-#                         sympy.exp(1j * m1 * 2 * sympy.pi / n),
-#                         0,
-#                     ],
-#                     [
-#                         0,
-#                         sympy.exp(-1j * m1 * 2 * sympy.pi / n),
-#                     ],
-#                 ]
-#             ),
-#             sympy.Matrix([[0, 1], [1, 0]]),
-#         ]
-#
-#         func = [func0, func1]
-#         qps_value = [qpoint]
-#         n_value = [nrot]
-#
-#         m1_value = list(range(0, nrot + 1))
-#         paras_values = list(itertools.product(*[qps_value, m1_value, n_value]))
-#         IR_matrix = []
-#         for ii, paras_value in enumerate(paras_values):
-#             tmp_k1, tmp_m1, tmp_n = paras_value
-#
-#             if np.isclose(tmp_m1, 0, atol=symprec) or np.isclose(
-#                 tmp_m1, nrot, atol=symprec
-#             ):
-#                 fc = func[0]
-#                 paras_symbol = [k1, m1, n, piV]
-#             else:
-#                 fc = func[1]
-#                 paras_symbol = [k1, m1, n]
-#
-#             res = []
-#             for tmp_order in order:
-#                 for jj, tmp in enumerate(tmp_order):
-#                     if jj == 0:
-#                         tmp0 = fc[tmp]
-#                     else:
-#                         # tmp0 = tmp0 * fc[tmp]
-#                         tmp0 = fc[tmp] * tmp0
-#                 if len(paras_symbol) == 4:
-#                     tmp1 = tmp0.evalf(
-#                         subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piV: -1}
-#                     ) + tmp0.evalf(
-#                         subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piV: 1}
-#                     )
-#                     # tmp1 = tmp0.evalf(subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piV: 1})
-#                     res.append(tmp1)
-#                 else:
-#                     tmp1 = tmp0.evalf(subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n})
-#                     res.append(tmp1)
-#             IR_matrix.append(np.array(res).astype(np.complex128))
-#     return IR_matrix, paras_values, paras_symbol
