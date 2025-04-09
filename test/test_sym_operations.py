@@ -45,7 +45,6 @@ def test_lingroupfamily(shared_datadir):
     rota_sym = obj.sch_symbol
     # family = get_family_Num_from_sym_symbol(trans_sym, rota_sym)
     family = get_family_Num_from_sym_symbol("T", "C1")
-
     assert family == 4
 
 
