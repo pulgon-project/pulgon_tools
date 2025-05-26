@@ -561,12 +561,18 @@ def main():
     parser.add_argument(
         "filename", help="path to the file from which coordinates will be read"
     )
+    parser.add_argument(
+        "--symprec",
+        type=float,
+        default=0.001,
+        help="symmetry precision",
+    )
     args = parser.parse_args()
 
     st_name = args.filename
     st = read(st_name)
 
-    cyclic = CyclicGroupAnalyzer(st)
+    cyclic = CyclicGroupAnalyzer(st, tolerance=args.symprec)
     cy, mon = cyclic.get_cyclic_group()
 
     for ii, cg in enumerate(cy):

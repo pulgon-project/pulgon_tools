@@ -211,6 +211,12 @@ def main():
         action="store_true",
         help="open the detection of point group",
     )
+    parser.add_argument(
+        "--symprec",
+        type=float,
+        default=0.001,
+        help="symmetry precision",
+    )
     args = parser.parse_args()
     point_group_ind = args.enable_pg
 
@@ -218,7 +224,7 @@ def main():
     st = read(st_name)
 
     mol = Molecule(species=st.numbers, coords=st.positions)
-    obj1 = LineGroupAnalyzer(mol)
+    obj1 = LineGroupAnalyzer(mol, tolerance=args.symprec)
     pg1 = obj1.get_pointgroup()
     print(" Axial point group: ", pg1)
 
