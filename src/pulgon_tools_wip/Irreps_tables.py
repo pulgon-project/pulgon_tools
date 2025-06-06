@@ -753,7 +753,8 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     [0, sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2))],
                 ]
             ),
-            sympy.Matrix([[0, 1], [1, 0]]),
+            # sympy.Matrix([[0, 1], [1, 0]]),
+            sympy.Matrix([[1, 0], [0, 1]]),
             sympy.Matrix([[0, piV], [piV, 0]]),
             sympy.Matrix([[piV, 0], [0, piV]]),
         ]
@@ -792,7 +793,7 @@ def line_group_sympy(DictParams, symprec=1e-6):
                         0,
                         0,
                         0,
-                        sympy.exp(-1j * (m1 * sympy.pi / n + k1 * a / 2)),
+                        sympy.exp(1j * (-m1 * sympy.pi / n - k1 * a / 2)),
                     ],
                 ]
             ),

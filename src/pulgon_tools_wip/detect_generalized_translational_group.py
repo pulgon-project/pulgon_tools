@@ -15,7 +15,7 @@
 import argparse
 import itertools
 import logging
-from pdb import set_trace
+from fractions import Fraction
 
 import ase.io.vasp
 import numpy as np
@@ -23,14 +23,25 @@ from ase import Atoms
 from ase.build.tools import rotation_matrix
 from ase.io import read
 from ase.io.vasp import read_vasp, write_vasp
+from ipdb import set_trace
 from pymatgen.core import Molecule
 from pymatgen.core.operations import SymmOp
 from pymatgen.symmetry.analyzer import PointGroupAnalyzer
 from pymatgen.util.coord import find_in_coord_list
 
-from pulgon_tools_wip.utils import get_num_of_decimal, refine_cell
+from pulgon_tools_wip.utils import (
+    angle_between_points,
+    get_num_of_decimal,
+    refine_cell,
+)
 
 # from torchgen.native_function_generation import self_to_out_signature
+
+
+# logging.basicConfig(
+#     level=logging.DEBUG,  # 设置最低日志级别为 DEBUG
+#     format='%(asctime)s - %(levelname)s - %(message)s'
+# )
 
 
 class CyclicGroupAnalyzer:
@@ -51,7 +62,7 @@ class CyclicGroupAnalyzer:
         self,
         atom: ase.atoms.Atoms,
         tolerance: float = 0.001,
-        round_symprec: int = 3,
+        round_symprec: int = 5,
     ) -> None:
         """
 
@@ -71,7 +82,7 @@ class CyclicGroupAnalyzer:
             )
         else:
             self._symprec = tolerance
-            self._layer_symprec = 0.1
+            self._layer_symprec = 0.05
             # self._round_symprec = get_num_of_decimal(tolerance)
             self._round_symprec = round_symprec
             self._zaxis = np.array([0, 0, 1])
@@ -178,11 +189,11 @@ class CyclicGroupAnalyzer:
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]
         )
         for ii, monomer in enumerate(monomer_atoms):
-
-            # set_trace()
             logging.debug("---Start deticting NO.%d monomer" % (ii + 1))
             tran = potential_tans[ii]
-            ind = int(np.round(1 / tran, self._round_symprec))
+            # ind = int(np.round(1 / tran, self._round_symprec))
+            ind = int(np.round(1 / tran))
+
             if ind - 1 / tran > self._symprec:
                 logging.error("Selecting wrong translational vector")
                 continue
@@ -209,7 +220,8 @@ class CyclicGroupAnalyzer:
                         % Q
                     )
                     cyclic_group.append(
-                        "T%s(%s)" % (Q, np.round(tran * self._pure_trans, 3))
+                        "(C%s|T%s(%s))"
+                        % (Q, ind, np.round(tran * self._pure_trans, 3))
                     )
                     mono.append(monomer)
                     tmp_sym_operations.insert(0, invariant_op)
@@ -243,6 +255,35 @@ class CyclicGroupAnalyzer:
                         logging.debug("Mirror does not exist")
         return cyclic_group, mono, sym_op
 
+    def _detect_possible_helical_angle(self, ind, monomer):
+
+        min_z = np.min(monomer.get_scaled_positions()[:, 2])
+        min_idx = np.argmin(monomer.get_scaled_positions()[:, 2])
+
+        point_start = (monomer.get_scaled_positions() @ self._primitive.cell)[
+            min_idx
+        ][:2]
+        itp = np.where(
+            abs(
+                (min_z + 1 / ind)
+                - self._primitive.get_scaled_positions()[:, 2]
+            )
+            < self._symprec
+        )[0]
+        point_end = (
+            self._primitive.get_scaled_positions() @ self._primitive.cell
+        )[itp][:, :2]
+
+        center = ([0.5, 0.5, 0] @ self._primitive.cell)[:2]
+
+        pot_angle = np.unique(
+            [
+                angle_between_points(point_start, center, tmp)
+                for tmp in point_end
+            ]
+        )
+        return pot_angle
+
     def _detect_rotation(
         self, monomer: ase.atoms.Atoms, tran: np.float64, ind: int
     ) -> [bool, int | float]:
@@ -260,22 +301,24 @@ class CyclicGroupAnalyzer:
         center = [0.5, 0.5, 0] @ self._primitive.cell
 
         # detect the monomer's rotational symmetry for specifying therotation
-        mol = Molecule(species=monomer.numbers, coords=monomer.positions)
-        monomer_rot_ind = PointGroupAnalyzer(mol)._check_rot_sym(self._zaxis)
+        # mol = Molecule(species=monomer.numbers, coords=monomer.positions)
+        # monomer_rot_ind = PointGroupAnalyzer(mol)._check_rot_sym(self._zaxis)
+        # pot_angle = (
+        #     np.array(
+        #         [
+        #             360 * ii / monomer_rot_ind
+        #             for ii in range(1, monomer_rot_ind + 1)
+        #         ]
+        #     )
+        #     / ind
+        # )
 
         # possible rotational angle in cyclic group
-        ind1 = (
-            np.array(
-                [
-                    360 * ii / monomer_rot_ind
-                    for ii in range(1, monomer_rot_ind + 1)
-                ]
-            )
-            / ind
-        )
-        logging.debug("Candidate rotational degree is: %s" % str(ind1))
+        pot_angle = self._detect_possible_helical_angle(ind, monomer)
+        logging.debug("Candidate rotational degree is: %s" % str(pot_angle))
+        # set_trace()
 
-        for test_ind in ind1:
+        for test_ind in pot_angle:
             itp1, itp2 = (
                 True,
                 True,
@@ -312,7 +355,6 @@ class CyclicGroupAnalyzer:
                     [],
                     [],
                 )  # record the rotational result in current layer
-
                 for ii, site in enumerate(monomer):
                     coord1 = op1.operate(site.position)
                     coord2 = op2.operate(site.position)
@@ -332,6 +374,7 @@ class CyclicGroupAnalyzer:
                     )
                 itp1 = itp1 and np.array(itp3).all()
                 itp2 = itp2 and np.array(itp4).all()
+
                 if not (itp1 or itp2):
                     break
                 if itp1:
@@ -339,7 +382,8 @@ class CyclicGroupAnalyzer:
                 if itp2:
                     tmp_sym_op.append(op2)
             if itp1 or itp2:
-                Q = int(360 / test_ind)
+                Q = Fraction(360 / test_ind).limit_denominator()
+
                 logging.debug(
                     "The minimal rotational degree is: %s" % test_ind
                 )
@@ -432,6 +476,7 @@ class CyclicGroupAnalyzer:
         """
         z = self._primitive.get_scaled_positions()[:, 2]
         z = np.round(z, self._round_symprec)
+        # z = np.round(z, 6)
 
         z_uniq, counts = np.unique(z, return_counts=True)
         potential_trans = np.append((z_uniq - z_uniq[0])[1:], 1)
@@ -443,12 +488,12 @@ class CyclicGroupAnalyzer:
             # check the atomic number and layer number of potential monomer
             # check the translational distance whether correspond to the layer numbers
             if (
-                len(self._primitive) % monomer_num == 0
-                and len(z_uniq) % (ii + 1) == 0
+                len(self._primitive) % monomer_num
+                == 0  # make sure the atom number of primitive is multiple times of monomer
+                and len(z_uniq) % (ii + 1) == 0  #
                 and abs(len(z_uniq) / (ii + 1) - 1 / potential_trans[ii])
                 < self._layer_symprec
             ):
-
                 if len(self._primitive) == monomer_num:
                     # if the monomer is the whole structure
                     # monomer.append(self._primitive)

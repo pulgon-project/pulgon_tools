@@ -659,8 +659,9 @@ def affine_matrix_op(af1, af2):
 
     """
     ro = af2[:3, :3] @ af1[:3, :3]
-    # ro1 = af1[:3, :3] @ af2[:3, :3]
-    tran = np.remainder(af2[:3, 3] + af2[:3, :3] @ af1[:3, 3], [1, 1, 1])
+    # ro = af1[:3, :3] @ af2[:3, :3]
+    # tran = np.remainder(af2[:3, 3] + af2[:3, :3] @ af1[:3, 3], [1, 1, 1])
+    tran = (af2[:3, 3] + af2[:3, :3] @ af1[:3, 3]) % 1
     # tran = np.remainder(af2[:3, 3] + af1[:3, 3], [1, 1, 1])
     # if (test_tran - tran).sum() > 1e-5:
     #     set_trace()
@@ -1514,6 +1515,34 @@ def divide_irreps(vec, adapted, dimensions):
 
 def get_p_from_qrn(q, r, n):
     q_tilder = q / n  # q_tilder = a / f
+    if np.isclose(q_tilder, int(q_tilder)):
+        q_tilder = int(q_tilder)
+    else:
+        logging.ERROR("q_tilder is not an interger")
     p_tilder = r ** (sympy.totient(q_tilder) - 1)
     p = n * p_tilder
     return p
+
+
+def angle_between_points(A, B, C):
+    """
+    Calculate angle between three points. Point b is the vertex
+
+    Parameters
+    ----------
+    A : The first point coordinates
+    B : The second point coordinates
+    C : The third point coordinates
+
+    Returns
+    -------
+    angle : float
+        The angle between points A, B and C in degrees.
+    """
+    BA = np.array(A) - np.array(B)
+    BC = np.array(C) - np.array(B)
+
+    cosine_angle = np.dot(BA, BC) / (np.linalg.norm(BA) * np.linalg.norm(BC))
+    cosine_angle = np.clip(cosine_angle, -1.0, 1.0)
+    angle_rad = np.arccos(cosine_angle)
+    return np.degrees(angle_rad)

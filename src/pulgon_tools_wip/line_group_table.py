@@ -64,9 +64,13 @@ def get_family_Num_from_sym_symbol(trans_sym, rota_sym):
         sym_map = family_map["T'"]
     elif trans_sym == "T":
         sym_map = family_map["T"]
-    elif trans_sym.startswith("T"):
+    else:
+        # trans_sym.startswith("T"):
+        trans_sym_C = trans_sym.split("|")[0]
+        trans_sym_T = trans_sym.split("|")[1]
         sym_map = family_map["TN"]
-        num_trans = float(re.findall(r"T(.*?)\(", trans_sym)[0])
+
+        num_trans = float(eval(trans_sym_C.partition("(C")[2]))
         num_rots = float(re.findall(r"\d+", rota_sym)[0])
         sym_map = (
             sym_map["T2n"]
@@ -76,9 +80,6 @@ def get_family_Num_from_sym_symbol(trans_sym, rota_sym):
 
         if rota_sym[0] == "S" and not np.isclose(num_trans, num_rots, 1e-4):
             return log_error()
-
-    else:
-        return log_error()
 
     # Resolve the value based on rota_sym
     key = rota_sym[0]
