@@ -26,8 +26,8 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
         nrot = DictParams["nrot"]
         a = DictParams["a"]
         order = DictParams["order"]
-
         k1, m1, n, piV = symbols("k1 m1 n piV")
+
         func0 = sympy.Matrix(
             [
                 1,
@@ -67,6 +67,7 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
         func = [func0, func1]
         qps_value = [qpoint]
         m1_value = list(range(0, int(nrot / 2) + 1))
+        # set_trace()
 
         def value_fc(fc, tmp_k1, tmp_m1, tmp_piV, nrot, order):
             res = []
@@ -88,7 +89,7 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
         for ii, paras_value in enumerate(paras_km):
             tmp_k1, tmp_m1 = paras_value
             if np.isclose(tmp_m1, 0, atol=symprec) or np.isclose(
-                tmp_m1, int(nrot / 2), atol=symprec
+                tmp_m1, nrot / 2, atol=symprec
             ):
                 idx_fc = 0
                 fc = func[idx_fc]
