@@ -14,17 +14,22 @@
 
 import argparse
 import logging
-from pdb import set_trace
+from typing import Union
 
 import ase
 import numpy as np
-import pretty_errors
 from ase import Atoms
 from ase.io import read
 from ase.io.vasp import write_vasp
+from ipdb import set_trace
 from pymatgen.core import Molecule
 from pymatgen.core.operations import SymmOp
 from pymatgen.symmetry.analyzer import PointGroupAnalyzer
+
+from pulgon_tools_wip.utils import (
+    brute_force_generate_group,
+    find_axis_center_of_nanotube,
+)
 
 
 class LineGroupAnalyzer(PointGroupAnalyzer):
@@ -41,11 +46,8 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
 
     def __init__(
         self,
-        mol: Molecule | Atoms,
+        mol: Union[Molecule, Atoms],
         tolerance: float = 0.01,
-        eigen_tolerance: float = 0.01,
-        matrix_tolerance: float = 0.01,
-        corner: bool = False,
     ):
         """The default settings are usually sufficient. (Totally the same with PointGroupAnalyzer)
 
@@ -53,27 +55,24 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
             mol (Molecule): Molecule to determine point group.
             tolerance (float): Distance tolerance to consider sites as
                 symmetrically equivalent. Defaults to 0.3 Angstrom.
-            eigen_tolerance (float): Tolerance to compare eigen values of
-                the inertia tensor. Defaults to 0.01.
             matrix_tolerance (float): Tolerance used to generate the full set of
                 symmetry operations of the point group.
         """
         logging.debug("--------------------start detecting axial point group")
 
         if type(mol) == Atoms:
-            if corner == True:
-                mol = self._change_center(mol)
-                mol = Molecule(species=mol.numbers, coords=mol.positions)
-            else:
-                mol = Molecule(species=mol.numbers, coords=mol.positions)
+            # mol = self._find_axis_center_of_nanotube(mol)
+            mol = find_axis_center_of_nanotube(mol)
+            mol = Molecule(species=mol.numbers, coords=mol.positions)
 
         self.mol = mol
-        self.centered_mol = mol.get_centered_molecule()  # Todo:   check
-        # self.centered_mol = self._find_axis_center_of_nanotube()    #Todo:   check
+        # self.centered_mol = mol
+        self.centered_mol = mol.get_centered_molecule()
 
         self.tol = tolerance
-        self.eig_tol = eigen_tolerance
-        self.mat_tol = matrix_tolerance
+        self.mat_tol = tolerance
+        self._zaxis = np.array([0, 0, 1])
+
         self._analyze()
         # if self.sch_symbol in ["C1v", "C1h"]:
         #     self.sch_symbol = "Cs"
@@ -87,19 +86,20 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self.rot_sym = []
         self.symmops = [SymmOp(np.eye(4))]
 
-        z_axis = np.array([0, 0, 1])
-
-        self._check_rot_sym(z_axis)
-
-        if len(self.rot_sym) > 0:
+        self._check_rot_sym(self._zaxis)
+        # if len(self.rot_sym) > 0 and self.rot_sym[0][1]!=1:     # modify the case when i==1
+        if len(self.rot_sym) > 0:  # modify the case when i==1
             logging.debug(
                 "The rot_num along zaxis is: %d" % self.rot_sym[0][1]
             )
             logging.debug("Start detecting U")
-            self._check_perpendicular_r2_axis(z_axis)
+
+            self._check_perpendicular_r2_axis(self._zaxis)
             if len(self.rot_sym) >= 2:
                 logging.debug("U exist, start detecting dihedral group")
+
                 self._proc_dihedral()
+
             elif len(self.rot_sym) == 1:
                 logging.debug(
                     "U does not exist, leaving Cnh, Cnv and S2n as candidates"
@@ -142,51 +142,62 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         ) / total_inertia
         return inertia_tensor
 
-    def _find_axis_center_of_nanotube(self) -> Molecule:
-        """remove the center of structure to (x,y):(0,0)
+    def _get_center_of_mass_periodic(self, atom):
+        cell_max = [1, 1, 1]
+        tmp = atom.get_scaled_positions() / cell_max * 2 * np.pi
+        itp1 = np.cos(tmp)
+        itp2 = np.sin(tmp)
 
+        mass = atom.get_masses()
+        itp1_av = mass @ itp1 / mass.sum()
+        itp2_av = mass @ itp2 / mass.sum()
+        theta_av = np.arctan2(-itp2_av, -itp1_av) + np.pi
+        res = cell_max * theta_av / 2 / np.pi
+        return res
+
+    def _find_axis_center_of_nanotube(
+        self, atom: ase.atoms.Atoms
+    ) -> ase.atoms.Atoms:
+        """remove the center of structure to (x,y):(0,0)
         Args:
             atom: initial structure
 
         Returns: centralized structure
 
         """
-        mol = self.mol.copy()
+        n_st = atom.copy()
+        center = self._get_center_of_mass_periodic(atom)
+        pos = (
+            np.remainder(atom.get_scaled_positions() - center + 0.5, [1, 1, 1])
+            @ atom.cell
+        )
 
-        species = np.unique(mol.species)
-        center = np.zeros((len(species), 3))
-        for site in mol:
-            idx = np.where(species, site.specie)[0]
-            center[idx] = center[idx] + site.coords
-
-            set_trace()
-
-        vector = atom.get_center_of_mass()
         atoms = Atoms(
             cell=n_st.cell,
             numbers=n_st.numbers,
-            positions=n_st.positions - [vector[0], vector[1], 0],
+            positions=pos,
         )
         return atoms
 
-    def _change_center(self, st1: ase.atoms.Atoms) -> ase.atoms.Atoms:
-        """
+    # def get_symmetry_operations(self):
+    #     generators = [op.affine_matrix for op in self.symmops if not np.allclose(op.affine_matrix, np.eye(4))]
+    #     ops = brute_force_generate_group(generators, self.tol)
+    #     ops_sym = [SymmOp(op) for op in ops]
+    #     return ops_sym
 
-        Args:
-            st1: an ase.atom structure
+    def get_generators(self):
+        generators = [
+            op.affine_matrix
+            for op in self.symmops
+            if not np.allclose(op.affine_matrix, np.eye(4))
+        ]
+        return generators
 
-        Returns: an ase.atom structure with z axis located in the cell center
 
-        """
-        st1_pos = st1.get_scaled_positions()
-        st2_pos = st1_pos[:, :2] + 0.5
-        tmp = np.modf(st2_pos)[0]
-        tmp1 = st1_pos[:, 2]
-        tmp1 = tmp1.reshape(tmp1.shape[0], 1)
-
-        st2 = st1.copy()
-        st2.positions = np.dot(np.hstack((tmp, tmp1)), st2.cell)
-        return st2
+def get_symcell(monomer: Atoms) -> Atoms:
+    apg = LineGroupAnalyzer(monomer)
+    equ = list(apg.get_equivalent_atoms()["eq_sets"].keys())
+    return monomer[equ]
 
 
 def main():
@@ -208,9 +219,10 @@ def main():
     st = read(st_name)
 
     mol = Molecule(species=st.numbers, coords=st.positions)
-    obj1 = LineGroupAnalyzer(mol)
-    pg1 = obj1.get_pointgroup()
-    print(" Axial point group: ", pg1)
+    obj = LineGroupAnalyzer(mol)
+    # apg = obj.get_pointgroup()
+    apg = obj.sch_symbol
+    print(" Axial point group: ", apg)
 
     if point_group_ind:
         obj2 = PointGroupAnalyzer(mol)
