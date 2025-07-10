@@ -19,7 +19,9 @@ dependencies = [
     "numpy",
     "ase",
     "pymatgen",
-    "pretty_errors"
+    "ipdb",
+    "cvxpy",
+#    "phonopy",
 ]
 
 dynamic = ["version"]

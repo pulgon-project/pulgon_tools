@@ -14,6 +14,7 @@
 
 import argparse
 import logging
+from typing import Union
 
 import ase
 import numpy as np
@@ -45,7 +46,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
 
     def __init__(
         self,
-        mol: Molecule | Atoms,
+        mol: Union[Molecule, Atoms],
         tolerance: float = 0.01,
     ):
         """The default settings are usually sufficient. (Totally the same with PointGroupAnalyzer)
@@ -218,9 +219,10 @@ def main():
     st = read(st_name)
 
     mol = Molecule(species=st.numbers, coords=st.positions)
-    obj1 = LineGroupAnalyzer(mol)
-    pg1 = obj1.get_pointgroup()
-    print(" Axial point group: ", pg1)
+    obj = LineGroupAnalyzer(mol)
+    # apg = obj.get_pointgroup()
+    apg = obj.sch_symbol
+    print(" Axial point group: ", apg)
 
     if point_group_ind:
         obj2 = PointGroupAnalyzer(mol)

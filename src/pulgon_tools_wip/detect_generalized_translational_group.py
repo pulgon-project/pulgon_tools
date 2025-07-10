@@ -16,27 +16,16 @@ import argparse
 import itertools
 import logging
 from fractions import Fraction
+from typing import Union
 
 import ase.io.vasp
 import numpy as np
 from ase import Atoms
-from ase.build.tools import rotation_matrix
 from ase.io import read
-from ase.io.vasp import read_vasp, write_vasp
-from ipdb import set_trace
-from pymatgen.core import Molecule
 from pymatgen.core.operations import SymmOp
-from pymatgen.symmetry.analyzer import PointGroupAnalyzer
 from pymatgen.util.coord import find_in_coord_list
 
-from pulgon_tools_wip.utils import (
-    angle_between_points,
-    get_num_of_decimal,
-    refine_cell,
-)
-
-# from torchgen.native_function_generation import self_to_out_signature
-
+from pulgon_tools_wip.utils import angle_between_points, refine_cell
 
 # logging.basicConfig(
 #     level=logging.DEBUG,  # 设置最低日志级别为 DEBUG
@@ -286,7 +275,7 @@ class CyclicGroupAnalyzer:
 
     def _detect_rotation(
         self, monomer: ase.atoms.Atoms, tran: np.float64, ind: int
-    ) -> [bool, int | float]:
+    ) -> [bool, Union[int, float]]:
         """
 
         Args:
@@ -612,10 +601,10 @@ def main():
     st = read(st_name)
 
     cyclic = CyclicGroupAnalyzer(st)
-    cy, mon = cyclic.get_cyclic_group()
-
+    # cy, mon = cyclic.get_cyclic_group()
+    cy = cyclic.cyclic_group
     for ii, cg in enumerate(cy):
-        print(cg + "  " + str(mon[ii].symbols))
+        print(cg)
 
 
 if __name__ == "__main__":

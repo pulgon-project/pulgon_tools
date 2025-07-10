@@ -13,32 +13,21 @@
 # permissions and limitations under the License.
 
 import copy
-import itertools
-import json
-import logging
-import os.path
-import time
+from typing import Union
 
 import ase
 import cvxpy as cp
-import numpy as np
-import phonopy
 import scipy as sp
 import scipy.interpolate
 import scipy.sparse as ss
 import scipy.spatial.distance
-import sympy
 from ase import Atoms
 from ipdb import set_trace
-from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
-from phonopy.units import VaspToTHz
+
+# from phonopy.units import VaspToTHz
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
-from scipy.linalg.interpolative import svd
-from sympy import symbols
-from sympy.physics.quantum import TensorProduct, represent
-from tensorly.decomposition import parafac
-from tqdm import tqdm
+from sympy.physics.quantum import TensorProduct
 
 from pulgon_tools_wip.Irreps_tables import *
 from pulgon_tools_wip.Irreps_tables_withparities import (
@@ -54,7 +43,7 @@ def e() -> np.ndarray:
     return mat
 
 
-def Cn(n: int | float) -> np.ndarray:
+def Cn(n: Union[int, float]) -> np.ndarray:
     """
     Args:
         n: rotate 2*pi/n
@@ -101,7 +90,7 @@ def U() -> np.ndarray:
     return mat
 
 
-def U_d(fid: float | int) -> np.ndarray:
+def U_d(fid: Union[float, int]) -> np.ndarray:
     """
 
     Args:
@@ -120,7 +109,7 @@ def U_d(fid: float | int) -> np.ndarray:
     return mat
 
 
-def S2n(n: int | float) -> np.ndarray:
+def S2n(n: Union[int, float]) -> np.ndarray:
     """
     Args:
         n: dihedral group, rotate 2*pi/n
@@ -1213,7 +1202,6 @@ def _calc_dists(atoms, tolerance=1e-3):
 
 
 def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
-
     IFC = phonon.force_constants.copy()
     scell = phonon.supercell
 
@@ -1223,8 +1211,6 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
         (scell.scaled_positions + np.asarray([0.5, 0.5, 0.0])[np.newaxis, :])
         % 1.0
     ) @ cell
-    # positions = ((scell.get_scaled_positions() + np.asarray([0.5, 0.5, 0.0])[np.newaxis, :]) % 1.0) @ cell
-
     ase_atoms = ase.Atoms(symbols, positions, cell=cell, pbc=True)
     dists, degeneracy, shifts = _calc_dists(ase_atoms)
     n_satoms = len(symbols)
@@ -1296,9 +1282,6 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
                             )
                         )
                         data.append(r_ij[gamma])
-                        # data.append(positions[j][gamma])
-                        # data.append(average_pos[j][gamma])
-
                         rows.append(n_rows)
                         cols.append(
                             np.ravel_multi_index(
@@ -1306,11 +1289,7 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
                             )
                         )
                         data.append(-r_ij[beta])
-                        # data.append(-positions[j][beta])
-                        # data.append(-average_pos[j][beta])
-                    # set_trace()
                     n_rows += 1
-    # set_trace()
 
     # And fthe Huang invariances, also for rotation.
     for alpha in range(3):
@@ -1377,25 +1356,25 @@ def get_IFCSYM_from_cvxpy_M(M, IFC):
     return IFC_sym
 
 
-def get_freq_and_dis_from_phonopy(phonon, qpoints):
-    frequencies = []
-    distances = []
-    for ii, q in enumerate(qpoints[0]):
-        D = phonon.get_dynamical_matrix_at_q(q)
-        eigvals, eigvecs = np.linalg.eigh(D)
-        eigvals = eigvals.real
-        frequencies.append(
-            np.sqrt(abs(eigvals)) * np.sign(eigvals) * VaspToTHz
-        )
-        if ii == 0:
-            distances.append(0)
-            q_last = q.copy()
-        else:
-            distances.append(
-                np.linalg.norm(np.dot(q - q_last, phonon.supercell.get_cell()))
-            )
-    frequencies = np.array(frequencies).T
-    return frequencies, distances
+# def get_freq_and_dis_from_phonopy(phonon, qpoints):
+#     frequencies = []
+#     distances = []
+#     for ii, q in enumerate(qpoints[0]):
+#         D = phonon.get_dynamical_matrix_at_q(q)
+#         eigvals, eigvecs = np.linalg.eigh(D)
+#         eigvals = eigvals.real
+#         frequencies.append(
+#             np.sqrt(abs(eigvals)) * np.sign(eigvals) * VaspToTHz
+#         )
+#         if ii == 0:
+#             distances.append(0)
+#             q_last = q.copy()
+#         else:
+#             distances.append(
+#                 np.linalg.norm(np.dot(q - q_last, phonon.supercell.get_cell()))
+#             )
+#     frequencies = np.array(frequencies).T
+#     return frequencies, distances
 
 
 def get_independent_atoms(perms):
