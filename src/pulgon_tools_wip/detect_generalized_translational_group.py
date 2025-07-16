@@ -22,15 +22,16 @@ import ase.io.vasp
 import numpy as np
 from ase import Atoms
 from ase.io import read
+from ipdb import set_trace
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
 
 from pulgon_tools_wip.utils import angle_between_points, refine_cell
 
-# logging.basicConfig(
-#     level=logging.DEBUG,  # 设置最低日志级别为 DEBUG
-#     format='%(asctime)s - %(levelname)s - %(message)s'
-# )
+logging.basicConfig(
+    level=logging.DEBUG,  # 设置最低日志级别为 DEBUG
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
 
 
 class CyclicGroupAnalyzer:
@@ -245,7 +246,6 @@ class CyclicGroupAnalyzer:
         return cyclic_group, mono, sym_op
 
     def _detect_possible_helical_angle(self, ind, monomer):
-
         min_z = np.min(monomer.get_scaled_positions()[:, 2])
         min_idx = np.argmin(monomer.get_scaled_positions()[:, 2])
 
@@ -265,11 +265,15 @@ class CyclicGroupAnalyzer:
 
         center = ([0.5, 0.5, 0] @ self._primitive.cell)[:2]
 
-        pot_angle = np.unique(
+        arr = np.array(
             [
                 angle_between_points(point_start, center, tmp)
                 for tmp in point_end
             ]
+        )
+        pot_angle = (
+            np.unique(np.round(arr / self._symprec).astype(int))
+            * self._symprec
         )
         return pot_angle
 
