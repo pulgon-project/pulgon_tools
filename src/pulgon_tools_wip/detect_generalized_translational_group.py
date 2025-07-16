@@ -28,10 +28,10 @@ from pymatgen.util.coord import find_in_coord_list
 
 from pulgon_tools_wip.utils import angle_between_points, refine_cell
 
-logging.basicConfig(
-    level=logging.DEBUG,  # 设置最低日志级别为 DEBUG
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+# logging.basicConfig(
+#     level=logging.DEBUG,  # 设置最低日志级别为 DEBUG
+#     format="%(asctime)s - %(levelname)s - %(message)s",
+# )
 
 
 class CyclicGroupAnalyzer:
