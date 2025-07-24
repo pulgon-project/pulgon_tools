@@ -379,7 +379,6 @@ def get_perms_from_ops(atoms: Atoms, ops_sym, symprec=1e-2, round=4):
                 print(ii, aid)
                 set_trace()
                 raise ValueError
-                # set_trace()
     perms_table = np.array(perms).astype(np.int32)
     return perms_table
 
@@ -400,7 +399,7 @@ def get_matrices(atoms, ops_sym, symprec=1e-5):
     return matrices
 
 
-def get_matrices_withPhase(atoms, ops_sym, qpoint, symprec=1e-5):
+def get_matrices_withPhase(atoms, ops_sym, qpoint, symprec=1e-3):
     perms_table = get_perms_from_ops(atoms, ops_sym, symprec=symprec)
 
     natoms = len(atoms.numbers)
@@ -637,7 +636,7 @@ def get_modified_projector(DictParams, atom):
     return adapted, dimensions
 
 
-def affine_matrix_op(af1, af2):
+def affine_matrix_op(af1, af2, symprec=1e-8):
     """Definition of group multiplication
 
     Args:
@@ -647,16 +646,21 @@ def affine_matrix_op(af1, af2):
     Returns:
 
     """
+    af1 = np.round(af1 / symprec).astype(int) * symprec
+    af2 = np.round(af2 / symprec).astype(int) * symprec
+
     ro = af2[:3, :3] @ af1[:3, :3]
     # ro = af1[:3, :3] @ af2[:3, :3]
-    # tran = np.remainder(af2[:3, 3] + af2[:3, :3] @ af1[:3, 3], [1, 1, 1])
-    tran = (af2[:3, 3] + af2[:3, :3] @ af1[:3, 3]) % 1
-    # tran = np.remainder(af2[:3, 3] + af1[:3, 3], [1, 1, 1])
-    # if (test_tran - tran).sum() > 1e-5:
-    #     set_trace()
+    tran = np.remainder(af2[:3, 3] + af2[:3, :3] @ af1[:3, 3], [1, 1, 1])
+    # tran = (af2[:3, 3] + af2[:3, :3] @ af1[:3, 3]) % 1
+    if np.isclose(tran[0], 1):
+        set_trace()
+    # tran = np.round(tran / symprec).astype(int) * symprec
+
     af = np.eye(4)
     af[:3, :3] = ro
     af[:3, 3] = tran
+
     return af
 
 
@@ -791,7 +795,7 @@ def brute_force_generate_group_subsquent(
         for ii, g in enumerate(L):
             tmp_seq1 = L_seq[ii]
             for jj, h in enumerate(G):
-                gh = affine_matrix_op(g, h)
+                gh = affine_matrix_op(g, h, symprec=1e-5)
                 tmp_seq2 = tmp_seq1 + [jj + 1]
                 judge = (abs(L - gh) < symec).all(axis=1).all(axis=1).any()
                 if not judge:
