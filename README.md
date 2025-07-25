@@ -44,6 +44,20 @@ pulgon-detect-CyclicGroup poscar.vasp
 
 
 
+### 5. force constant correction:
+```
+pulgon_tools_wip --pbc '[True,True,False]'
+```
+`--path_yaml`: The path of `phonopy.yaml`. Default=`./phonopy.yaml`.   
+`--fcs`: The path of `force_constants.hdf5`.  Default=`./force_constants.hdf5`.   
+`--pbc`: The periodic boundary conduction of your structure. Default=`[True, True, False]`       
+`--plot_phonon`: Enable plotting phonon spectrum.   
+`--phononfig_savename`: The name of phonon spectrum fig. Default=`phonon_fix.png`.   
+`--fcs_savename`: The name of saving corrected fcs file. Default=`FORCE_CONSTANTS_correction.hdf5`.   
+`--full_fcs`: Enable saving the complete fcs.   
+`--methods`: The available methods are 'convex_opt', 'ridge_model'. Default=`convex_opt`.  
+
+
 ## Scripts
 
 scripts/detect_linegroup.py:
