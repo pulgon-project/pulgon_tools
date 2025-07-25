@@ -46,7 +46,7 @@ pulgon-detect-CyclicGroup poscar.vasp
 
 ### 5. force constant correction:
 ```
-pulgon_tools_wip --pbc '[True,True,False]'
+pulgon-fcs-correction --pbc '[True,True,False]'
 ```
 `--path_yaml`: The path of `phonopy.yaml`. Default=`./phonopy.yaml`.   
 `--fcs`: The path of `force_constants.hdf5`.  Default=`./force_constants.hdf5`.   
