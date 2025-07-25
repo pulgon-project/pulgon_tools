@@ -8,14 +8,10 @@ After installing the package with `pip` (e.g. `pip install -e .`), the command `
 ### 1.generate line group structures
  You need to specify the motif, generators of point groups and generalized translation group. An example:
 
-windows:
 ```
 pulgon-generate-structures -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -g ['Cn(6)','U()','sigmaV()'] -c {'T_Q':[5,3]} -s poscar.vasp
 ```   
-Unix:
-```
-pulgon-generate-structures -m  "[[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]]" -g "['Cn(6)','U()','sigmaV()']" -c "{'T_Q':[5,3]}" -s poscar.vasp
-```   
+
 
 
 -m: the Cylindrical coordinates of initial atom position   
@@ -46,7 +42,7 @@ pulgon-detect-CyclicGroup poscar.vasp
 
 ### 5. force constant correction:
 ```
-pulgon-fcs-correction --pbc '[True,True,False]'
+pulgon-fcs-correction --pbc [True,True,False]
 ```
 `--path_yaml`: The path of `phonopy.yaml`. Default=`./phonopy.yaml`.   
 `--fcs`: The path of `force_constants.hdf5`.  Default=`./force_constants.hdf5`.   
