@@ -29,8 +29,8 @@ from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
 from sympy.physics.quantum import TensorProduct
 
-from pulgon_tools_wip.Irreps_tables import *
-from pulgon_tools_wip.Irreps_tables_withparities import (
+from pulgon_tools.Irreps_tables import *
+from pulgon_tools.Irreps_tables_withparities import (
     line_group_sympy_withparities,
 )
 

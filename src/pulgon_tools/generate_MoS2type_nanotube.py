@@ -7,7 +7,7 @@ from pulp import LpMinimize, LpProblem, LpVariable, lpSum, value
 from pymatgen.core.operations import SymmOp
 from scipy.optimize import fsolve
 
-from pulgon_tools_wip.utils import Cn, brute_force_generate_group
+from pulgon_tools.utils import Cn, brute_force_generate_group
 
 
 def cyl2car(cyl):

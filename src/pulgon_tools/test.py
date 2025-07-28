@@ -26,11 +26,11 @@ from ipdb import set_trace
 from numpy.linalg.linalg import eigvals
 from sympy.printing.octave import print_octave_code
 
-from pulgon_tools_wip.detect_generalized_translational_group import (
+from pulgon_tools.detect_generalized_translational_group import (
     CyclicGroupAnalyzer,
 )
-from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
-from pulgon_tools_wip.generate_structures import (
+from pulgon_tools.detect_point_group import LineGroupAnalyzer
+from pulgon_tools.generate_structures import (
     Cn,
     S2n,
     U,
@@ -40,8 +40,8 @@ from pulgon_tools_wip.generate_structures import (
     sigmaH,
     sigmaV,
 )
-from pulgon_tools_wip.line_group_table import get_family_Num_from_sym_symbol
-from pulgon_tools_wip.utils import get_symbols_from_ops
+from pulgon_tools.line_group_table import get_family_Num_from_sym_symbol
+from pulgon_tools.utils import get_symbols_from_ops
 
 
 def lingroupfamily(poscar):

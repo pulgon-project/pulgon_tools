@@ -21,7 +21,7 @@ import numpy as np
 from ase import Atoms
 from ase.io.vasp import write_vasp
 
-from pulgon_tools_wip.utils import (
+from pulgon_tools.utils import (
     Cn,
     S2n,
     U,

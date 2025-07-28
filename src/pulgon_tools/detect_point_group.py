@@ -26,7 +26,7 @@ from pymatgen.core import Molecule
 from pymatgen.core.operations import SymmOp
 from pymatgen.symmetry.analyzer import PointGroupAnalyzer
 
-from pulgon_tools_wip.utils import (
+from pulgon_tools.utils import (
     brute_force_generate_group,
     find_axis_center_of_nanotube,
 )

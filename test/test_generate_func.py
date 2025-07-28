@@ -17,7 +17,7 @@ from pdb import set_trace
 import numpy as np
 import pytest
 
-from pulgon_tools_wip.generate_structures import (
+from pulgon_tools.generate_structures import (
     Cn,
     S2n,
     U,

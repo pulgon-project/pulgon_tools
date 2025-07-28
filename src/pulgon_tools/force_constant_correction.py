@@ -25,7 +25,7 @@ def main():
     parser.add_argument(
         "--fcs",
         default="./force_constants.hdf5",
-        help="The path of force_constants.hdf5",
+        help="The path of force_constants.hdf5 or FORCE_CONSTANTS",
     )
     parser.add_argument(
         "--plot_phonon",

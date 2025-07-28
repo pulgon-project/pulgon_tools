@@ -5,7 +5,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pulgon_tools_wip"
+name = "pulgon_tools"
 authors = [
     {name = "Yujie Cen", email = "yujie.cen@tuwien.ac.at"}
 ]
@@ -31,14 +31,14 @@ dynamic = ["version"]
 where = ["src"]
 
 [project.scripts]
-pulgon-generate-structures = "pulgon_tools_wip:generate_structures.main"
-pulgon-detect-AxialPointGroup = "pulgon_tools_wip:detect_point_group.main"
-pulgon-detect-CyclicGroup = "pulgon_tools_wip:detect_generalized_translational_group.main"
-pulgon-generate-CharacterTable = "pulgon_tools_wip:Irreps_tables.main"
-pulgon-fcs-correction = "pulgon_tools_wip:force_constant_correction.main"
+pulgon-generate-structures = "pulgon_tools:generate_structures.main"
+pulgon-detect-AxialPointGroup = "pulgon_tools:detect_point_group.main"
+pulgon-detect-CyclicGroup = "pulgon_tools:detect_generalized_translational_group.main"
+#pulgon-generate-CharacterTable = "pulgon_tools:Irreps_tables.main"
+pulgon-fcs-correction = "pulgon_tools:force_constant_correction.main"
 
 [project.optional-dependencies]
 test = ["pytest", "pytest-datadir"]
 
 [tool.setuptools.dynamic]
-version = {attr = "pulgon_tools_wip.__version__"}
+version = {attr = "pulgon_tools.__version__"}

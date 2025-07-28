@@ -22,10 +22,10 @@ import pytest_datadir
 from ase.io.vasp import read_vasp
 from pymatgen.core import Molecule
 
-from pulgon_tools_wip.detect_generalized_translational_group import (
+from pulgon_tools.detect_generalized_translational_group import (
     CyclicGroupAnalyzer,
 )
-from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
+from pulgon_tools.detect_point_group import LineGroupAnalyzer
 
 pytest_plugins = ["pytest-datadir"]
 

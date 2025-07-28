@@ -12,28 +12,7 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-from pdb import set_trace
-
-from pulgon_tools.Irreps_tables import (
-    line_group_1,
-    line_group_2,
-    line_group_3,
-    line_group_4,
-    line_group_5,
-    line_group_6,
-    line_group_7,
-    line_group_8,
-    line_group_9,
-    line_group_10,
-    line_group_11,
-    line_group_12,
-    line_group_13,
-)
-
-
-def main():
-    pass
-
+from pulgon_tools.force_constant_correction import main
 
 if __name__ == "__main__":
     main()

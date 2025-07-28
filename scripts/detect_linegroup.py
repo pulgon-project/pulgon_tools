@@ -5,12 +5,12 @@ import pretty_errors
 from ase.io.vasp import read_vasp
 from ipdb import set_trace
 
-from pulgon_tools_wip.detect_generalized_translational_group import (
+from pulgon_tools.detect_generalized_translational_group import (
     CyclicGroupAnalyzer,
 )
-from pulgon_tools_wip.detect_point_group import LineGroupAnalyzer
-from pulgon_tools_wip.line_group_table import get_family_Num_from_sym_symbol
-from pulgon_tools_wip.utils import (
+from pulgon_tools.detect_point_group import LineGroupAnalyzer
+from pulgon_tools.line_group_table import get_family_Num_from_sym_symbol
+from pulgon_tools.utils import (
     Cn,
     S2n,
     brute_force_generate_group_subsquent,
