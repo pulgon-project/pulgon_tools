@@ -12,15 +12,16 @@ from phonopy.harmonic.force_constants import compact_fc_to_full_fc
 def main():
     parser = argparse.ArgumentParser(description="Apply the sum rules to fcs")
     parser.add_argument(
-        "--path_yaml",
-        default="./phonopy.yaml",
-        help="The path of phonopy.yaml",
-    )
-    parser.add_argument(
         "--pbc",
+        required=True,
         # default=[True, True, False],
         type=parse_bool_list,
         help="The periodic boundary conduction of structure",
+    )
+    parser.add_argument(
+        "--path_yaml",
+        default="./phonopy.yaml",
+        help="The path of phonopy.yaml",
     )
     parser.add_argument(
         "--fcs",
