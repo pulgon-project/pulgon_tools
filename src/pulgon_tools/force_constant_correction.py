@@ -18,13 +18,13 @@ def main():
     )
     parser.add_argument(
         "--pbc",
-        default=[True, True, False],
+        # default=[True, True, False],
         type=parse_bool_list,
         help="The periodic boundary conduction of structure",
     )
     parser.add_argument(
         "--fcs",
-        default="./force_constants.hdf5",
+        default="./FORCE_CONSTANTS",
         help="The path of force_constants.hdf5 or FORCE_CONSTANTS",
     )
     parser.add_argument(
