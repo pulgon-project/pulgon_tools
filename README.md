@@ -54,9 +54,9 @@ pulgon-fcs-correction --pbc [True,True,False]
 `--methods`: The available methods are 'convex_opt', 'ridge_model'. Default=`convex_opt`.  
 
 
-## Scripts
+## Examples
 
-scripts/detect_linegroup.py:
+examples/detect_linegroup.py:
 ```
-python detect_linegroup.py  your_poscar
+python examples/detect_linegroup.py  examples/POSCAR  1e-3
 ```
