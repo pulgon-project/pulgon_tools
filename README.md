@@ -46,7 +46,7 @@ pulgon-fcs-correction --pbc [True,True,False]
 ```
 `--pbc`: The periodic boundary conduction of your structure. e.g.`--pbc [False, False, False]` correspond to cluster, `--pbc [True, Ture, False]` correspond to 2D structure.       
 `--path_yaml`: The path of `phonopy.yaml`. Default=`./phonopy.yaml`.   
-`--fcs`: The path of `force_constants.hdf5`.  Default=`./FORCE_CONSTANTS`.   
+`--fcs`: The path of fcs. `FORCE_CONSTANTS` or `force_constants.hdf5`.  Default=`./FORCE_CONSTANTS`.   
 `--plot_phonon`: Enable plotting the corrected phonon spectrum.   
 `--phononfig_savename`: The name of phonon spectrum fig. Default=`phonon_fix.png`.   
 `--fcs_savename`: The name of saving corrected fcs file. Default=`FORCE_CONSTANTS_correction.hdf5`.   
