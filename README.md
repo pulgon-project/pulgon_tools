@@ -52,6 +52,7 @@ pulgon-fcs-correction --pbc [True,True,False] --poscar POSCAR --supercell_matrix
 `--cut_off`: fcs is 0 if the atomic distance beyond `cut_off`. Default=`15`.  
 `--recenter`: Enable recenter the structure. (atoms.positions - [0.5,0.5,0.5]) % 1.  
 `--plot_phonon`: Enable plotting the corrected phonon spectrum.   
+`--k_path`: The k path of plotting phonon, e.g. `--k_path [[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]`.  
 `--phononfig_savename`: The name of phonon spectrum fig. Default=`phonon_fix.png`.   
 `--fcs_savename`: The name of saving corrected fcs file. Default=`FORCE_CONSTANTS_correction.hdf5`.   
 `--full_fcs`: Enable saving the complete fcs.   
