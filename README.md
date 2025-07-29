@@ -44,9 +44,12 @@ pulgon-detect-CyclicGroup poscar.vasp
 ```
 pulgon-fcs-correction --pbc [True,True,False]
 ```
-`--pbc`: The periodic boundary conduction of your structure. e.g.`--pbc [False, False, False]` correspond to cluster, `--pbc [True, Ture, False]` correspond to 2D structure.       
-`--path_yaml`: The path of `phonopy.yaml`. Default=`./phonopy.yaml`.   
+`--pbc`: The periodic boundary conduction of your structure. e.g.`--pbc [False, False, False]` correspond to cluster, `--pbc [True, Ture, False]` correspond to 2D structure.  
+`--poscar`: The file of POSCAR. Default=`./POSCAR`.    
+`--supercell_matrix`: The supercell matrix that used to calculate fcs. e.g.`--supercell_matrix [5, 5, 1]`. Default=`None`.    
+`--path_yaml`: The path of `phonopy.yaml`. Default=`None`, if it's provided, `POSCAR` and `supercell_matrix` are not necessary.      
 `--fcs`: The path of fcs. `FORCE_CONSTANTS` or `force_constants.hdf5`.  Default=`./FORCE_CONSTANTS`.   
+`--recenter`: Enable recenter the structure. (atoms.positions - [0.5,0.5,0.5]) % 1.  
 `--plot_phonon`: Enable plotting the corrected phonon spectrum.   
 `--phononfig_savename`: The name of phonon spectrum fig. Default=`phonon_fix.png`.   
 `--fcs_savename`: The name of saving corrected fcs file. Default=`FORCE_CONSTANTS_correction.hdf5`.   

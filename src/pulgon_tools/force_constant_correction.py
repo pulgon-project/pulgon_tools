@@ -1,12 +1,19 @@
 import argparse
 import ast
+import os
 
 import numpy as np
 import phonopy.file_IO
 import scipy.sparse as ssp
 from ase import Atoms
 from ipdb import set_trace
-from phonopy.harmonic.force_constants import compact_fc_to_full_fc
+from phonopy import Phonopy
+from phonopy.file_IO import parse_FORCE_CONSTANTS, read_force_constants_hdf5
+from phonopy.harmonic.force_constants import (
+    compact_fc_to_full_fc,
+    full_fc_to_compact_fc,
+)
+from phonopy.interface.vasp import read_vasp
 
 
 def main():
@@ -19,9 +26,27 @@ def main():
         help="The periodic boundary conduction of structure",
     )
     parser.add_argument(
+        "--supercell_matrix",
+        required=True,
+        # default=[5,5,1],
+        type=parse_int_list,
+        help="The supercell matrix that used to calculate fcs",
+    )
+    parser.add_argument(
+        "--poscar",
+        default="./POSCAR",
+        help="The path of poscar",
+    )
+    parser.add_argument(
         "--path_yaml",
-        default="./phonopy.yaml",
+        default=None,
         help="The path of phonopy.yaml",
+    )
+    parser.add_argument(
+        "--cut_off",
+        default=15,
+        type=float,
+        help="Cutoff radius for interatomic interactions",
     )
     parser.add_argument(
         "--fcs",
@@ -34,6 +59,12 @@ def main():
         help="Enable plotting if specified (default: False)",
     )
     parser.add_argument(
+        "--k_path",
+        default=None,
+        type=str2list,
+        help="The k path of plotting phonon, e.g. [[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]",
+    )
+    parser.add_argument(
         "--phononfig_savename",
         default="phonon_fix",
         help="The name of phonon spectrum fig",
@@ -42,6 +73,11 @@ def main():
         "--fcs_savename",
         default="FORCE_CONSTANTS_correction.hdf5",
         help="The name of corrected fcs",
+    )
+    parser.add_argument(
+        "--recenter",
+        action="store_true",
+        help="(atoms.positions - [0.5,0.5,0.5])%1",
     )
     parser.add_argument(
         "--methods",
@@ -55,30 +91,68 @@ def main():
     )
     args = parser.parse_args()
 
+    poscar = args.poscar
+    supercell_matrix = args.supercell_matrix
     path_yaml = args.path_yaml
     fcs_name = args.fcs
     pbc = args.pbc
+    cut_off = args.cut_off
     methods = args.methods
     plot_phonon = args.plot_phonon
     fcs_savename = args.fcs_savename
     phononfig_savename = args.phononfig_savename
     full_fcs = args.full_fcs
+    recenter = args.recenter
+    k_path = args.k_path
 
-    phonon = phonopy.load(
-        phonopy_yaml=path_yaml, force_constants_filename=fcs_name
-    )
+    if path_yaml is not None:
+        phonon = phonopy.load(
+            phonopy_yaml=path_yaml, force_constants_filename=fcs_name
+        )
+    else:
+        unitcell = read_vasp(poscar)
+        phonon = Phonopy(unitcell, supercell_matrix=np.diag(supercell_matrix))
+
+        file_ext = os.path.splitext(fcs_name)[1].lower()
+        if file_ext == ".hdf5":
+            fcs = read_force_constants_hdf5(fcs_name)
+        else:
+            fcs = parse_FORCE_CONSTANTS(fcs_name)
+        phonon.force_constants = fcs
+
     scell = phonon.supercell
-    atoms_scell = Atoms(
-        numbers=scell.numbers,
-        cell=scell.cell,
-        positions=scell.positions,
-        pbc=pbc,
-    )
+    if recenter:
+        atoms_scell = Atoms(
+            numbers=scell.numbers,
+            cell=scell.cell,
+            scaled_positions=(scell.scaled_positions - [0.5, 0.5, 0.5]) % 1,
+            pbc=pbc,
+        )
+    else:
+        atoms_scell = Atoms(
+            numbers=scell.numbers,
+            cell=scell.cell,
+            scaled_positions=scell.scaled_positions,
+            pbc=pbc,
+        )
 
-    IFC = phonon.force_constants
-    n_atoms, n_satoms = IFC.shape[:2]
+    phonon.symmetrize_force_constants()
+    IFC = phonon.force_constants.copy()
+    if IFC.shape[0] == IFC.shape[1]:
+        IFC = full_fc_to_compact_fc(phonon.primitive, IFC)
+        n_atoms, n_satoms = IFC.shape[:2]
+    else:
+        n_atoms, n_satoms = IFC.shape[:2]
 
     average_delta = atoms_scell.get_all_distances(mic=True, vector=True)
+    average_distance = atoms_scell.get_all_distances(mic=True, vector=False)
+
+    idx_x, idx_y = np.where(average_distance > cut_off)
+    for ii, ix in enumerate(idx_x):
+        if ix in phonon.primitive.p2s_map:
+            ix = phonon.primitive.p2p_map[ix]
+            IFC[ix, idx_y[ii]] = np.zeros((3, 3))
+
     average_products = np.einsum(
         "...i,...j->...ij", average_delta, average_delta
     )
@@ -102,7 +176,6 @@ def main():
     print("Adding acoustic sum rules")
 
     # The same but for rotations (Born-Huang).
-    # positions = phonon.get_supercell().positions
     for i in range(n_atoms):
         for alpha in range(3):
             for beta in range(3):
@@ -126,7 +199,7 @@ def main():
                     n_rows += 1
     print("Adding Born-Huang sum rules")
 
-    # And fthe Huang invariances, also for rotation.
+    # And the Huang invariances, also for rotation.
     for alpha in range(3):
         for beta in range(3):
             for gamma in range(3):
@@ -153,8 +226,34 @@ def main():
                     n_rows += 1
     print("Adding Huang invariances")
 
+    # Make sure the IFC matrix is symmetric.
+    for i in range(n_atoms):
+        for j in range(n_atoms):
+            for alpha in range(3):
+                for beta in range(3):
+                    rows.append(n_rows)
+                    cols.append(
+                        np.ravel_multi_index(
+                            (i, phonon.primitive.p2s_map[j], alpha, beta),
+                            IFC.shape,
+                        )
+                    )
+                    data.append(1.0)
+                    rows.append(n_rows)
+                    cols.append(
+                        np.ravel_multi_index(
+                            (j, phonon.primitive.p2s_map[i], beta, alpha),
+                            IFC.shape,
+                        )
+                    )
+                    data.append(-1.0)
+                    n_rows += 1
+    print("now finish symmetric rules")
+
     # Rebuild the sparse matrix.
     M = ssp.coo_array((data, (rows, cols)), shape=(n_rows, IFC.size))
+
+    # set_trace()
 
     print("Start solving constraints")
     if methods == "convex_opt":
@@ -193,10 +292,55 @@ def main():
         ########################################################
 
     if plot_phonon:
+        import matplotlib.pyplot as plt
+        from phonopy.phonon.band_structure import (
+            get_band_qpoints_and_path_connections,
+        )
+
         print("Start drawing the phonon spectrum")
-        phonon.force_constants = IFC_sym
-        phonon.auto_band_structure()
-        phonon.plot_band_structure().savefig(phononfig_savename, dpi=500)
+        if k_path is None:
+            phonon.auto_band_structure()
+            phonon.plot_band_structure().savefig(phononfig_savename, dpi=500)
+        else:
+
+            # path = [[0.0, 0.0, 0.0], [0.5, 0.0,0.0], [0.5, 0.5, 0.0],[0.0, 0.5, 0.0], [0.0, 0.0, 0.0]]
+            # path = [[[0.0, 0.0, 0.0], [0.0, 0.0,0.5]]]
+            # path =
+
+            qpoints, connections = get_band_qpoints_and_path_connections(
+                [k_path], npoints=101
+            )
+
+            phonon.run_band_structure(
+                qpoints, path_connections=connections, with_eigenvectors=True
+            )
+            bands_raws = phonon.get_band_structure_dict()
+
+            phonon.force_constants = IFC_sym
+            phonon.run_band_structure(
+                qpoints, path_connections=connections, with_eigenvectors=True
+            )
+            bands_fix = phonon.get_band_structure_dict()
+
+            distances = bands_raws["distances"][0]
+            freq_raw = bands_raws["frequencies"][0]
+            freq_fix = bands_fix["frequencies"][0]
+
+            for ii, freq in enumerate(freq_raw.T):
+                if ii == 0:
+                    plt.plot(distances, freq, label="raw", color="grey")
+                else:
+                    plt.plot(distances, freq, color="grey")
+
+            for ii, freq in enumerate(freq_fix.T):
+                if ii == 0:
+                    plt.plot(distances, freq, label="fix", color="red")
+                else:
+                    plt.plot(distances, freq, color="red")
+            plt.plot(distances, np.zeros_like(distances), "b--", linewidth=0.8)
+            plt.legend()
+            # plt.ylim(bottom=0)
+            plt.savefig(phononfig_savename, dpi=300)
 
     if full_fcs:
         IFC_full = compact_fc_to_full_fc(phonon.primitive, IFC_sym)
@@ -227,6 +371,34 @@ def parse_bool_list(value):
         return parsed
     except (ValueError, SyntaxError):
         raise argparse.ArgumentTypeError(f"Invalid boolean list: {value}")
+
+
+def parse_int_list(value):
+    """Parse a string representing a list of booleans into a Python list"""
+    try:
+        parsed = ast.literal_eval(value)
+        if not isinstance(parsed, list) or not all(
+            isinstance(x, int) for x in parsed
+        ):
+            raise ValueError("Input must be a list of Int, e.g., [5, 5, 1]")
+        if len(parsed) != 3:
+            raise ValueError(
+                "PBC list must contain exactly 3 int, e.g., [5, 5, 1]"
+            )
+        return parsed
+    except (ValueError, SyntaxError):
+        raise argparse.ArgumentTypeError(f"Invalid boolean list: {value}")
+
+
+def str2list(v):
+    if v is None:
+        return None
+    try:
+        return ast.literal_eval(v)
+    except Exception:
+        raise argparse.ArgumentTypeError(
+            "k_path must be a valid Python list expression."
+        )
 
 
 if __name__ == "__main__":
