@@ -47,9 +47,9 @@ pulgon-fcs-correction --pbc [True,True,False] --poscar POSCAR --supercell_matrix
 `--pbc`: The periodic boundary conduction of your structure. e.g.`--pbc [False, False, False]` correspond to cluster, `--pbc [True, Ture, False]` correspond to 2D structure.  
 `--poscar`: The file of POSCAR. Default=`./POSCAR`.    
 `--supercell_matrix`: The supercell matrix that used to calculate fcs. e.g.`--supercell_matrix [5, 5, 1]`. Default=`None`.    
-`--path_yaml`: The path of `phonopy.yaml`. Default=`None`, if it's provided, `POSCAR` and `supercell_matrix` are not necessary.      
+`--path_yaml`: The path of `phonopy.yaml`. Default=`None`. If it's provided, `POSCAR` and `supercell_matrix` are not necessary.      
 `--fcs`: The path of fcs. `FORCE_CONSTANTS` or `force_constants.hdf5`.  Default=`./FORCE_CONSTANTS`.   
-`--cut_off`: fcs is 0 if the atomic distance beyond `cut_off`. Default=`15`.  
+`--cut_off`: If the atomic distance beyond `cut_off`, the corresponding fcs are 0. Default=`15`.  
 `--recenter`: Enable recenter the structure. (atoms.positions - [0.5,0.5,0.5]) % 1.  
 `--plot_phonon`: Enable plotting the corrected phonon spectrum.   
 `--k_path`: The k path of plotting phonon, e.g. `--k_path [[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]`.  
