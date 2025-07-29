@@ -42,7 +42,7 @@ pulgon-detect-CyclicGroup poscar.vasp
 
 ### 5. force constant correction:
 ```
-pulgon-fcs-correction --pbc [True,True,False]
+pulgon-fcs-correction --pbc [True,True,False] --poscar POSCAR --supercell_matrix [7,7,1] --recenter
 ```
 `--pbc`: The periodic boundary conduction of your structure. e.g.`--pbc [False, False, False]` correspond to cluster, `--pbc [True, Ture, False]` correspond to 2D structure.  
 `--poscar`: The file of POSCAR. Default=`./POSCAR`.    

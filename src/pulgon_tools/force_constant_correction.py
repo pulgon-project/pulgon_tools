@@ -147,12 +147,6 @@ def main():
     average_delta = atoms_scell.get_all_distances(mic=True, vector=True)
     average_distance = atoms_scell.get_all_distances(mic=True, vector=False)
 
-    idx_x, idx_y = np.where(average_distance > cut_off)
-    for ii, ix in enumerate(idx_x):
-        if ix in phonon.primitive.p2s_map:
-            ix = phonon.primitive.p2p_map[ix]
-            IFC[ix, idx_y[ii]] = np.zeros((3, 3))
-
     average_products = np.einsum(
         "...i,...j->...ij", average_delta, average_delta
     )
@@ -250,11 +244,24 @@ def main():
                     n_rows += 1
     print("now finish symmetric rules")
 
+    # Add extra constraints to make the force constants short-sighted
+    idx_x, idx_y = np.where(average_distance > cut_off)
+    for ii, ix in enumerate(idx_x):
+        if ix in phonon.primitive.p2s_map:
+            i = phonon.primitive.p2p_map[ix]
+            j = idx_y[ii]
+            for alpha in range(3):
+                for beta in range(3):
+                    rows.append(n_rows)
+                    cols.append(
+                        np.ravel_multi_index((i, j, alpha, beta), IFC.shape)
+                    )
+                    data.append(1.0)
+                    n_rows += 1
+    print("now finish the fourth constrains")
+
     # Rebuild the sparse matrix.
     M = ssp.coo_array((data, (rows, cols)), shape=(n_rows, IFC.size))
-
-    # set_trace()
-
     print("Start solving constraints")
     if methods == "convex_opt":
         import cvxpy as cp
