@@ -71,7 +71,7 @@ def main():
     )
     parser.add_argument(
         "--fcs_savename",
-        default="FORCE_CONSTANTS_correction.hdf5",
+        default="FORCE_CONSTANTS_correction",
         help="The name of corrected fcs",
     )
     parser.add_argument(
@@ -118,6 +118,8 @@ def main():
             fcs = read_force_constants_hdf5(fcs_name)
         else:
             fcs = parse_FORCE_CONSTANTS(fcs_name)
+
+        set_trace()
         phonon.force_constants = fcs
 
     scell = phonon.supercell
@@ -351,13 +353,18 @@ def main():
 
     if full_fcs:
         IFC_full = compact_fc_to_full_fc(phonon.primitive, IFC_sym)
-        # phonopy.file_IO.write_FORCE_CONSTANTS(IFC_full, fcs_savename, phonon.primitive.p2s_map)
+        phonopy.file_IO.write_FORCE_CONSTANTS(
+            IFC_full, fcs_savename, phonon.primitive.p2s_map
+        )
         phonopy.file_IO.write_force_constants_to_hdf5(
             IFC_full, filename=fcs_savename
         )
     else:
+        phonopy.file_IO.write_FORCE_CONSTANTS(
+            IFC_sym, fcs_savename, phonon.primitive.p2s_map
+        )
         phonopy.file_IO.write_force_constants_to_hdf5(
-            IFC_sym, filename=fcs_savename
+            IFC_sym, filename=(fcs_savename + ".hdf5")
         )
 
 
