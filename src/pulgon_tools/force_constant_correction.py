@@ -119,7 +119,6 @@ def main():
         else:
             fcs = parse_FORCE_CONSTANTS(fcs_name)
 
-        set_trace()
         phonon.force_constants = fcs
 
     scell = phonon.supercell
