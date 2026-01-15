@@ -13,7 +13,6 @@ pulgon-generate-structures -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -g ['Cn(6)'
 ```   
 
 
-
 -m: the Cylindrical coordinates of initial atom position   
 -g: select from 'Cn(n)','sigmaV()','sigmaH()','U()','U_d(fid)' and 'S2n(n)'  
 -c: select from {'T_Q':[5,3]} and {'T_v':3}  
@@ -24,16 +23,17 @@ pulgon-generate-structures -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -g ['Cn(6)'
 
 ### 2. detect axial point group
 ```
-pulgon-detect-AxialPointGroup poscar.vasp --enable_pg
+pulgon-detect-AxialPointGroup poscar.vasp --enable_pg --ebable_log
 ```
 
---enable_pg : detecting point group
-
+--enable_pg : Enable detecting point group.
+--ebable_log : Enable the output of detecting process.
 
 ### 3. detect cyclic group (generalized translational group)
 ```
-pulgon-detect-CyclicGroup poscar.vasp
+pulgon-detect-CyclicGroup poscar.vasp --ebable_log
 ```
+--ebable_log : Enable the output of detecting process
 
 
 ### 4. character table
