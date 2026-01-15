@@ -26,8 +26,8 @@ pulgon-generate-structures -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -g ['Cn(6)'
 pulgon-detect-AxialPointGroup poscar.vasp --enable_pg --ebable_log
 ```
 
---enable_pg : Enable detecting point group.
---ebable_log : Enable the output of detecting process.
+--enable_pg : Enable detecting point group   
+--ebable_log : Enable the output of detecting process   
 
 ### 3. detect cyclic group (generalized translational group)
 ```
