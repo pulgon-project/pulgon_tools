@@ -652,6 +652,7 @@ def affine_matrix_op(af1, af2, symprec=1e-8):
     ro = af2[:3, :3] @ af1[:3, :3]
     # ro = af1[:3, :3] @ af2[:3, :3]
     tran = np.remainder(af2[:3, 3] + af2[:3, :3] @ af1[:3, 3], [1, 1, 1])
+
     # tran = (af2[:3, 3] + af2[:3, :3] @ af1[:3, 3]) % 1
     if np.isclose(tran[0], 1):
         set_trace()

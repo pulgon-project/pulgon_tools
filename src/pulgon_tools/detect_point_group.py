@@ -212,8 +212,20 @@ def main():
         action="store_true",
         help="open the detection of point group",
     )
+    parser.add_argument(
+        "--enable_log",
+        action="store_true",
+        help="Enable the output of detection process",
+    )
+
     args = parser.parse_args()
     point_group_ind = args.enable_pg
+    flag_log = args.enable_log
+    if flag_log:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s - %(levelname)s - %(message)s",
+        )
 
     st_name = args.filename
     st = read(st_name)

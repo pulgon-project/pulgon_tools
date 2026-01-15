@@ -28,11 +28,6 @@ from pymatgen.util.coord import find_in_coord_list
 
 from pulgon_tools.utils import angle_between_points, refine_cell
 
-# logging.basicConfig(
-#     level=logging.DEBUG,  # 设置最低日志级别为 DEBUG
-#     format="%(asctime)s - %(levelname)s - %(message)s",
-# )
-
 
 class CyclicGroupAnalyzer:
     """A class to analyze the generalized translational group (cyclic group)
@@ -82,6 +77,11 @@ class CyclicGroupAnalyzer:
             self._atom = self._find_axis_center_of_nanotube(atom)
 
             self._primitive = self._find_primitive()
+
+            self.supercell_mutiple = int(
+                len(self._atom.numbers) / len(self._primitive.numbers)
+            )
+
             self._pure_trans = self._primitive.cell[2, 2]
 
             self._analyze()
@@ -201,6 +201,7 @@ class CyclicGroupAnalyzer:
                 logging.debug(
                     "The scaled translational distance is %s " % (1 / ind)
                 )
+
                 rotation, Q, tmp_sym_operations = self._detect_rotation(
                     monomer, tran * self._pure_trans, ind
                 )
@@ -472,6 +473,7 @@ class CyclicGroupAnalyzer:
         # z = np.round(z, 6)
 
         z_uniq, counts = np.unique(z, return_counts=True)
+
         potential_trans = np.append((z_uniq - z_uniq[0])[1:], 1)
         monomer_ind, monomer_ind_sum = self._get_monomer_ind(z, z_uniq)
 
@@ -499,59 +501,55 @@ class CyclicGroupAnalyzer:
         return monomer, translation
 
     def _find_primitive(self) -> ase.atoms.Atoms:
-        """fine the primitive cell of line group structure
+        """Find the primitive cell of a 1D line-group structure along z-axis."""
+        scaled_pos = self._atom.get_scaled_positions()
+        x_y = scaled_pos[:, :2]
+        z = scaled_pos[:, 2]
 
-        Returns: primitive cell
+        # Find candidate matching atoms in xy-plane
+        indices = find_in_coord_list(x_y[1:], x_y[0], atol=self._symprec)
+        indices = indices + 1 if indices.size > 0 else np.array([], dtype=int)
 
-        """
-        x_y = self._atom.get_scaled_positions()[:, :2]
-        z = self._atom.get_scaled_positions()[:, 2]
-
-        ind = find_in_coord_list(x_y[1:], x_y[0], atol=self._symprec) + 1
-
-        if len(ind) == 0:
-            logging.debug("It's a primitive cell")
+        if len(indices) == 0:
+            logging.debug("It's already a primitive cell.")
             return self._atom
-        else:
-            potential_z = z[ind] - z[0]
 
-            trans_z = []
-            for tmp in potential_z:
-                v = np.array([0, 0, tmp])
-                pos1, num1 = refine_cell(
-                    self._atom.get_scaled_positions() + v,
-                    self._atom.numbers,
-                    symprec=self._round_symprec,
-                )
-                pos2, num2 = refine_cell(
-                    self._atom.get_scaled_positions(),
-                    self._atom.numbers,
-                    symprec=self._round_symprec,
-                )
-                if (abs(pos1 - pos2) < self._symprec).all() and (
-                    num1 == num2
-                ).all():
-                    trans_z.append(tmp)
-            if len(trans_z) == 0:
-                logging.debug("It's a primitive cell")
-                return self._atom
-            else:
-                pure_z = min(trans_z)
-                itp = np.where(z < pure_z - self._symprec)[0]
-                cell = np.array(
-                    [
-                        self._atom.cell[0].copy(),
-                        self._atom.cell[1].copy(),
-                        [0, 0, pure_z * self._atom.cell[2, 2]],
-                    ]
-                )
-                numbers = self._atom.numbers[itp]
-                pos = self._atom.positions[itp]
-                atom = Atoms(cell=cell, numbers=numbers, positions=pos)
-                logging.debug(
-                    "It's not a primitive cell, already change to primitive self._primitive."
-                )
-                return atom
+        potential_z = (z[indices] - z[0]) % 1
+        trans_z = []
+
+        # Check which translation preserves the cell
+        for dz in potential_z:
+            shifted_pos = scaled_pos + np.array([0, 0, dz])
+            pos1, num1 = refine_cell(
+                shifted_pos, self._atom.numbers, symprec=self._round_symprec
+            )
+            pos2, num2 = refine_cell(
+                scaled_pos, self._atom.numbers, symprec=self._round_symprec
+            )
+            if np.allclose(pos1, pos2, atol=self._symprec) and np.array_equal(
+                num1, num2
+            ):
+                trans_z.append(dz)
+
+        if not trans_z:
+            logging.debug("No valid translation found. Already primitive.")
+            return self._atom
+
+        # Build new primitive cell
+        pure_z = min(trans_z)
+        atom_indices = np.where(z < pure_z - self._symprec)[0]
+        cell = np.zeros((3, 3))
+        cell[0] = self._atom.cell[0]
+        cell[1] = self._atom.cell[1]
+        cell[2] = [0, 0, pure_z * self._atom.cell[2, 2]]
+
+        atom = Atoms(
+            numbers=self._atom.numbers[atom_indices],
+            positions=self._atom.positions[atom_indices],
+            cell=cell,
+        )
+        logging.debug(f"Primitive cell found with z-translation {pure_z}.")
+        return atom
 
     def _check_if_along_OZ(self, atom):
         if (
@@ -599,7 +597,19 @@ def main():
     parser.add_argument(
         "filename", help="path to the file from which coordinates will be read"
     )
+    parser.add_argument(
+        "--enable_log",
+        action="store_true",
+        help="Enable the output of detection process",
+    )
     args = parser.parse_args()
+
+    flag_log = args.enable_log
+    if flag_log:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format="%(asctime)s - %(levelname)s - %(message)s",
+        )
 
     st_name = args.filename
     st = read(st_name)
