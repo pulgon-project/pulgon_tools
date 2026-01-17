@@ -15,6 +15,7 @@
 import argparse
 import itertools
 import logging
+import warnings
 from fractions import Fraction
 from typing import Union
 
@@ -27,6 +28,12 @@ from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
 
 from pulgon_tools.utils import angle_between_points, refine_cell
+
+warnings.filterwarnings(
+    "ignore",
+    category=RuntimeWarning,
+    message="invalid value encountered in divide",
+)
 
 
 class CyclicGroupAnalyzer:
@@ -90,7 +97,7 @@ class CyclicGroupAnalyzer:
         """print all possible monomers and their cyclic group"""
         monomer, potential_trans = self._potential_translation()
 
-        logging.debug("There are %d monomer" % len(monomer))
+        logging.debug("There are %d monomer candidates" % len(monomer))
         (
             self.cyclic_group,
             self.monomers,
@@ -179,7 +186,7 @@ class CyclicGroupAnalyzer:
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]
         )
         for ii, monomer in enumerate(monomer_atoms):
-            logging.debug("---Start deticting NO.%d monomer" % (ii + 1))
+            logging.debug("---Start deticting Item %d monomer" % (ii + 1))
             tran = potential_tans[ii]
             # ind = int(np.round(1 / tran, self._round_symprec))
             ind = int(np.round(1 / tran))
@@ -197,10 +204,10 @@ class CyclicGroupAnalyzer:
                 sym_op.append(invariant_op)
             else:
                 # detect rotation
-                logging.debug("Start detecting rotation")
                 logging.debug(
                     "The scaled translational distance is %s " % (1 / ind)
                 )
+                logging.debug("Start detecting rotation")
 
                 rotation, Q, tmp_sym_operations = self._detect_rotation(
                     monomer, tran * self._pure_trans, ind
@@ -309,7 +316,7 @@ class CyclicGroupAnalyzer:
 
         # possible rotational angle in cyclic group
         pot_angle = self._detect_possible_helical_angle(ind, monomer)
-        logging.debug("Candidate rotational degree is: %s" % str(pot_angle))
+        logging.debug("Candidate rotational degrees are: %s" % str(pot_angle))
         # set_trace()
 
         for test_ind in pot_angle:
@@ -617,8 +624,9 @@ def main():
     cyclic = CyclicGroupAnalyzer(st)
     # cy, mon = cyclic.get_cyclic_group()
     cy = cyclic.cyclic_group
+    print("The generalized translational group symbol:")
     for ii, cg in enumerate(cy):
-        print(cg)
+        print("Monomer %d:" % (ii + 1), cg)
 
 
 if __name__ == "__main__":
