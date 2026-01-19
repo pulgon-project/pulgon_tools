@@ -15,7 +15,7 @@ pulgon-generate-structures -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -g ['Cn(6)'
 
 -m: the Cylindrical coordinates of symcell   
 -g: select from 'Cn(n)','sigmaV()','sigmaH()','U()','U_d(fid)' and 'S2n(n)'  
--c: select from {'T_Q':[5,3]} and {'T_v':3}  
+-c: select from {'T_Q':[Q,f]} and {'T_v':f}, 360/Q is the rotational degree along z axis, f is the translational distance along z axis.     
 -s: saved file name  
 
 ##### Note: No space in the list or dict.

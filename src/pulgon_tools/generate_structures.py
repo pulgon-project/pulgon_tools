@@ -15,6 +15,7 @@
 import argparse
 import copy
 from pdb import set_trace
+from typing import Union
 
 import ase
 import numpy as np
@@ -34,7 +35,9 @@ from pulgon_tools.utils import (
 )
 
 
-def T_Q(Q: float | int, f: float | int, pos: np.ndarray) -> np.ndarray:
+def T_Q(
+    Q: Union[float, int], f: Union[float, int], pos: np.ndarray
+) -> np.ndarray:
     """
 
     Args:
@@ -54,7 +57,7 @@ def T_Q(Q: float | int, f: float | int, pos: np.ndarray) -> np.ndarray:
     return pos
 
 
-def T_v(f: float | int, pos: np.ndarray) -> np.ndarray:
+def T_v(f: Union[float, int], pos: np.ndarray) -> np.ndarray:
     """
 
     Args:
