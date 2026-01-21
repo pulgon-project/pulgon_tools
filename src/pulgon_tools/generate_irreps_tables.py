@@ -58,30 +58,37 @@ def main():
     )
     parser.add_argument("filename", help="path to the file of a strcuture")
     parser.add_argument(
-        "qz",
+        "-qz",
         "--qpoint_z",
         type=float,
         default=0.0,
         help="The qpoint in the periodic direction (z), from 0 to 1",
     )
     parser.add_argument(
-        "symprec",
+        "-symprec",
         "--symmetry_precision",
         type=float,
         default=1e-8,
         help="the symmetry tolerance",
     )
     parser.add_argument(
-        "charaname" "--character_savename",
+        "-charaname",
+        "--character_savename",
         default="characters",
         help="The filename of character",
+    )
+    parser.add_argument(
+        "--enable_rep_matrix",
+        action="store_true",
+        help="open the detection of point group",
     )
 
     args = parser.parse_args()
     st_name = args.filename
-    qpoint_z = args.qz
-    symprec = args.symprec
-    chara_filename = args.charaname
+    qpoint_z = args.qpoint_z
+    symprec = args.symmetry_precision
+    chara_filename = args.character_savename
+    enable_rep_matrix = args.enable_rep_matrix
 
     atom = read(st_name)
     (
@@ -101,16 +108,39 @@ def main():
         "a": aL,
     }
 
-    representation_mat, _, _ = get_character_withparities(
-        DictParams, symprec=symprec
-    )
-    characters, paras_values, paras_symbols = get_character_num_withparities(
-        DictParams, symprec=symprec
-    )
+    if enable_rep_matrix:
+        (
+            characters,
+            ireps_values,
+            ireps_symbols,
+        ) = get_character_num_withparities(DictParams, symprec=symprec)
+        representation_mat, _, _ = get_character_withparities(
+            DictParams, symprec=symprec
+        )
+        representation_mat_dict = {}
+        for i, rep in enumerate(representation_mat):
+            representation_mat_dict[f"D_irrep_{i}"] = rep
 
-    set_trace()
+        np.savez(
+            chara_filename,
+            characters=characters,
+            ireps_values=ireps_values,
+            ireps_symbols=ireps_symbols,
+            **representation_mat_dict,
+        )
 
-    np.savetxt(chara_filename, characters)
+    else:
+        (
+            characters,
+            ireps_values,
+            ireps_symbols,
+        ) = get_character_num_withparities(DictParams, symprec=symprec)
+        np.savez(
+            chara_filename,
+            characters=characters,
+            ireps_values=ireps_values,
+            ireps_symbols=ireps_symbols,
+        )
 
 
 if __name__ == "__main__":
