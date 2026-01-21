@@ -40,7 +40,7 @@ pulgon-detect-CyclicGroup poscar.vasp --ebable_log
 ```
 pulgon-irreps-tables poscar --qpoint_z 0.0 --enable_rep_matrix
 ```
---qpoint_z: Specify the `q` point.
+--qpoint_z: Specify the `q` point.  
 --enable_rep_matrix: Save the representation matrices. By default, only the character table is saved.
 
 
