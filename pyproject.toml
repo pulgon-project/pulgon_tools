@@ -34,8 +34,9 @@ where = ["src"]
 pulgon-generate-structures = "pulgon_tools:generate_structures.main"
 pulgon-detect-AxialPointGroup = "pulgon_tools:detect_point_group.main"
 pulgon-detect-CyclicGroup = "pulgon_tools:detect_generalized_translational_group.main"
-#pulgon-generate-CharacterTable = "pulgon_tools:Irreps_tables.main"
 pulgon-fcs-correction = "pulgon_tools:force_constant_correction.main"
+pulgon-irreps-tables = "pulgon_tools:generate_irreps_tables.main"
+
 
 [project.optional-dependencies]
 test = ["pytest", "pytest-datadir"]

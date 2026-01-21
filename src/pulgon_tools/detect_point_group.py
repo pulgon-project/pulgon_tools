@@ -203,7 +203,7 @@ def get_symcell(monomer: Atoms) -> Atoms:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Try to detect the line group of a system"
+        description="Detect the line group of a system"
     )
     parser.add_argument(
         "filename", help="path to the file from which coordinates will be read"

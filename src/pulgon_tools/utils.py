@@ -13,7 +13,7 @@
 # permissions and limitations under the License.
 
 import copy
-from typing import Union
+from typing import Any, Union
 
 import ase
 import cvxpy as cp
@@ -938,7 +938,9 @@ def get_character(DictParams, symprec=1e-8):
     return characters, paras_values, paras_symbols
 
 
-def get_character_withparities(DictParams, symprec=1e-8):
+def get_character_withparities(
+    DictParams: object, symprec: object = 1e-8
+) -> tuple[list[Any], list[Any], list[Any]]:
     characters, paras_values, paras_symbols = line_group_sympy_withparities(
         DictParams, symprec
     )
