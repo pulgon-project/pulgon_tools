@@ -45,27 +45,62 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
                     ],
                     [
                         0,
-                        sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2)),
+                        sympy.exp(-1j * k1 * a),
                     ],
                 ]
             ),
             sympy.Matrix(
                 [
                     [
-                        sympy.exp(1j * m1 * 2 * sympy.pi / n),
                         0,
+                        sympy.exp(1j * m1 * 2 * sympy.pi / n),
                     ],
                     [
+                        1,
                         0,
-                        sympy.exp(1j * m1 * 2 * sympy.pi / n),
                     ],
                 ]
             ),
-            sympy.Matrix([[0, 1], [1, 0]]),
         ]
         func = [func0, func1]
         qps_value = [qpoint]
-        m1_value = list(range(-int(nrot) + 1, int(nrot) + 1))
+        m1_value = list(range(-int(nrot / 2) + 1, int(nrot / 2) + 1))
+
+        def value_fc(fc, tmp_k1, tmp_m1, tmp_piH, nrot, order):
+            res = []
+            for tmp_order in order:
+                for jj, tmp in enumerate(tmp_order):
+                    if jj == 0:
+                        tmp0 = fc[tmp]
+                    else:
+                        tmp0 = fc[tmp] * tmp0
+                tmp1 = tmp0.evalf(
+                    subs={k1: tmp_k1, m1: tmp_m1, n: nrot, piV: tmp_piH}
+                )
+                res.append(tmp1)
+            return res
+
+        paras_km = list(itertools.product(*[qps_value, m1_value]))
+        paras_symbol = [k1, m1, piH]
+        characters, paras_values = [], []
+        for ii, paras_value in enumerate(paras_km):
+            tmp_k1, tmp_m1 = paras_value
+            if np.isclose(tmp_k1, 0, atol=symprec) or np.isclose(
+                tmp_k1, np.pi / a, atol=symprec
+            ):
+                idx_fc = 0
+                fc = func[idx_fc]
+                for tmp_piV in [-1, 1]:
+                    res = value_fc(fc, tmp_k1, tmp_m1, tmp_piV, nrot, order)
+                    characters.append(np.array(res).astype(np.complex128))
+                    paras_values.append([tmp_k1, tmp_m1, tmp_piV])
+            else:
+                idx_fc = 1
+                fc = func[idx_fc]
+                tmp_piV = 0
+                res = value_fc(fc, tmp_k1, tmp_m1, tmp_piV, nrot, order)
+                characters.append(np.array(res).astype(np.complex128))
+                paras_values.append([tmp_k1, tmp_m1, tmp_piV])
 
     elif family == 4:
         qpoint = DictParams["qpoints"]
