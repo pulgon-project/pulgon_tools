@@ -82,9 +82,7 @@ class CyclicGroupAnalyzer:
             # self._center_atom = self._center_of_nanotube(atom)
 
             self._atom = self._find_axis_center_of_nanotube(atom)
-
             self._primitive = self._find_primitive()
-
             self.supercell_mutiple = int(
                 len(self._atom.numbers) / len(self._primitive.numbers)
             )
