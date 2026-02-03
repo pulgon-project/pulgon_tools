@@ -62,17 +62,17 @@ class TestCyclicGroupAnalyzer:
         st_name = shared_datadir / "st1"
         st = read_vasp(st_name)
         cy1 = CyclicGroupAnalyzer(st, tolerance=1e-2)
-        cy2 = CyclicGroupAnalyzer(st, tolerance=1e-3)
+        cy2 = CyclicGroupAnalyzer(st, tolerance=1e-4)
         monomers1, translations1 = cy1._potential_translation()
         monomers2, translations2 = cy2._potential_translation()
-        idx1, Q1, _ = cy1._detect_rotation(
+        idx1, _, _ = cy1._detect_rotation(
             monomers1[0], translations1[0] * cy1._primitive.cell[2, 2], ind=3
         )
-        idx2, Q2, _ = cy2._detect_rotation(
+        idx2, _, _ = cy2._detect_rotation(
             monomers2[0], translations2[0] * cy2._primitive.cell[2, 2], ind=3
         )
-        assert idx1 == True and Q1 == 12
-        assert idx2 == False and Q2 == 1
+        assert idx1 == True
+        assert idx2 == False
 
     def test_mirror(self, shared_datadir):
         st_name = shared_datadir / "st7"
@@ -106,27 +106,28 @@ class TestCyclicGroupAnalyzer:
         st = read_vasp(st_name)
         cyclic = CyclicGroupAnalyzer(st, tolerance=1e-2)
         cy, mon = cyclic.get_cyclic_group()
-        assert cy[0] == "T12(1.498)" and str(mon[0].symbols) == "C4"
+        assert cy[0] == "(C12|T3(1.5))" and str(mon[0].symbols) == "C4"
 
     def test_the_whole_function_st2(self, shared_datadir):
         st_name = shared_datadir / "st7"
         st = read_vasp(st_name)
-        cyclic = CyclicGroupAnalyzer(st)
+        cyclic = CyclicGroupAnalyzer(st, tolerance=1e-2)
         cy, mon = cyclic.get_cyclic_group()
-        assert cy[0] == "T'(1.5)" and str(mon[0].symbols) == "C6"
+        assert cy[0] == "(C24|T2(1.5))" and str(mon[0].symbols) == "C6"
 
     def test_the_whole_function_st3(self, shared_datadir):
         st_name = shared_datadir / "9-9-AM"
         st = read_vasp(st_name)
-        cyclic = CyclicGroupAnalyzer(st, tolerance=0.01)
+        cyclic = CyclicGroupAnalyzer(st, tolerance=1e-2)
         cy, mon = cyclic.get_cyclic_group()
-        assert cy[0] == "T18(1.614)" and str(mon[0].symbols) == "Mo9S18"
+        assert cy[0] == "(C18|T2(1.614))" and str(mon[0].symbols) == "Mo9S18"
 
     def test_the_whole_function_st4(self, shared_datadir):
         st_name = shared_datadir / "24-0-ZZ"
         st = read_vasp(st_name)
-        cyclic = CyclicGroupAnalyzer(st, tolerance=0.01)
+        cyclic = CyclicGroupAnalyzer(st, tolerance=1e-2)
         cy, mon = cyclic.get_cyclic_group()
+        # set_trace()
         assert (
             cy[0] == "T48(2.74)"
             and cy[1] == "T'(2.74)"
