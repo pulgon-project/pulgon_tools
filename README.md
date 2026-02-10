@@ -32,7 +32,7 @@ pulgon-generate-structures-chirality -c (10,0) -sy (Mo,S) -s POSCAR
 -s: saved file name  
 
 
-### Symmetry detection
+### 2. Symmetry detection
 #### (a) detect axial point group
 ```
 pulgon-detect-AxialPointGroup -st POSCAR --enable_pg --ebable_log
