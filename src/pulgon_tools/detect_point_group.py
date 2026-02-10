@@ -86,7 +86,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self.rot_sym = []
         self.symmops = [SymmOp(np.eye(4))]
 
-        print("Start detecting rotational number")
+        logging.debug("Start detecting rotational number")
         self._check_rot_sym(self._zaxis)
         # if len(self.rot_sym) > 0 and self.rot_sym[0][1]!=1:     # modify the case when i==1
         if len(self.rot_sym) > 0:  # modify the case when i==1

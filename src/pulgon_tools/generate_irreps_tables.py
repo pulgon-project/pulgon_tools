@@ -56,7 +56,9 @@ def main():
     parser = argparse.ArgumentParser(
         description="Return the representation matrices or character table from a structure"
     )
-    parser.add_argument("filename", help="path to the file of a strcuture")
+    parser.add_argument(
+        "-st", "--filename", help="path to the file of a strcuture"
+    )
     parser.add_argument(
         "-qp",
         "--qpoint_z",
@@ -72,7 +74,7 @@ def main():
         help="the symmetry tolerance",
     )
     parser.add_argument(
-        "-charaname",
+        "-cn",
         "--character_savename",
         default="characters",
         help="The filename of character",

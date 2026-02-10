@@ -50,7 +50,7 @@ pulgon-detect-CyclicGroup -st POSCAR --ebable_log
 
 ### 3. character table and irreps matrices
 ```
-pulgon-irreps-tables poscar -qp 0.0 --enable_rep_matrix
+pulgon-irreps-tables -st poscar -qp 0.0 --enable_rep_matrix
 ```
 -qp: Specify the `q` point, from 0 to 1.  
 --enable_rep_matrix: Save the representation matrices. By default, only the character table is saved.

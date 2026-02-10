@@ -28,6 +28,7 @@ share/python-wheels/
 MANIFEST
 *.vasp
 *.npy
+*.npz
 htmlcov
 
 # PyInstaller
