@@ -49,9 +49,9 @@ pulgon-detect-CyclicGroup -st POSCAR --ebable_log
 
 ### 4. character table
 ```
-pulgon-irreps-tables poscar --qpoint_z 0.0 --enable_rep_matrix
+pulgon-irreps-tables poscar -qp 0.0 --enable_rep_matrix
 ```
---qpoint_z: Specify the `q` point.  
+-qp: Specify the `q` point.  
 --enable_rep_matrix: Save the representation matrices. By default, only the character table is saved.
 
 

@@ -58,7 +58,7 @@ def main():
     )
     parser.add_argument("filename", help="path to the file of a strcuture")
     parser.add_argument(
-        "-qz",
+        "-qp",
         "--qpoint_z",
         type=float,
         default=0.0,
