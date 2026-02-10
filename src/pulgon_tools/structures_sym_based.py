@@ -201,7 +201,7 @@ def generate_line_group_structure(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="generating line group structure"
+        description="generating line group structure by symmetry-based approach"
     )
 
     parser.add_argument(

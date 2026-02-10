@@ -31,7 +31,8 @@ dynamic = ["version"]
 where = ["src"]
 
 [project.scripts]
-pulgon-generate-structures = "pulgon_tools:generate_structures.main"
+pulgon-generate-structures-sym_based = "pulgon_tools:structures_sym_based.main"
+pulgon-generate-structures-chirality = "pulgon_tools:structure_chirality.main"
 pulgon-detect-AxialPointGroup = "pulgon_tools:detect_point_group.main"
 pulgon-detect-CyclicGroup = "pulgon_tools:detect_generalized_translational_group.main"
 pulgon-fcs-correction = "pulgon_tools:force_constant_correction.main"

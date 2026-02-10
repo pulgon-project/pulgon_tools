@@ -6,12 +6,13 @@
 After installing the package with `pip` (e.g. `pip install -e .`), the command `pulgon-generate-structures` and `pulgon-detect-AxialPointGroup` will become available.
 
 ### 1.generate line group structures
+
+(a) Symmetry-based approach (general)
  You need to specify the motif, generators of point groups and generalized translation group. An example:
 
 ```
-pulgon-generate-structures -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -g ['Cn(6)','U()','sigmaV()'] -c {'T_Q':[5,3]} -s poscar.vasp
+pulgon-generate-structures-sym_based -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -g ['Cn(6)','U()','sigmaV()'] -c {'T_Q':[5,3]} -s poscar.vasp
 ```   
-
 
 -m: the Cylindrical coordinates of symcell   
 -g: select from 'Cn(n)','sigmaV()','sigmaH()','U()','U_d(fid)' and 'S2n(n)'  
@@ -19,6 +20,17 @@ pulgon-generate-structures -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -g ['Cn(6)'
 -s: saved file name  
 
 ##### Note: No space in the list or dict.
+
+(b) Chiral rolling approach (MoS2-type)
+
+```
+pulgon-generate-structures-chirality -c (10,0) -sy (Mo,S) -s POSCAR
+```   
+-c: the chirality (n,m)   
+-sy: the symbols of atoms (symbol1, symbol2)  
+-b: the bond length between `symbol1` and `symbol2`, `default=2.43`  
+-dz: the interlayer spacing, `default=1.57`  
+-s: saved file name  
 
 
 ### 2. detect axial point group

@@ -1,3 +1,5 @@
+import argparse
+
 import numpy as np
 import sympy
 from ase import Atoms
@@ -15,7 +17,7 @@ def cyl2car(cyl):
     return car
 
 
-def helical_group_analysis(a1, a2, n1, n2):
+def helical_group_analysis(a1, a2, n1, n2, L1):
     n_gcd = np.gcd(n1, n2)
     n1_tilde = int(n1 / n_gcd)
     n2_tilde = int(n2 / n_gcd)
@@ -163,16 +165,21 @@ def generate_symcell_and_linegroup_elements(
     pos_cyl = np.array(
         [pos_cyl2, pos_cyl0 + solutions1, pos_cyl1 + solutions2]
     )
-    numbers = np.array([symbol1, symbol2, symbol2])
-    return pos_cyl, numbers
+    symbols = np.array([symbol1, symbol2, symbol2])
+    return pos_cyl, symbols
 
 
-def get_nanotube_from_n1n2(n1, n2, symbol1, symbol2, L1, bond_length, delta_Z):
+def get_nanotube_from_n1n2(n1, n2, symbol1, symbol2, bond_length, delta_Z):
+    L1 = np.sqrt(bond_length**2 - delta_Z**2) * np.sqrt(
+        2 - 2 * np.cos(2 * np.pi / 3)
+    )  # the length of hex lattice
     a1 = L1 * np.array([1, 0])
     a2 = np.array([L1 * np.cos(np.pi / 3), L1 * np.sin(np.pi / 3)])
-    q, f, r, R, Ch, t, t1, t2, n_gcd = helical_group_analysis(a1, a2, n1, n2)
+    q, f, r, R, Ch, t, t1, t2, n_gcd = helical_group_analysis(
+        a1, a2, n1, n2, L1
+    )
 
-    coo_cyl, numbers = generate_symcell_and_linegroup_elements(
+    coo_cyl, symbols = generate_symcell_and_linegroup_elements(
         a1,
         a2,
         Ch,
@@ -223,26 +230,74 @@ def get_nanotube_from_n1n2(n1, n2, symbol1, symbol2, L1, bond_length, delta_Z):
                 ).any()
                 if judge == False:
                     pos_car = np.vstack((pos_car, tmp))
-    numbers = np.tile(numbers, len(ops_sym))
+    symbols = np.tile(symbols, len(ops_sym))
     pos_car = np.array(pos_car)
 
     scaled = np.round(
         np.remainder(np.dot(pos_car, np.linalg.inv(cell)), [1, 1, 1]), 10
     )
     scaled, index = np.unique(scaled, axis=0, return_index=True)
-    numbers = numbers[index]
-    new_atom = Atoms(scaled_positions=scaled, cell=cell, numbers=numbers)
+    symbols = symbols[index]
+    new_atom = Atoms(scaled_positions=scaled, cell=cell, symbols=symbols)
     return new_atom
 
 
+def main():
+    parser = argparse.ArgumentParser(
+        description="generating line group structure by symmetry-based approach"
+    )
+
+    parser.add_argument(
+        "-c",
+        "--chirality",
+        default=(10, 10),
+    )
+
+    parser.add_argument(
+        "-sy",
+        "--symbol",
+        default=("Mo", "S"),
+    )
+
+    parser.add_argument("-b", "--bond_length", default=2.43, type=float)
+
+    parser.add_argument("-dz", "--delta_Z", default=1.57, type=float)
+
+    parser.add_argument(
+        "-s",
+        "--st_name",
+        type=str,
+        default="POSCAR",
+        help="the saved file name",
+    )
+
+    args = parser.parse_args()
+
+    n1, n2 = eval(args.chirality)[0], eval(args.chirality)[1]
+    symbol1, symbol2 = eval(args.symbol)[0], eval(args.symbol)[1]
+    bond_length = args.bond_length
+    delta_Z = args.delta_Z
+    filename = args.st_name
+
+    new_atom = get_nanotube_from_n1n2(
+        n1, n2, symbol1, symbol2, bond_length, delta_Z
+    )
+    pos = (new_atom.get_scaled_positions() - [0.5, 0.5, 0]) % 1 @ new_atom.cell
+    new_atom = Atoms(
+        positions=pos, cell=new_atom.cell, numbers=new_atom.numbers
+    )
+    write_vasp(filename, new_atom, direct=True, sort=True)
+
+
 if __name__ == "__main__":
+    main()
     ##################### single layer ###################
     # n1, n2 = 24, 0
     # symbol1, symbol2 = 42, 16     # Mo, S
     # name = "MoS2"
     # # symbol1, symbol2 = 74, 16     # W, S
     # # name = "WS2"
-    # atom1 = read_vasp("poscar-preoptimization/poscar_monolayer_%s.vasp" % name)
+    # atom1 = read_vasp("examples/poscar_monolayer_%s" % name)
     # L1 = np.linalg.norm(atom1.cell[0])       # lattice parameter factor
     # delta_Z = abs((atom1.positions - atom1.positions[2])[0, 2])      # the distance between different layer in 2D
     # bond_length = np.linalg.norm((atom1.positions[0] - atom1.positions[2]))
@@ -251,46 +306,46 @@ if __name__ == "__main__":
     # new_atom = Atoms(positions=pos, cell=new_atom.cell, numbers=new_atom.numbers)
     # write_vasp("poscar-preoptimization/poscar_%s_%d_%d.vasp" % (name, n1, n2), new_atom, direct=True, sort=True)
     ####################### multi layer ######################
-    n1, n2 = 10, 0
-    symbol1, symbol2 = 74, 16  # W, S
-    name1 = "WS2"
-    atom1 = read_vasp("../../examples/poscar_monolayer_%s" % name1)
-    L1 = np.linalg.norm(atom1.cell[0])  # lattice pacmeter factor
-    delta_Z1 = abs((atom1.positions - atom1.positions[2])[0, 2])
-    bond_length1 = np.linalg.norm((atom1.positions[0] - atom1.positions[2]))
-
-    new_atom1 = get_nanotube_from_n1n2(
-        n1, n2, symbol1, symbol2, L1, bond_length1, delta_Z1
-    )
-    n3, n4 = 20, 0
-    symbol1, symbol2 = 42, 16  # Mo, S
-    name2 = "MoS2"
-    atom2 = read_vasp("../../examples/poscar_monolayer_%s" % name2)
-    L2 = np.linalg.norm(atom2.cell[0])  # lattice pacmeter factor
-    delta_Z2 = abs((atom2.positions - atom2.positions[2])[0, 2])
-    bond_length2 = np.linalg.norm((atom2.positions[0] - atom2.positions[2]))
-
-    new_atom2 = get_nanotube_from_n1n2(
-        n3, n4, symbol1, symbol2, L2, bond_length2, delta_Z2
-    )
-    name = "WS2-%dx%d-MoS2-%dx%d" % (n1, n2, n3, n4)
-
-    pos1 = (
-        (new_atom1.get_scaled_positions() - [0.5, 0.5, 0]) % 1 @ new_atom1.cell
-    )
-    pos2 = (
-        (new_atom2.get_scaled_positions() - [0.5, 0.5, 0]) % 1 @ new_atom2.cell
-    )
-
-    tmp = np.concatenate(
-        ((new_atom2.cell - new_atom1.cell)[[0, 1], [0, 1]] / 2, [0])
-    )
-    pos1 = pos1 + tmp
-
-    pos = np.vstack((pos1, pos2))
-    cell = new_atom2.cell
-    numbers = np.concatenate((new_atom1.numbers, new_atom2.numbers), axis=0)
-    new_atom = Atoms(positions=pos, cell=cell, numbers=numbers)
-    write_vasp("poscar_%s.vasp" % (name), new_atom, direct=True, sort=True)
+    # n1, n2 = 10, 0
+    # symbol1, symbol2 = 74, 16  # W, S
+    # name1 = "WS2"
+    # atom1 = read_vasp("../../examples/poscar_monolayer_%s" % name1)
+    # L1 = np.linalg.norm(atom1.cell[0])  # lattice pacmeter factor
+    # delta_Z1 = abs((atom1.positions - atom1.positions[2])[0, 2])
+    # bond_length1 = np.linalg.norm((atom1.positions[0] - atom1.positions[2]))
+    #
+    # new_atom1 = get_nanotube_from_n1n2(
+    #     n1, n2, symbol1, symbol2, L1, bond_length1, delta_Z1
+    # )
+    # n3, n4 = 20, 0
+    # symbol1, symbol2 = 42, 16  # Mo, S
+    # name2 = "MoS2"
+    # atom2 = read_vasp("../../examples/poscar_monolayer_%s" % name2)
+    # L2 = np.linalg.norm(atom2.cell[0])  # lattice pacmeter factor
+    # delta_Z2 = abs((atom2.positions - atom2.positions[2])[0, 2])
+    # bond_length2 = np.linalg.norm((atom2.positions[0] - atom2.positions[2]))
+    #
+    # new_atom2 = get_nanotube_from_n1n2(
+    #     n3, n4, symbol1, symbol2, L2, bond_length2, delta_Z2
+    # )
+    # name = "WS2-%dx%d-MoS2-%dx%d" % (n1, n2, n3, n4)
+    #
+    # pos1 = (
+    #     (new_atom1.get_scaled_positions() - [0.5, 0.5, 0]) % 1 @ new_atom1.cell
+    # )
+    # pos2 = (
+    #     (new_atom2.get_scaled_positions() - [0.5, 0.5, 0]) % 1 @ new_atom2.cell
+    # )
+    #
+    # tmp = np.concatenate(
+    #     ((new_atom2.cell - new_atom1.cell)[[0, 1], [0, 1]] / 2, [0])
+    # )
+    # pos1 = pos1 + tmp
+    #
+    # pos = np.vstack((pos1, pos2))
+    # cell = new_atom2.cell
+    # numbers = np.concatenate((new_atom1.numbers, new_atom2.numbers), axis=0)
+    # new_atom = Atoms(positions=pos, cell=cell, numbers=numbers)
+    # write_vasp("poscar_%s.vasp" % (name), new_atom, direct=True, sort=True)
     #######################################################
     # pass
