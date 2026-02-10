@@ -25,8 +25,8 @@ pulgon-generate-structures-sym_based -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -
 ```
 pulgon-generate-structures-chirality -c (10,0) -sy (Mo,S) -s POSCAR
 ```   
--c: the chirality (n,m)   
--sy: the symbols of atoms (symbol1, symbol2)  
+-c: the chirality `(n,m)`   
+-sy: the symbols of atoms `(symbol1, symbol2)`  
 -b: the bond length between `symbol1` and `symbol2`, `default=2.43`  
 -dz: the interlayer spacing, `default=1.57`  
 -s: saved file name  
@@ -34,7 +34,7 @@ pulgon-generate-structures-chirality -c (10,0) -sy (Mo,S) -s POSCAR
 
 ### 2. detect axial point group
 ```
-pulgon-detect-AxialPointGroup poscar.vasp --enable_pg --ebable_log
+pulgon-detect-AxialPointGroup -st POSCAR --enable_pg --ebable_log
 ```
 
 --enable_pg : Enable detecting point group   
@@ -42,7 +42,7 @@ pulgon-detect-AxialPointGroup poscar.vasp --enable_pg --ebable_log
 
 ### 3. detect cyclic group (generalized translational group)
 ```
-pulgon-detect-CyclicGroup poscar.vasp --ebable_log
+pulgon-detect-CyclicGroup -st POSCAR --ebable_log
 ```
 --ebable_log : Enable the output of detecting process
 

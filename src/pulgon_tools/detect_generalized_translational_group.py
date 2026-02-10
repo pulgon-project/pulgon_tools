@@ -600,7 +600,9 @@ def main():
         description="Try to detect the generalized translational group of a line group structure"
     )
     parser.add_argument(
-        "filename", help="path to the file from which coordinates will be read"
+        "-st",
+        "--filename",
+        help="path to the file from which coordinates will be read",
     )
     parser.add_argument(
         "--enable_log",

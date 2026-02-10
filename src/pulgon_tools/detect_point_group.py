@@ -206,7 +206,9 @@ def main():
         description="Detect the line group of a system"
     )
     parser.add_argument(
-        "filename", help="path to the file from which coordinates will be read"
+        "-st",
+        "--filename",
+        help="path to the file from which coordinates will be read",
     )
     parser.add_argument(
         "--enable_pg",
