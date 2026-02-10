@@ -32,7 +32,8 @@ pulgon-generate-structures-chirality -c (10,0) -sy (Mo,S) -s POSCAR
 -s: saved file name  
 
 
-### 2. detect axial point group
+### Symmetry detection
+#### (a) detect axial point group
 ```
 pulgon-detect-AxialPointGroup -st POSCAR --enable_pg --ebable_log
 ```
@@ -40,22 +41,22 @@ pulgon-detect-AxialPointGroup -st POSCAR --enable_pg --ebable_log
 --enable_pg : Enable detecting point group   
 --ebable_log : Enable the output of detecting process   
 
-### 3. detect cyclic group (generalized translational group)
+#### (b) detect cyclic group (generalized translational group)
 ```
 pulgon-detect-CyclicGroup -st POSCAR --ebable_log
 ```
 --ebable_log : Enable the output of detecting process
 
 
-### 4. character table
+### 3. character table and irreps matrices
 ```
 pulgon-irreps-tables poscar -qp 0.0 --enable_rep_matrix
 ```
--qp: Specify the `q` point.  
+-qp: Specify the `q` point, from 0 to 1.  
 --enable_rep_matrix: Save the representation matrices. By default, only the character table is saved.
 
 
-### 5. force constant correction:
+### 4. force constant correction:
 ```
 pulgon-fcs-correction --pbc [True,True,False] --poscar POSCAR --supercell_matrix [7,7,1] --recenter
 ```
