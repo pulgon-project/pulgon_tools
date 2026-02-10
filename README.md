@@ -7,7 +7,7 @@ After installing the package with `pip` (e.g. `pip install -e .`), the command `
 
 ### 1.generate line group structures
 
-(a) Symmetry-based approach (general)
+#### (a) Symmetry-based approach (general)
  You need to specify the motif, generators of point groups and generalized translation group. An example:
 
 ```
@@ -17,11 +17,10 @@ pulgon-generate-structures-sym_based -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -
 -m: the Cylindrical coordinates of symcell   
 -g: select from 'Cn(n)','sigmaV()','sigmaH()','U()','U_d(fid)' and 'S2n(n)'  
 -c: select from {'T_Q':[Q,f]} and {'T_v':f}, 360/Q is the rotational degree along z axis, f is the translational distance along z axis.     
--s: saved file name  
-
+-s: saved file name
 ##### Note: No space in the list or dict.
 
-(b) Chiral rolling approach (MoS2-type)
+#### (b) Chiral rolling approach (MoS2-type)
 
 ```
 pulgon-generate-structures-chirality -c (10,0) -sy (Mo,S) -s POSCAR
