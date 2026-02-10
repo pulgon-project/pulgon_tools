@@ -58,7 +58,7 @@ pulgon-irreps-tables -st poscar -qp 0.0 --enable_rep_matrix
 
 ### 4. force constant correction:
 ```
-pulgon-fcs-correction --pbc [True,True,False] --poscar POSCAR --supercell_matrix [7,7,1] --recenter
+pulgon-fcs-correction --pbc [True,True,False] --st POSCAR --supercell_matrix [7,7,1] --recenter
 ```
 `--pbc`: The periodic boundary conduction of your structure. e.g.`--pbc [False, False, False]` correspond to cluster, `--pbc [True, Ture, False]` correspond to 2D structure.  
 `--poscar`: The file of POSCAR. Default=`./POSCAR`.    

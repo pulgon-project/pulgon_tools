@@ -33,7 +33,7 @@ def main():
         help="The supercell matrix that used to calculate fcs",
     )
     parser.add_argument(
-        "--poscar",
+        "-st" "--poscar",
         default="./POSCAR",
         help="The path of poscar",
     )
