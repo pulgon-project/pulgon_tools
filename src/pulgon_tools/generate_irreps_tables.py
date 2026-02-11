@@ -113,8 +113,8 @@ def main():
     if enable_rep_matrix:
         (
             characters,
-            ireps_values,
-            ireps_symbols,
+            irreps_values,
+            irreps_symbols,
         ) = get_character_num_withparities(DictParams, symprec=symprec)
         representation_mat, _, _ = get_character_withparities(
             DictParams, symprec=symprec
@@ -126,22 +126,25 @@ def main():
         np.savez(
             chara_filename,
             characters=characters,
-            ireps_values=ireps_values,
-            ireps_symbols=ireps_symbols,
+            ireps_values=irreps_values,
+            ireps_symbols=irreps_symbols,
             **representation_mat_dict,
         )
 
     else:
         (
             characters,
-            ireps_values,
-            ireps_symbols,
+            irreps_values,
+            irreps_symbols,
         ) = get_character_num_withparities(DictParams, symprec=symprec)
+
+        # np.savetxt("character.txt", np.round(characters.real, 3))
+        # set_trace()
         np.savez(
             chara_filename,
             characters=characters,
-            ireps_values=ireps_values,
-            ireps_symbols=ireps_symbols,
+            ireps_values=irreps_values,
+            ireps_symbols=irreps_symbols,
         )
 
 
