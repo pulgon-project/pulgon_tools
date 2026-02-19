@@ -19,15 +19,19 @@ import warnings
 from fractions import Fraction
 from typing import Union
 
-import ase.io.vasp
+import ase
 import numpy as np
 from ase import Atoms
-from ase.io import read
+from ase.io.vasp import read_vasp
 from ipdb import set_trace
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
 
-from pulgon_tools.utils import angle_between_points, refine_cell
+from pulgon_tools.utils import (
+    angle_between_points,
+    decimal_places,
+    refine_cell,
+)
 
 warnings.filterwarnings(
     "ignore",
@@ -54,7 +58,6 @@ class CyclicGroupAnalyzer:
         self,
         atom: ase.atoms.Atoms,
         tolerance: float = 0.001,
-        round_symprec: int = 5,
     ) -> None:
         """
 
@@ -75,7 +78,8 @@ class CyclicGroupAnalyzer:
         else:
             self._symprec = tolerance
             self._layer_symprec = 0.05
-            # self._round_symprec = get_num_of_decimal(tolerance)
+
+            round_symprec = decimal_places(tolerance)
             self._round_symprec = round_symprec
             self._zaxis = np.array([0, 0, 1])
 
@@ -86,9 +90,7 @@ class CyclicGroupAnalyzer:
             self.supercell_mutiple = int(
                 len(self._atom.numbers) / len(self._primitive.numbers)
             )
-
             self._pure_trans = self._primitive.cell[2, 2]
-
             self._analyze()
 
     def _analyze(self) -> None:
@@ -186,7 +188,6 @@ class CyclicGroupAnalyzer:
         for ii, monomer in enumerate(monomer_atoms):
             logging.debug("---Start deticting Item %d monomer" % (ii + 1))
             tran = potential_tans[ii]
-            # ind = int(np.round(1 / tran, self._round_symprec))
             ind = int(np.round(1 / tran))
 
             if ind - 1 / tran > self._symprec:
@@ -277,10 +278,7 @@ class CyclicGroupAnalyzer:
                 for tmp in point_end
             ]
         )
-        pot_angle = (
-            np.unique(np.round(arr / self._symprec).astype(int))
-            * self._symprec
-        )
+        pot_angle = np.sort(np.round(arr, self._round_symprec))
         return pot_angle
 
     def _detect_rotation(
@@ -299,42 +297,18 @@ class CyclicGroupAnalyzer:
         coords = self._primitive.get_scaled_positions() @ self._primitive.cell
         center = [0.5, 0.5, 0] @ self._primitive.cell
 
-        # detect the monomer's rotational symmetry for specifying therotation
-        # mol = Molecule(species=monomer.numbers, coords=monomer.positions)
-        # monomer_rot_ind = PointGroupAnalyzer(mol)._check_rot_sym(self._zaxis)
-        # pot_angle = (
-        #     np.array(
-        #         [
-        #             360 * ii / monomer_rot_ind
-        #             for ii in range(1, monomer_rot_ind + 1)
-        #         ]
-        #     )
-        #     / ind
-        # )
-
         # possible rotational angle in cyclic group
         pot_angle = self._detect_possible_helical_angle(ind, monomer)
         logging.debug("Candidate rotational degrees are: %s" % str(pot_angle))
-        # set_trace()
 
         for test_ind in pot_angle:
             itp1, itp2 = (
                 True,
                 True,
             )  # record the rotational result from different layer
-
             tmp_sym_op = []
+
             for layer in range(1, ind):
-                # op1 = SymmOp.from_axis_angle_and_translation(
-                #     self._zaxis,
-                #     test_ind * layer,
-                #     translation_vec=(0, 0, tran * layer),
-                # )
-                # op2 = SymmOp.from_axis_angle_and_translation(
-                #     self._zaxis,
-                #     -test_ind * layer,
-                #     translation_vec=(0, 0, tran * layer),
-                # )
                 op1 = SymmOp.from_origin_axis_angle(
                     origin=center, axis=self._zaxis, angle=test_ind * layer
                 )
@@ -357,12 +331,8 @@ class CyclicGroupAnalyzer:
                 for ii, site in enumerate(monomer):
                     coord1 = op1.operate(site.position)
                     coord2 = op2.operate(site.position)
-                    # coord1 = np.remainder(op1.operate(np.remainder(site.scaled_position - [0.5,0.5,0.5], [1,1,1])), [1,1,1])
-                    # coord2 = np.remainder(op2.operate(np.remainder(site.scaled_position - [0.5,0.5,0.5],[1,1,1])), [1,1,1])
-
                     tmp1 = find_in_coord_list(coords, coord1, self._symprec)
                     tmp2 = find_in_coord_list(coords, coord2, self._symprec)
-                    # set_trace()
                     itp3.append(
                         len(tmp1) == 1
                         and self._primitive.numbers[tmp1[0]] == site.number
@@ -380,6 +350,7 @@ class CyclicGroupAnalyzer:
                     tmp_sym_op.append(op1)
                 if itp2:
                     tmp_sym_op.append(op2)
+
             if itp1 or itp2:
                 Q = Fraction(360 / test_ind).limit_denominator()
 
@@ -459,7 +430,10 @@ class CyclicGroupAnalyzer:
     def _get_monomer_ind(
         self, z: np.ndarray, z_uniq: np.ndarray
     ) -> [list, list]:
-        monomer_ind = [np.where(z == tmp)[0] for tmp in z_uniq]
+        monomer_ind = [
+            np.where(np.isclose(z, tmp, atol=self._symprec))[0]
+            for tmp in z_uniq
+        ]
         monomer_ind_sum = []
         tmp1 = np.array([])
         for tmp in monomer_ind:
@@ -474,13 +448,17 @@ class CyclicGroupAnalyzer:
 
         """
         z = self._primitive.get_scaled_positions()[:, 2]
-        z = np.round(z, self._round_symprec)
-        # z = np.round(z, 6)
+        # z = np.round(z, self._round_symprec)
 
-        z_uniq, counts = np.unique(z, return_counts=True)
-
-        potential_trans = np.append((z_uniq - z_uniq[0])[1:], 1)
+        z_uniq, counts = np.unique(
+            np.round(z, self._round_symprec), return_counts=True
+        )
         monomer_ind, monomer_ind_sum = self._get_monomer_ind(z, z_uniq)
+
+        z_uniq_high_accurate = z[monomer_ind].mean(axis=1)
+        potential_trans = np.append(
+            (z_uniq_high_accurate - z_uniq_high_accurate[0])[1:], 1
+        )
 
         translation, monomer = [], []
         for ii in range(len(z_uniq)):
@@ -605,6 +583,13 @@ def main():
         help="path to the file from which coordinates will be read",
     )
     parser.add_argument(
+        "-t",
+        "--tolerance",
+        default=1e-3,
+        type=float,
+        help="Tolerance for atomic positions",
+    )
+    parser.add_argument(
         "--enable_log",
         action="store_true",
         help="Enable the output of detection process",
@@ -619,14 +604,13 @@ def main():
         )
 
     st_name = args.filename
-    st = read(st_name)
+    st = read_vasp(st_name)
 
-    cyclic = CyclicGroupAnalyzer(st)
-    # cy, mon = cyclic.get_cyclic_group()
-    cy = cyclic.cyclic_group
+    cyclic = CyclicGroupAnalyzer(st, tolerance=args.tolerance)
+    cy, mononers = cyclic.get_cyclic_group()
     print("The generalized translational group symbol:")
     for ii, cg in enumerate(cy):
-        print("Monomer %d:" % (ii + 1), cg)
+        print("Monomer %s:" % mononers[ii].symbols, cg)
 
 
 if __name__ == "__main__":

@@ -26,19 +26,14 @@ from pulgon_tools.line_group_table import get_family_Num_from_sym_symbol
 from pulgon_tools.utils import get_symbols_from_ops
 
 
-def test_symcell(poscar):
-    obj = CyclicGroupAnalyzer(poscar)
-    res = get_symcell(obj.monomers[0])
-    write_vasp("poscar.vasp", res)
-    return res
+def main():
+    st_name = "test/data/st7"
+    st = read_vasp(st_name)
+    cyclic = CyclicGroupAnalyzer(st, tolerance=1e-2)
+    cy, mon = cyclic.get_cyclic_group()
+
+    set_trace()
 
 
 if __name__ == "__main__":
-    # poscar = read_vasp("../../test/data/9-9-AM")
-    # poscar = read_vasp("../../test/data/12-12-AM")
-    # poscar = read_vasp("../../test/data/24-0-ZZ")
-    # poscar = read_vasp("../../test/data/C4h")
-    # poscar = read_vasp("../../test/data/C4v")
-    poscar = read_vasp("POSCAR-defect-pri-5.vasp")
-    # poscar = read_vasp("../../test/data/C4")
-    test_symcell(poscar)
+    main()

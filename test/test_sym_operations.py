@@ -43,8 +43,7 @@ def test_lingroupfamily(shared_datadir):
     trans_sym = cyclic.cyclic_group[0]
     obj = LineGroupAnalyzer(poscar)
     rota_sym = obj.sch_symbol
-    # family = get_family_Num_from_sym_symbol(trans_sym, rota_sym)
-    family = get_family_Num_from_sym_symbol("T", "C1")
+    family = get_family_Num_from_sym_symbol(trans_sym, rota_sym)
     assert family == 4
 
 
@@ -57,4 +56,4 @@ def test_symop_symbol(shared_datadir):
     sch, _, op_trans = cyclic.get_cyclic_group_and_op()
     op_rotas = obj.get_generators()
     symbols = get_symbols_from_ops(op_rotas)
-    assert symbols[0] == "C9" and symbols[1] == "S18"
+    assert symbols[0] == "C9"

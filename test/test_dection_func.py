@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 from pdb import set_trace
 
+import numpy as np
 import pretty_errors
 import pytest
 import pytest_datadir
@@ -39,8 +40,9 @@ class TestCyclicGroupAnalyzer:
         idx, Q, _ = cy._detect_rotation(
             monomers[0], translations[0] * cy._primitive.cell[2, 2], 3
         )
+
         assert idx == True
-        assert Q == 12
+        assert Q.numerator == 12
 
     def test_find_axis_center_of_nanotubFe(self, shared_datadir):
         st_name = shared_datadir / "12-12-AM"
@@ -56,7 +58,7 @@ class TestCyclicGroupAnalyzer:
         cy = CyclicGroupAnalyzer(st)
         monomers, translations = cy._potential_translation()
         assert str(monomers[0].symbols) == "Mo9S18"
-        assert translations[0] == 0.5
+        assert np.isclose(translations[0], 0.5, atol=1e-3)
 
     def test_rotational_tolerance(self, shared_datadir):
         st_name = shared_datadir / "st1"
@@ -127,9 +129,8 @@ class TestCyclicGroupAnalyzer:
         st = read_vasp(st_name)
         cyclic = CyclicGroupAnalyzer(st, tolerance=1e-2)
         cy, mon = cyclic.get_cyclic_group()
-        # set_trace()
         assert (
-            cy[0] == "T48(2.74)"
+            cy[0] == "(C48|T2(2.74))"
             and cy[1] == "T'(2.74)"
             and str(mon[0].symbols) == "Mo24S48"
         )

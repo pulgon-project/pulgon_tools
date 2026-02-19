@@ -13,6 +13,7 @@
 # permissions and limitations under the License.
 
 import copy
+from decimal import Decimal
 from typing import Any, Union
 
 import ase
@@ -23,8 +24,6 @@ import scipy.sparse as ss
 import scipy.spatial.distance
 from ase import Atoms
 from ipdb import set_trace
-
-# from phonopy.units import VaspToTHz
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
 from sympy.physics.quantum import TensorProduct
@@ -201,19 +200,9 @@ def get_num_of_decimal(num: float) -> int:
     return len(np.format_float_positional(num).split(".")[1])
 
 
-# def get_symcell(monomer: Atoms) -> Atoms:
-#     """based on the point group symmetry of monomer, return the symcell
-#
-#     Args:
-#         monomer:
-#
-#     Returns: symcell
-#
-#     """
-#     apg = LineGroupAnalyzer(monomer)
-#     equ = list(apg.get_equivalent_atoms()["eq_sets"].keys())
-#     # sym = apg.get_symmetry_operations()
-#     return monomer[equ]
+def decimal_places(x):
+    d = Decimal(str(x))
+    return abs(d.as_tuple().exponent)
 
 
 def get_center_of_mass_periodic(atom):
@@ -327,7 +316,7 @@ def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
 
             if idx2.size == 0:
                 logging.ERROR("tolerance exceed while calculate perms")
-            tmp_perm[jj] = idx2
+            tmp_perm[jj] = idx2.item()
         perms.append(tmp_perm)
     perms_table, itp = np.unique(perms, axis=0, return_index=True)
     perms_table = perms_table.astype(np.int32)

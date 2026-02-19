@@ -35,7 +35,7 @@ pulgon-generate-structures-chirality -c (10,0) -sy (Mo,S) -s POSCAR
 ### 2. Symmetry detection
 #### (a) detect axial point group
 ```
-pulgon-detect-AxialPointGroup -st POSCAR --enable_pg --ebable_log
+pulgon-detect-AxialPointGroup -st POSCAR --enable_pg --enable_log
 ```
 
 --enable_pg : Enable detecting point group   
@@ -43,8 +43,9 @@ pulgon-detect-AxialPointGroup -st POSCAR --enable_pg --ebable_log
 
 #### (b) detect cyclic group (generalized translational group)
 ```
-pulgon-detect-CyclicGroup -st POSCAR --ebable_log
+pulgon-detect-CyclicGroup -st POSCAR -t 0.001 --enable_log
 ```
+-t: Tolerance for atomic positions  
 --ebable_log : Enable the output of detecting process
 
 
