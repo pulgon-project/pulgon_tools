@@ -24,7 +24,7 @@ pulgon-generate-structures-sym_based -m  [[3,np.pi/24,0.6],[2.2,np.pi/24,0.8]] -
 
 ```
 pulgon-generate-structures-chirality -c (10,0) -sy (Mo,S) -s POSCAR
-```   
+```
 -c: the chirality `(n,m)`   
 -sy: the symbols of atoms `(symbol1, symbol2)`  
 -b: the bond length between `symbol1` and `symbol2`, `default=2.43`  
@@ -35,45 +35,50 @@ pulgon-generate-structures-chirality -c (10,0) -sy (Mo,S) -s POSCAR
 ### 2. Symmetry detection
 #### (a) detect axial point group
 ```
-pulgon-detect-AxialPointGroup -st POSCAR --enable_pg --enable_log
+pulgon-detect-AxialPointGroup -st POSCAR -el
 ```
-
---enable_pg : Enable detecting point group   
---ebable_log : Enable the output of detecting process   
+-st: POSCAR
+-t: Tolerance for atomic positions
+-ep : Enable detecting point group   
+-el : Enable the output of detecting process   
 
 #### (b) detect cyclic group (generalized translational group)
 ```
 pulgon-detect-CyclicGroup -st POSCAR -t 0.001 --enable_log
 ```
+-st: POSCAR
 -t: Tolerance for atomic positions  
---ebable_log : Enable the output of detecting process
+-el : Enable the output of detecting process
 
 
 ### 3. character table and irreps matrices
 ```
-pulgon-irreps-tables -st poscar -qp 0.0 --enable_rep_matrix
+pulgon-irreps-tables -st poscar -qp 0.0 -er
 ```
+-st: POSCAR
 -qp: Specify the `q` point, from 0 to 1.  
---enable_rep_matrix: Save the representation matrices. By default, only the character table is saved.
+-t: Tolerance for atomic positions  
+-er: Save the representation matrices. By default, only the character table is saved.
+-s: saved file name  
 
 
 ### 4. force constant correction:
 ```
-pulgon-fcs-correction --pbc [True,True,False] --st POSCAR --supercell_matrix [7,7,1] --recenter
+pulgon-fcs-correction -pbc [True,True,False] -st POSCAR -sm [7,7,1] -r
 ```
-`--pbc`: The periodic boundary conduction of your structure. e.g.`--pbc [False, False, False]` correspond to cluster, `--pbc [True, Ture, False]` correspond to 2D structure.  
-`--poscar`: The file of POSCAR. Default=`./POSCAR`.    
-`--supercell_matrix`: The supercell matrix that used to calculate fcs. e.g.`--supercell_matrix [5, 5, 1]`. Default=`None`.    
-`--path_yaml`: The path of `phonopy.yaml`. Default=`None`. If it's provided, `POSCAR` and `supercell_matrix` are not necessary.      
-`--fcs`: The path of fcs. `FORCE_CONSTANTS` or `force_constants.hdf5`.  Default=`./FORCE_CONSTANTS`.   
-`--cut_off`: If the atomic distance beyond `cut_off`, the corresponding fcs are 0. Default=`15`.  
-`--recenter`: Enable recenter the structure. (atoms.positions - [0.5,0.5,0.5]) % 1.  
-`--plot_phonon`: Enable plotting the corrected phonon spectrum.   
-`--k_path`: The k path of plotting phonon, e.g. `--k_path [[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]`.  
-`--phononfig_savename`: The name of phonon spectrum fig. Default=`phonon_fix.png`.   
-`--fcs_savename`: The name of saving corrected fcs file. Default=`FORCE_CONSTANTS_correction.hdf5`.   
-`--full_fcs`: Enable saving the complete fcs.   
-`--methods`: The available methods are 'convex_opt', 'ridge_model'. Default=`convex_opt`.  
+-st: The file of POSCAR. Default=`./POSCAR`.
+-pbc: The periodic boundary conduction of your structure. e.g.`--pbc [False, False, False]` correspond to cluster, `--pbc [True, Ture, False]` correspond to 2D structure.  
+-sm: The supercell matrix that used to calculate fcs. e.g.`--supercell_matrix [5, 5, 1]`. Default=`None`.    
+-py: The path of `phonopy.yaml`. Default=`None`. If it's provided, `POSCAR` and `supercell_matrix` are not necessary.      
+-fcs: The path of fcs. `FORCE_CONSTANTS` or `force_constants.hdf5`.  Default=`./FORCE_CONSTANTS`.   
+-c: If the atomic distance beyond `cut_off`, the corresponding fcs are 0. Default=`15`.  
+-r: Enable recenter the structure. (atoms.positions - [0.5,0.5,0.5]) % 1.  
+-p: Enable plotting the corrected phonon spectrum.   
+-k: The k path of plotting phonon, e.g. `--k_path [[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]`.  
+-sp: The name of phonon spectrum fig. Default=`phonon_fix.png`.   
+-sf: The name of saving corrected fcs file. Default=`FORCE_CONSTANTS_correction.hdf5`.   
+-f: Enable saving the complete fcs.   
+-m: The available methods are 'convex_opt', 'ridge_model'. Default=`convex_opt`.  
 
 
 ## Examples

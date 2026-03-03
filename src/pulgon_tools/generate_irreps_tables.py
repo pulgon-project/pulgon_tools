@@ -67,19 +67,20 @@ def main():
         help="The qpoint in the periodic direction (z), from 0 to 1",
     )
     parser.add_argument(
-        "-symprec",
-        "--symmetry_precision",
+        "-t",
+        "--tolerance",
         type=float,
         default=1e-8,
-        help="the symmetry tolerance",
+        help="Tolerance for atomic positions",
     )
     parser.add_argument(
-        "-cn",
-        "--character_savename",
+        "-s",
+        "--savename_chara",
         default="characters",
         help="The filename of character",
     )
     parser.add_argument(
+        "-er",
         "--enable_rep_matrix",
         action="store_true",
         help="open the detection of point group",

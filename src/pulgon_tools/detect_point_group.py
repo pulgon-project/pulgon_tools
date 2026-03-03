@@ -211,11 +211,20 @@ def main():
         help="path to the file from which coordinates will be read",
     )
     parser.add_argument(
+        "-t",
+        "--tolerance",
+        default=1e-3,
+        type=float,
+        help="Tolerance for atomic positions",
+    )
+    parser.add_argument(
+        "-ep",
         "--enable_pg",
         action="store_true",
         help="open the detection of point group",
     )
     parser.add_argument(
+        "-el",
         "--enable_log",
         action="store_true",
         help="Enable the output of detection process",

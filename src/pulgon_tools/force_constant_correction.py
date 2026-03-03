@@ -19,13 +19,14 @@ from phonopy.interface.vasp import read_vasp
 def main():
     parser = argparse.ArgumentParser(description="Apply the sum rules to fcs")
     parser.add_argument(
-        "--pbc",
+        "-pbc",
         required=True,
         # default=[True, True, False],
         type=parse_bool_list,
         help="The periodic boundary conduction of structure",
     )
     parser.add_argument(
+        "-sm",
         "--supercell_matrix",
         required=True,
         # default=[5,5,1],
@@ -33,58 +34,66 @@ def main():
         help="The supercell matrix that used to calculate fcs",
     )
     parser.add_argument(
-        "-st" "--poscar",
+        "-st",
         default="./POSCAR",
         help="The path of poscar",
     )
     parser.add_argument(
+        "-py",
         "--path_yaml",
         default=None,
         help="The path of phonopy.yaml",
     )
     parser.add_argument(
+        "-c",
         "--cut_off",
         default=15,
         type=float,
         help="Cutoff radius for interatomic interactions",
     )
     parser.add_argument(
-        "--fcs",
+        "-fcs",
         default="./FORCE_CONSTANTS",
         help="The path of force_constants.hdf5 or FORCE_CONSTANTS",
     )
     parser.add_argument(
-        "--plot_phonon",
+        "-p" "--plot_phonon",
         action="store_true",
         help="Enable plotting if specified (default: False)",
     )
     parser.add_argument(
+        "-k",
         "--k_path",
         default=None,
         type=str2list,
         help="The k path of plotting phonon, e.g. [[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]",
     )
     parser.add_argument(
+        "-sp",
         "--phononfig_savename",
         default="phonon_fix",
         help="The name of phonon spectrum fig",
     )
     parser.add_argument(
+        "-sf",
         "--fcs_savename",
         default="FORCE_CONSTANTS_correction",
         help="The name of corrected fcs",
     )
     parser.add_argument(
+        "-r",
         "--recenter",
         action="store_true",
         help="(atoms.positions - [0.5,0.5,0.5])%1",
     )
     parser.add_argument(
+        "-m",
         "--methods",
         default="convex_opt",
         help="The available methods are 'convex_opt', 'ridge_model'",
     )
     parser.add_argument(
+        "-f",
         "--full_fcs",
         action="store_true",
         help="Enable saving the complete fcs",

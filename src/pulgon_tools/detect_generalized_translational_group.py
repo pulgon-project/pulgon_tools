@@ -590,6 +590,7 @@ def main():
         help="Tolerance for atomic positions",
     )
     parser.add_argument(
+        "-el",
         "--enable_log",
         action="store_true",
         help="Enable the output of detection process",
