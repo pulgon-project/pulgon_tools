@@ -1,6 +1,10 @@
 # Pulgon_tools
 
 
+## Install
+```
+pip install -e .
+```
 
 ## Usage
 After installing the package with `pip` (e.g. `pip install -e .`), the command `pulgon-generate-structures` and `pulgon-detect-AxialPointGroup` will become available.
