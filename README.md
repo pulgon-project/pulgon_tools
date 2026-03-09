@@ -41,29 +41,29 @@ pulgon-generate-structures-chirality -c (10,0) -b ('Mo','S') -s POSCAR
 ```
 pulgon-detect-AxialPointGroup -p POSCAR -o
 ```
--p: POSCAR
--t: Tolerance for atomic positions
--g : Enable detecting point group   
--o : Enable the output of detecting process   
+-p: POSCAR  
+-t: Tolerance for atomic positions  
+-g : Enable detecting point group     
+-o : Enable the output of detecting process    
 
 #### (b) detect cyclic group (generalized translational group)
 ```
 pulgon-detect-CyclicGroup -p POSCAR -t 0.001 -o
 ```
--p: POSCAR
--t: Tolerance for atomic positions  
--o : Enable the output of detecting process
+-p: POSCAR  
+-t: Tolerance for atomic positions    
+-o : Enable the output of detecting process  
 
 
 ### 3. character table and irreps matrices
 ```
 pulgon-irreps-tables -p POSCAR -q 0.0 -r
 ```
--p: POSCAR
--q: Specify the `q` point, from 0 to 1.  
--t: Tolerance for atomic positions  
--r: Save the representation matrices. By default, only the character table is saved.
--s: saved file name  
+-p: POSCAR  
+-q: Specify the `q` point, from 0 to 1.    
+-t: Tolerance for atomic positions   
+-r: Save the representation matrices. By default, only the character table is saved.  
+-s: saved file name   
 
 
 ### 4. force constant correction:
