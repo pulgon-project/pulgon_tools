@@ -57,10 +57,10 @@ def main():
         description="Return the representation matrices or character table from a structure"
     )
     parser.add_argument(
-        "-st", "--filename", help="path to the file of a strcuture"
+        "-p", "--POSCAR", help="path to the file of a strcuture"
     )
     parser.add_argument(
-        "-qp",
+        "-q",
         "--qpoint_z",
         type=float,
         default=0.0,
@@ -80,17 +80,17 @@ def main():
         help="The filename of character",
     )
     parser.add_argument(
-        "-er",
+        "-r",
         "--enable_rep_matrix",
         action="store_true",
         help="open the detection of point group",
     )
 
     args = parser.parse_args()
-    st_name = args.filename
+    st_name = args.POSCAR
     qpoint_z = args.qpoint_z
-    symprec = args.symmetry_precision
-    chara_filename = args.character_savename
+    symprec = args.tolerance
+    chara_filename = args.savename_chara
     enable_rep_matrix = args.enable_rep_matrix
 
     atom = read(st_name)

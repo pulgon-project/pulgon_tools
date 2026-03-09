@@ -22,7 +22,7 @@ from typing import Union
 import ase
 import numpy as np
 from ase import Atoms
-from ase.io.vasp import read_vasp
+from ase.io.vasp import read_vasp, write_vasp
 from ipdb import set_trace
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
@@ -253,111 +253,196 @@ class CyclicGroupAnalyzer:
         return cyclic_group, mono, sym_op
 
     def _detect_possible_helical_angle(self, ind, monomer):
-        min_z = np.min(monomer.get_scaled_positions()[:, 2])
-        min_idx = np.argmin(monomer.get_scaled_positions()[:, 2])
+        scaled = monomer.get_scaled_positions()
+        z = scaled[:, 2]
 
-        point_start = (monomer.get_scaled_positions() @ self._primitive.cell)[
-            min_idx
-        ][:2]
-        itp = np.where(
-            abs(
-                (min_z + 1 / ind)
-                - self._primitive.get_scaled_positions()[:, 2]
-            )
-            < self._symprec
-        )[0]
+        # all atoms with min(z)
+        min_z = np.min(z)
+        min_mask = np.abs(z - min_z) < self._symprec
+        points_start = (scaled[min_mask] @ self._primitive.cell)[:, :2]
+
+        # find out the points on upper layer
+        target_z = (min_z + 1 / ind) % 1.0
+
+        prim_z = self._primitive.get_scaled_positions()[:, 2]
+        itp = np.where(np.abs(prim_z - target_z) < self._symprec)[0]
+
+        if len(itp) == 0:
+            raise RuntimeError(f"No atoms found at target z={target_z:.4f}")
+
         point_end = (
             self._primitive.get_scaled_positions() @ self._primitive.cell
         )[itp][:, :2]
-
         center = ([0.5, 0.5, 0] @ self._primitive.cell)[:2]
 
+        # calculate the angle
         arr = np.array(
             [
-                angle_between_points(point_start, center, tmp)
-                for tmp in point_end
+                angle_between_points(ps, center, pe)
+                for ps in points_start
+                for pe in point_end
             ]
         )
-        pot_angle = np.sort(np.round(arr, self._round_symprec))
-        return pot_angle
+        return np.unique(np.round(arr, self._round_symprec))
+
+    # def _detect_rotation(
+    #     self, monomer: ase.atoms.Atoms, tran: np.float64, ind: int
+    # ) -> [bool, Union[int, float]]:
+    #     """
+    #
+    #     Args:
+    #         monomer: monomer candidates
+    #         tran: the translational distance of monomer candidates
+    #         ind: monomer layer numbers in the primitive cell
+    #
+    #     Returns: judge if the rotational symmetry exist and rotational index Q
+    #
+    #     """
+    #     coords = self._primitive.get_scaled_positions() @ self._primitive.cell
+    #     center = [0.5, 0.5, 0] @ self._primitive.cell
+    #
+    #     # possible rotational angle in cyclic group
+    #     pot_angle = self._detect_possible_helical_angle(ind, monomer)
+    #     logging.debug("Candidate rotational degrees are: %s" % str(pot_angle))
+    #
+    #     for test_ind in pot_angle:
+    #         itp1, itp2 = (
+    #             True,
+    #             True,
+    #         )  # record the rotational result from different layer
+    #         tmp_sym_op = []
+    #
+    #         for layer in range(1, ind):
+    #             op1 = SymmOp.from_origin_axis_angle(
+    #                 origin=center, axis=self._zaxis, angle=test_ind * layer
+    #             )
+    #             op1 = SymmOp.from_rotation_and_translation(
+    #                 op1.rotation_matrix,
+    #                 op1.translation_vector + [0, 0, tran * layer],
+    #             )
+    #             op2 = SymmOp.from_origin_axis_angle(
+    #                 origin=center, axis=self._zaxis, angle=-test_ind * layer
+    #             )
+    #             op2 = SymmOp.from_rotation_and_translation(
+    #                 op2.rotation_matrix,
+    #                 op2.translation_vector + [0, 0, tran * layer],
+    #             )
+    #
+    #             itp3, itp4 = (
+    #                 [],
+    #                 [],
+    #             )  # record the rotational result in current layer
+    #             for ii, site in enumerate(monomer):
+    #                 coord1 = op1.operate(site.position)
+    #                 coord2 = op2.operate(site.position)
+    #                 tmp1 = find_in_coord_list(coords, coord1, self._symprec)
+    #                 tmp2 = find_in_coord_list(coords, coord2, self._symprec)
+    #                 itp3.append(
+    #                     len(tmp1) == 1
+    #                     and self._primitive.numbers[tmp1[0]] == site.number
+    #                 )
+    #                 itp4.append(
+    #                     len(tmp2) == 1
+    #                     and self._primitive.numbers[tmp2[0]] == site.number
+    #                 )
+    #             itp1 = itp1 and np.array(itp3).all()
+    #             itp2 = itp2 and np.array(itp4).all()
+    #
+    #             if not (itp1 or itp2):
+    #                 break
+    #             if itp1:
+    #                 tmp_sym_op.append(op1)
+    #             if itp2:
+    #                 tmp_sym_op.append(op2)
+    #
+    #         if itp1 or itp2:
+    #             Q = Fraction(360 / test_ind).limit_denominator()
+    #
+    #             logging.debug(
+    #                 "The minimal rotational degree is: %s" % test_ind
+    #             )
+    #             return True, Q, tmp_sym_op
+    #     return False, 1, None
 
     def _detect_rotation(
         self, monomer: ase.atoms.Atoms, tran: np.float64, ind: int
-    ) -> [bool, Union[int, float]]:
-        """
+    ):
+        """Detect helical/rotational symmetry between monomer layers in a nanotube.
+
+        For each candidate rotation angle, verifies that rotating the base monomer
+        by `angle * layer` and translating by `tran * layer` maps onto existing
+        atoms in the primitive cell. Tests both positive and negative rotation
+        directions independently.
 
         Args:
-            monomer: monomer candidates
-            tran: the translational distance of monomer candidates
-            ind: monomer layer numbers in the primitive cell
+            monomer: Base monomer (layer 0) extracted from the primitive cell.
+            tran: Translational displacement (Cartesian, along z) per monomer layer.
+            ind: Number of monomer layers contained in the primitive cell.
 
-        Returns: judge if the rotational symmetry exist and rotational index Q
+        Returns:
+            A tuple of (found, Q, sym_ops) where:
+                - found (bool): True if a valid rotational symmetry is detected.
+                - Q (Fraction | int): Rotational index, defined as 360 / angle.
+                  Returns 1 if no symmetry is found.
+                - sym_ops (list[SymmOp] | None): Symmetry operations (one per
+                  layer, for the valid rotation direction). None if not found.
 
+        Notes:
+            - When ind == 1, no inter-layer rotation can be defined; returns False.
+            - Positive and negative rotation directions are tested separately to
+              avoid mixing inconsistent symmetry operations.
+            - Q is computed via Fraction to avoid floating-point precision issues.
         """
+        if ind == 1:
+            return False, 1, None
+
         coords = self._primitive.get_scaled_positions() @ self._primitive.cell
         center = [0.5, 0.5, 0] @ self._primitive.cell
-
-        # possible rotational angle in cyclic group
         pot_angle = self._detect_possible_helical_angle(ind, monomer)
         logging.debug("Candidate rotational degrees are: %s" % str(pot_angle))
+        # write_vasp("monomer.vasp", monomer, direct=True, sort=True)
+        # write_vasp("primitive.vasp", self._primitive, direct=True, sort=True)
 
         for test_ind in pot_angle:
-            itp1, itp2 = (
-                True,
-                True,
-            )  # record the rotational result from different layer
-            tmp_sym_op = []
+            for sign, label in [(1, "pos"), (-1, "neg")]:
+                sym_ops = []
+                all_pass = True
 
-            for layer in range(1, ind):
-                op1 = SymmOp.from_origin_axis_angle(
-                    origin=center, axis=self._zaxis, angle=test_ind * layer
-                )
-                op1 = SymmOp.from_rotation_and_translation(
-                    op1.rotation_matrix,
-                    op1.translation_vector + [0, 0, tran * layer],
-                )
-                op2 = SymmOp.from_origin_axis_angle(
-                    origin=center, axis=self._zaxis, angle=-test_ind * layer
-                )
-                op2 = SymmOp.from_rotation_and_translation(
-                    op2.rotation_matrix,
-                    op2.translation_vector + [0, 0, tran * layer],
-                )
-
-                itp3, itp4 = (
-                    [],
-                    [],
-                )  # record the rotational result in current layer
-                for ii, site in enumerate(monomer):
-                    coord1 = op1.operate(site.position)
-                    coord2 = op2.operate(site.position)
-                    tmp1 = find_in_coord_list(coords, coord1, self._symprec)
-                    tmp2 = find_in_coord_list(coords, coord2, self._symprec)
-                    itp3.append(
-                        len(tmp1) == 1
-                        and self._primitive.numbers[tmp1[0]] == site.number
+                for layer in range(1, ind):
+                    angle = sign * test_ind * layer
+                    op = SymmOp.from_origin_axis_angle(
+                        origin=center, axis=self._zaxis, angle=angle
                     )
-                    itp4.append(
-                        len(tmp2) == 1
-                        and self._primitive.numbers[tmp2[0]] == site.number
+                    op = SymmOp.from_rotation_and_translation(
+                        op.rotation_matrix,
+                        op.translation_vector + [0, 0, tran * layer],
                     )
-                itp1 = itp1 and np.array(itp3).all()
-                itp2 = itp2 and np.array(itp4).all()
 
-                if not (itp1 or itp2):
-                    break
-                if itp1:
-                    tmp_sym_op.append(op1)
-                if itp2:
-                    tmp_sym_op.append(op2)
+                    layer_pass = all(
+                        len(
+                            tmp := find_in_coord_list(
+                                coords,
+                                op.operate(site.position),
+                                self._symprec,
+                            )
+                        )
+                        == 1
+                        and self._primitive.numbers[tmp[0]] == site.number
+                        for site in monomer
+                    )
 
-            if itp1 or itp2:
-                Q = Fraction(360 / test_ind).limit_denominator()
+                    if not layer_pass:
+                        all_pass = False
+                        break
+                    sym_ops.append(op)
+                if all_pass:
+                    Q = (
+                        Fraction(360, int(round(test_ind))).limit_denominator()
+                        if float(test_ind).is_integer()
+                        else Fraction(360 / test_ind).limit_denominator(1000)
+                    )
+                    return True, Q, sym_ops
 
-                logging.debug(
-                    "The minimal rotational degree is: %s" % test_ind
-                )
-                return True, Q, tmp_sym_op
         return False, 1, None
 
     def _detect_mirror(
@@ -390,7 +475,6 @@ class CyclicGroupAnalyzer:
         diff_st = self._primitive[
             np.setdiff1d(range(len(coords)), diff_st_ind)
         ]
-
         for itp1, itp2 in itertools.combinations_with_replacement(
             range(len(monomer)), 2
         ):
@@ -428,17 +512,15 @@ class CyclicGroupAnalyzer:
         return False, None
 
     def _get_monomer_ind(
-        self, z: np.ndarray, z_uniq: np.ndarray
+        self, z_round: np.ndarray, z_uniq: np.ndarray
     ) -> [list, list]:
-        monomer_ind = [
-            np.where(np.isclose(z, tmp, atol=self._symprec))[0]
-            for tmp in z_uniq
-        ]
+        monomer_ind = [np.where(z_round == val)[0] for val in z_uniq]
+
         monomer_ind_sum = []
-        tmp1 = np.array([])
-        for tmp in monomer_ind:
-            tmp1 = np.sort(np.append(tmp1, tmp)).astype(np.int32)
-            monomer_ind_sum.append(tmp1)
+        accumulated = np.array([], dtype=np.int32)
+        for ind in monomer_ind:
+            accumulated = np.sort(np.append(accumulated, ind))
+            monomer_ind_sum.append(accumulated.copy())
         return monomer_ind, monomer_ind_sum
 
     def _potential_translation(self) -> [list, list]:
@@ -448,14 +530,15 @@ class CyclicGroupAnalyzer:
 
         """
         z = self._primitive.get_scaled_positions()[:, 2]
-        # z = np.round(z, self._round_symprec)
+        z_round = np.round(z, self._round_symprec)
 
-        z_uniq, counts = np.unique(
-            np.round(z, self._round_symprec), return_counts=True
+        z_uniq, counts = np.unique(z_round, return_counts=True)
+        monomer_ind, monomer_ind_sum = self._get_monomer_ind(z_round, z_uniq)
+
+        z_uniq_high_accurate = np.array(
+            [z[tmp_ind].mean().item() for tmp_ind in monomer_ind]
         )
-        monomer_ind, monomer_ind_sum = self._get_monomer_ind(z, z_uniq)
 
-        z_uniq_high_accurate = z[monomer_ind].mean(axis=1)
         potential_trans = np.append(
             (z_uniq_high_accurate - z_uniq_high_accurate[0])[1:], 1
         )
@@ -578,8 +661,8 @@ def main():
         description="Try to detect the generalized translational group of a line group structure"
     )
     parser.add_argument(
-        "-st",
-        "--filename",
+        "-p",
+        "--POSCAR",
         help="path to the file from which coordinates will be read",
     )
     parser.add_argument(
@@ -590,7 +673,7 @@ def main():
         help="Tolerance for atomic positions",
     )
     parser.add_argument(
-        "-el",
+        "-o",
         "--enable_log",
         action="store_true",
         help="Enable the output of detection process",
@@ -604,7 +687,7 @@ def main():
             format="%(asctime)s - %(levelname)s - %(message)s",
         )
 
-    st_name = args.filename
+    st_name = args.POSCAR
     st = read_vasp(st_name)
 
     cyclic = CyclicGroupAnalyzer(st, tolerance=args.tolerance)

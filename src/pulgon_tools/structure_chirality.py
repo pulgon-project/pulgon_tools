@@ -254,14 +254,14 @@ def main():
     )
 
     parser.add_argument(
-        "-sy",
+        "-b",
         "--symbol",
         default=("Mo", "S"),
     )
 
-    parser.add_argument("-b", "--bond_length", default=2.43, type=float)
+    parser.add_argument("-l", "--bond_length", default=2.43, type=float)
 
-    parser.add_argument("-dz", "--delta_Z", default=1.57, type=float)
+    parser.add_argument("-d", "--delta_Z", default=1.57, type=float)
 
     parser.add_argument(
         "-s",
@@ -274,6 +274,7 @@ def main():
     args = parser.parse_args()
 
     n1, n2 = eval(args.chirality)[0], eval(args.chirality)[1]
+
     symbol1, symbol2 = eval(args.symbol)[0], eval(args.symbol)[1]
     bond_length = args.bond_length
     delta_Z = args.delta_Z

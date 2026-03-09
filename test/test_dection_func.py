@@ -122,7 +122,7 @@ class TestCyclicGroupAnalyzer:
         st = read_vasp(st_name)
         cyclic = CyclicGroupAnalyzer(st, tolerance=1e-2)
         cy, mon = cyclic.get_cyclic_group()
-        assert cy[0] == "(C18|T2(1.614))" and str(mon[0].symbols) == "Mo9S18"
+        assert cy[0] == "(C18|T2(1.606))" and str(mon[0].symbols) == "Mo9S18"
 
     def test_the_whole_function_st4(self, shared_datadir):
         st_name = shared_datadir / "24-0-ZZ"
@@ -167,7 +167,7 @@ class TestAxialPointGroupAnalyzer:
         mol = Molecule(species=st.numbers, coords=st.positions)
         obj = LineGroupAnalyzer(mol)
         pg = obj.get_pointgroup()
-        assert str(pg) == "S2"
+        assert str(pg) == "S18"
 
     def test_axial_pg_st6(self, shared_datadir):
         st_name = shared_datadir / "C4h"

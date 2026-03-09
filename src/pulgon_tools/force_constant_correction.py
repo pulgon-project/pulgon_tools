@@ -16,120 +16,15 @@ from phonopy.harmonic.force_constants import (
 from phonopy.interface.vasp import read_vasp
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Apply the sum rules to fcs")
-    parser.add_argument(
-        "-pbc",
-        required=True,
-        # default=[True, True, False],
-        type=parse_bool_list,
-        help="The periodic boundary conduction of structure",
-    )
-    parser.add_argument(
-        "-sm",
-        "--supercell_matrix",
-        required=True,
-        # default=[5,5,1],
-        type=parse_int_list,
-        help="The supercell matrix that used to calculate fcs",
-    )
-    parser.add_argument(
-        "-st",
-        default="./POSCAR",
-        help="The path of poscar",
-    )
-    parser.add_argument(
-        "-py",
-        "--path_yaml",
-        default=None,
-        help="The path of phonopy.yaml",
-    )
-    parser.add_argument(
-        "-c",
-        "--cut_off",
-        default=15,
-        type=float,
-        help="Cutoff radius for interatomic interactions",
-    )
-    parser.add_argument(
-        "-fcs",
-        default="./FORCE_CONSTANTS",
-        help="The path of force_constants.hdf5 or FORCE_CONSTANTS",
-    )
-    parser.add_argument(
-        "-p" "--plot_phonon",
-        action="store_true",
-        help="Enable plotting if specified (default: False)",
-    )
-    parser.add_argument(
-        "-k",
-        "--k_path",
-        default=None,
-        type=str2list,
-        help="The k path of plotting phonon, e.g. [[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]",
-    )
-    parser.add_argument(
-        "-sp",
-        "--phononfig_savename",
-        default="phonon_fix",
-        help="The name of phonon spectrum fig",
-    )
-    parser.add_argument(
-        "-sf",
-        "--fcs_savename",
-        default="FORCE_CONSTANTS_correction",
-        help="The name of corrected fcs",
-    )
-    parser.add_argument(
-        "-r",
-        "--recenter",
-        action="store_true",
-        help="(atoms.positions - [0.5,0.5,0.5])%1",
-    )
-    parser.add_argument(
-        "-m",
-        "--methods",
-        default="convex_opt",
-        help="The available methods are 'convex_opt', 'ridge_model'",
-    )
-    parser.add_argument(
-        "-f",
-        "--full_fcs",
-        action="store_true",
-        help="Enable saving the complete fcs",
-    )
-    args = parser.parse_args()
-
-    poscar = args.poscar
-    supercell_matrix = args.supercell_matrix
-    path_yaml = args.path_yaml
-    fcs_name = args.fcs
-    pbc = args.pbc
-    cut_off = args.cut_off
-    methods = args.methods
-    plot_phonon = args.plot_phonon
-    fcs_savename = args.fcs_savename
-    phononfig_savename = args.phononfig_savename
-    full_fcs = args.full_fcs
-    recenter = args.recenter
-    k_path = args.k_path
-
-    if path_yaml is not None:
-        phonon = phonopy.load(
-            phonopy_yaml=path_yaml, force_constants_filename=fcs_name
-        )
-    else:
-        unitcell = read_vasp(poscar)
-        phonon = Phonopy(unitcell, supercell_matrix=np.diag(supercell_matrix))
-
-        file_ext = os.path.splitext(fcs_name)[1].lower()
-        if file_ext == ".hdf5":
-            fcs = read_force_constants_hdf5(fcs_name)
-        else:
-            fcs = parse_FORCE_CONSTANTS(fcs_name)
-
-        phonon.force_constants = fcs
-
+def build_constraint_matrix(
+    phonon, cut_off=15, recenter=False, pbc=[False, False, True]
+):
+    """
+    Build the sparse constraint matrix encoding translational
+    acoustic sum rules, Born-Huang rotational sum rules,
+    Huang invariances, matrix symmetry, and cutoff constraints.
+    Returns: sparse matrix M, IFC array
+    """
     scell = phonon.supercell
     if recenter:
         atoms_scell = Atoms(
@@ -272,7 +167,16 @@ def main():
 
     # Rebuild the sparse matrix.
     M = ssp.coo_array((data, (rows, cols)), shape=(n_rows, IFC.size))
-    print("Start solving constraints")
+    return M, IFC
+
+
+def solve_fcs(IFC, M, methods="convex_opt"):
+    """
+    Solve the constrained quadratic optimization problem
+    to correct the IFCs.
+    Returns: corrected IFC array
+    """
+
     if methods == "convex_opt":
         import cvxpy as cp
 
@@ -307,6 +211,114 @@ def main():
         print("Rotational sum-rules after,  ||Ax|| = {:20.15f}".format(delta))
         IFC_sym = parameters.reshape(IFC.shape)
         ########################################################
+    return IFC_sym
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Apply the sum rules to fcs")
+    parser.add_argument(
+        "-p",
+        default="./POSCAR",
+        help="The path of poscar",
+    )
+    parser.add_argument(
+        "-b",
+        "--pbc",
+        # required=True,
+        default=[False, False, True],
+        type=parse_bool_list,
+        help="The periodic boundary conduction of structure",
+    )
+    parser.add_argument(
+        "-x",
+        "--supercell_matrix",
+        required=True,
+        # default=[5,5,1],
+        type=parse_int_list,
+        help="The supercell matrix that used to calculate fcs",
+    )
+    parser.add_argument(
+        "-y",
+        "--path_yaml",
+        default=None,
+        help="The path of phonopy.yaml",
+    )
+    parser.add_argument(
+        "-f",
+        "--fcs",
+        default="./FORCE_CONSTANTS",
+        help="The path of force_constants.hdf5 or FORCE_CONSTANTS",
+    )
+    parser.add_argument(
+        "-c",
+        "--cut_off",
+        default=15,
+        type=float,
+        help="Cutoff radius for interatomic interactions",
+    )
+    parser.add_argument(
+        "-n",
+        "--plot_phonon",
+        action="store_true",
+        help="Enable plotting if specified (default: False)",
+    )
+    parser.add_argument(
+        "-k",
+        "--k_path",
+        default=None,
+        type=str2list,
+        help="The k path of plotting phonon, e.g. [[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]",
+    )
+    parser.add_argument(
+        "-r",
+        "--recenter",
+        action="store_true",
+        help="(atoms.positions - [0.5,0.5,0.5])%1",
+    )
+    parser.add_argument(
+        "-m",
+        "--methods",
+        default="convex_opt",
+        help="The available methods are 'convex_opt', 'ridge_model'",
+    )
+
+    args = parser.parse_args()
+
+    supercell_matrix = args.supercell_matrix
+    path_yaml = args.path_yaml
+    fcs_name = args.fcs
+    pbc = args.pbc
+    cut_off = args.cut_off
+    methods = args.methods
+    plot_phonon = args.plot_phonon
+    recenter = args.recenter
+    k_path = args.k_path
+    fcs_savename = "FORCE_CONSTANTS_correction"
+    phononfig_savename = "phonon_fix"
+
+    if path_yaml is not None:
+        phonon = phonopy.load(
+            phonopy_yaml=path_yaml, force_constants_filename=fcs_name
+        )
+    else:
+        poscar = args.poscar
+        unitcell = read_vasp(poscar)
+        phonon = Phonopy(unitcell, supercell_matrix=np.diag(supercell_matrix))
+
+        file_ext = os.path.splitext(fcs_name)[1].lower()
+        if file_ext == ".hdf5":
+            fcs = read_force_constants_hdf5(fcs_name)
+        else:
+            fcs = parse_FORCE_CONSTANTS(fcs_name)
+
+        phonon.force_constants = fcs
+
+    M, IFC = build_constraint_matrix(
+        phonon, cut_off=cut_off, recenter=recenter, pbc=pbc
+    )
+
+    print("Start solving constraints")
+    IFC_sym = solve_fcs(IFC, M, methods=methods)
 
     if plot_phonon:
         import matplotlib.pyplot as plt
@@ -319,11 +331,6 @@ def main():
             phonon.auto_band_structure()
             phonon.plot_band_structure().savefig(phononfig_savename, dpi=500)
         else:
-
-            # path = [[0.0, 0.0, 0.0], [0.5, 0.0,0.0], [0.5, 0.5, 0.0],[0.0, 0.5, 0.0], [0.0, 0.0, 0.0]]
-            # path = [[[0.0, 0.0, 0.0], [0.0, 0.0,0.5]]]
-            # path =
-
             qpoints, connections = get_band_qpoints_and_path_connections(
                 [k_path], npoints=101
             )
@@ -359,21 +366,12 @@ def main():
             # plt.ylim(bottom=0)
             plt.savefig(phononfig_savename, dpi=300)
 
-    if full_fcs:
-        IFC_full = compact_fc_to_full_fc(phonon.primitive, IFC_sym)
-        phonopy.file_IO.write_FORCE_CONSTANTS(
-            IFC_full, fcs_savename, phonon.primitive.p2s_map
-        )
-        phonopy.file_IO.write_force_constants_to_hdf5(
-            IFC_full, filename=fcs_savename
-        )
-    else:
-        phonopy.file_IO.write_FORCE_CONSTANTS(
-            IFC_sym, fcs_savename, phonon.primitive.p2s_map
-        )
-        phonopy.file_IO.write_force_constants_to_hdf5(
-            IFC_sym, filename=(fcs_savename + ".hdf5")
-        )
+    phonopy.file_IO.write_FORCE_CONSTANTS(
+        IFC_sym, fcs_savename, phonon.primitive.p2s_map
+    )
+    phonopy.file_IO.write_force_constants_to_hdf5(
+        IFC_sym, filename=(fcs_savename + ".hdf5")
+    )
 
 
 def parse_bool_list(value):

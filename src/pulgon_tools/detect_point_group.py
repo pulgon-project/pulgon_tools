@@ -206,8 +206,8 @@ def main():
         description="Detect the line group of a system"
     )
     parser.add_argument(
-        "-st",
-        "--filename",
+        "-p",
+        "--POSCAR",
         help="path to the file from which coordinates will be read",
     )
     parser.add_argument(
@@ -218,13 +218,13 @@ def main():
         help="Tolerance for atomic positions",
     )
     parser.add_argument(
-        "-ep",
+        "-g",
         "--enable_pg",
         action="store_true",
         help="open the detection of point group",
     )
     parser.add_argument(
-        "-el",
+        "-o",
         "--enable_log",
         action="store_true",
         help="Enable the output of detection process",
@@ -239,7 +239,7 @@ def main():
             format="%(asctime)s - %(levelname)s - %(message)s",
         )
 
-    st_name = args.filename
+    st_name = args.POSCAR
     st = read(st_name)
 
     mol = Molecule(species=st.numbers, coords=st.positions)
