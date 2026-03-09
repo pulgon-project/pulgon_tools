@@ -70,7 +70,7 @@ pulgon-irreps-tables -p POSCAR -q 0.0 -r
 ```
 pulgon-fcs-correction  -p POSCAR -b [False,False,True]  -x [1,1,3]
 ```
--p: The file of POSCAR. Default=`./POSCAR`.
+-p: The file of POSCAR. Default=`./POSCAR`.  
 -b: The periodic boundary conduction of your structure. e.g.`--pbc [False, False, False]` correspond to cluster, `--pbc [True, Ture, False]` correspond to 2D structure.  
 -x: The supercell matrix that used to calculate fcs. e.g.`--supercell_matrix [1, 1, 3]`. Default=`None`.    
 -y: The path of `phonopy.yaml`. Default=`None`. If it's provided, `POSCAR` and `supercell_matrix` are not necessary.      
