@@ -141,59 +141,144 @@ def change_center(st1: ase.atoms.Atoms) -> ase.atoms.Atoms:
     return st2
 
 
+# def generate_line_group_structure(
+#     monomer_pos: np.ndarray, monomer_symbols, cyclic_group: dict, symec: int = 4
+# ) -> ase.atoms.Atoms:
+#     """
+#
+#     Args:
+#         monomer_pos: the positions of monomer
+#         cyclic_group: the generalized translation group
+#
+#     Returns: the final structure after all symmetry operations
+#
+#     """
+#     all_pos = copy.deepcopy(monomer_pos)
+#     if list(cyclic_group.keys())[0] == "T_Q":
+#         Q = cyclic_group["T_Q"][0]
+#         f = cyclic_group["T_Q"][1]
+#         for ii in range(np.ceil(Q).astype(np.int32)):
+#             if ii == 0:
+#                 tmp_monomer_pos = T_Q(Q, f, monomer_pos)
+#                 all_pos = np.vstack((all_pos, tmp_monomer_pos))
+#             else:
+#                 tmp_monomer_pos = T_Q(Q, f, tmp_monomer_pos)
+#                 all_pos = np.vstack((all_pos, tmp_monomer_pos))
+#                 judge = np.sum(
+#                     (
+#                         sortrows(np.round(monomer_pos[:, :2], symec))
+#                         - sortrows(np.round(tmp_monomer_pos[:, :2], symec))
+#                     )
+#                     ** 2
+#                 )
+#                 if judge < 0.1:
+#                     Q = ii + 1
+#                     break
+#         all_pos = np.unique(np.round(all_pos, symec), axis=0)
+#         A = Q * f
+#
+#     elif list(cyclic_group.keys())[0] == "T_V":
+#         f = cyclic_group["T_V"]
+#         for ii in range(2):
+#             all_pos = np.vstack((all_pos, T_v(f, all_pos)))
+#         all_pos = np.unique(np.round(all_pos, symec), axis=0)
+#         A = 2 * f
+#     else:
+#         print("A error input about cyclic_group")
+#
+#     p0 = np.max(np.sqrt(all_pos[:, 0] ** 2 + all_pos[:, 1] ** 2))
+#     cell = np.array([[p0 * 3, 0, 0], [0, p0 * 3, 0], [0, 0, A]])
+#
+#     st1 = Atoms(symbols="C" + str(len(all_pos)), positions=all_pos, cell=cell)
+#
+#     refine_pos, refine_num = refine_cell(
+#         st1.get_scaled_positions(), st1.numbers
+#     )
+#     st2 = Atoms(numbers=refine_num, scaled_positions=refine_pos, cell=cell)
+#     st3 = change_center(st2)  # change the axis center to cell center
+#     return st3
+
+
 def generate_line_group_structure(
-    monomer_pos: np.ndarray, cyclic_group: dict, symec: int = 4
+    monomer_pos: np.ndarray,
+    monomer_symbols,
+    cyclic_group: dict,
+    symec: int = 4,
 ) -> ase.atoms.Atoms:
     """
-
     Args:
         monomer_pos: the positions of monomer
+        monomer_symbols: atomic symbols of monomer
         cyclic_group: the generalized translation group
 
-    Returns: the final structure after all symmetry operations
-
+    Returns:
+        the final structure after all symmetry operations
     """
+
     all_pos = copy.deepcopy(monomer_pos)
+    all_symbols = list(monomer_symbols)
+
     if list(cyclic_group.keys())[0] == "T_Q":
         Q = cyclic_group["T_Q"][0]
         f = cyclic_group["T_Q"][1]
+
+        tmp_monomer_pos = monomer_pos
         for ii in range(np.ceil(Q).astype(np.int32)):
-            if ii == 0:
-                tmp_monomer_pos = T_Q(Q, f, monomer_pos)
-                all_pos = np.vstack((all_pos, tmp_monomer_pos))
-            else:
-                tmp_monomer_pos = T_Q(Q, f, tmp_monomer_pos)
-                all_pos = np.vstack((all_pos, tmp_monomer_pos))
-                judge = np.sum(
-                    (
-                        sortrows(np.round(monomer_pos[:, :2], symec))
-                        - sortrows(np.round(tmp_monomer_pos[:, :2], symec))
-                    )
-                    ** 2
+
+            tmp_monomer_pos = T_Q(Q, f, tmp_monomer_pos)
+
+            all_pos = np.vstack((all_pos, tmp_monomer_pos))
+            all_symbols.extend(monomer_symbols)
+
+            judge = np.sum(
+                (
+                    sortrows(np.round(monomer_pos[:, :2], symec))
+                    - sortrows(np.round(tmp_monomer_pos[:, :2], symec))
                 )
-                if judge < 0.1:
-                    Q = ii + 1
-                    break
-        all_pos = np.unique(np.round(all_pos, symec), axis=0)
+                ** 2
+            )
+
+            if judge < 0.1:
+                Q = ii + 1
+                break
+
+        # unique positions while keeping symbols aligned
+        pos_round = np.round(all_pos, symec)
+        _, unique_idx = np.unique(pos_round, axis=0, return_index=True)
+
+        all_pos = all_pos[unique_idx]
+        all_symbols = [all_symbols[i] for i in unique_idx]
+
         A = Q * f
 
     elif list(cyclic_group.keys())[0] == "T_V":
+
         f = cyclic_group["T_V"]
+
         for ii in range(2):
-            all_pos = np.vstack((all_pos, T_v(f, all_pos)))
-        all_pos = np.unique(np.round(all_pos, symec), axis=0)
+
+            new_pos = T_v(f, all_pos)
+
+            all_pos = np.vstack((all_pos, new_pos))
+            all_symbols.extend(all_symbols[: len(new_pos)])
+
+        pos_round = np.round(all_pos, symec)
+        _, unique_idx = np.unique(pos_round, axis=0, return_index=True)
+
+        all_pos = all_pos[unique_idx]
+        all_symbols = [all_symbols[i] for i in unique_idx]
+
         A = 2 * f
+
     else:
         print("A error input about cyclic_group")
-
     p0 = np.max(np.sqrt(all_pos[:, 0] ** 2 + all_pos[:, 1] ** 2))
     cell = np.array([[p0 * 3, 0, 0], [0, p0 * 3, 0], [0, 0, A]])
-
-    st1 = Atoms(symbols="C" + str(len(all_pos)), positions=all_pos, cell=cell)
-
+    st1 = Atoms(symbols=all_symbols, positions=all_pos, cell=cell)
     refine_pos, refine_num = refine_cell(
         st1.get_scaled_positions(), st1.numbers
     )
+
     st2 = Atoms(numbers=refine_num, scaled_positions=refine_pos, cell=cell)
     st3 = change_center(st2)  # change the axis center to cell center
     return st3
@@ -233,8 +318,14 @@ def main():
         default="poscar.vasp",
         help="the saved file name",
     )
+    parser.add_argument(
+        "-b",
+        "--symbol",
+        default=("Mo", "S"),
+    )
 
     args = parser.parse_args()
+    symbols = eval(args.symbol)
 
     pos_cylin = np.array(eval(args.motif))
     if pos_cylin.ndim == 1:
@@ -260,15 +351,21 @@ def main():
 
     rot_sym = dimino(generators, symec=3)
 
-    monomer_pos = []
+    monomer_pos, monomer_symbols = [], []
     for sym in rot_sym:
         if pos.ndim == 1:
             monomer_pos.append(np.dot(sym, pos.reshape(pos.shape[0], 1)).T[0])
+            monomer_symbols = symbols.copy()
         else:
             monomer_pos.extend([np.dot(sym, line) for line in pos])
-    monomer_pos = np.array(monomer_pos)
+            monomer_symbols.extend(symbols)
 
-    st = generate_line_group_structure(monomer_pos, cg, symec=3)
+    monomer_pos = np.array(monomer_pos)
+    monomer_symbols = np.array(monomer_symbols)
+
+    st = generate_line_group_structure(
+        monomer_pos, monomer_symbols, cg, symec=3
+    )
     write_vasp("%s" % st_name, st, direct=True, sort=True)
 
 
