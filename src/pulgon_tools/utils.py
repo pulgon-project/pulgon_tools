@@ -134,32 +134,54 @@ def sortrows(a: np.ndarray) -> np.ndarray:
     return a[np.lexsort(np.rot90(a))]
 
 
+from typing import Tuple
+
+import numpy as np
+
+
 def refine_cell(
     scale_pos: np.ndarray, numbers: np.ndarray, symprec: int = 4
-) -> [np.ndarray, np.ndarray]:
-    """refine the scale position between 0-1, and remove duplicates
-
-    Args:
-        scale_pos: scale position of the structure
-        numbers: atom_type
-        symprec: system precise
-
-    Returns: scale position after refine, the correspond atom type
-
+) -> Tuple[np.ndarray, np.ndarray]:
     """
-    if scale_pos.ndim == 1:
-        scale_pos = np.modf(scale_pos)[0]
-        scale_pos[scale_pos < 0] = scale_pos[scale_pos < 0] + 1
-        pos = scale_pos
-        # pos = np.round(scale_pos, symprec)
-    else:
-        scale_pos = np.modf(scale_pos)[0]
-        scale_pos[scale_pos < 0] = scale_pos[scale_pos < 0] + 1
-        # set_trace()
-        scale_pos = np.round(scale_pos, symprec)
+    Refine fractional coordinates into [0,1) and remove duplicate atoms.
 
-        pos, index = np.unique(scale_pos, axis=0, return_index=True)
-        numbers = numbers[index]
+    Parameters
+    ----------
+    scale_pos : (N,3) or (3,) ndarray
+        Fractional coordinates.
+    numbers : (N,) ndarray
+        Atomic species indices.
+    symprec : int
+        Decimal precision used to identify duplicates.
+
+    Returns
+    -------
+    pos : ndarray
+        Refined fractional coordinates.
+    numbers : ndarray
+        Corresponding atomic species.
+    """
+
+    scale_pos = np.asarray(scale_pos)
+
+    # map coordinates to [0,1)
+    scale_pos = np.mod(scale_pos, 1.0)
+
+    # single atom case
+    if scale_pos.ndim == 1:
+        pos = np.round(scale_pos, symprec)
+        return pos, numbers
+
+    # round for numerical stability
+    scale_pos = np.round(scale_pos, symprec)
+
+    # remove duplicates while preserving order
+    _, index = np.unique(scale_pos, axis=0, return_index=True)
+    index = np.sort(index)
+
+    pos = scale_pos[index]
+    numbers = numbers[index]
+
     return pos, numbers
 
 

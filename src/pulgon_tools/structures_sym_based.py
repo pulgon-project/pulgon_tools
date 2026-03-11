@@ -141,64 +141,6 @@ def change_center(st1: ase.atoms.Atoms) -> ase.atoms.Atoms:
     return st2
 
 
-# def generate_line_group_structure(
-#     monomer_pos: np.ndarray, monomer_symbols, cyclic_group: dict, symec: int = 4
-# ) -> ase.atoms.Atoms:
-#     """
-#
-#     Args:
-#         monomer_pos: the positions of monomer
-#         cyclic_group: the generalized translation group
-#
-#     Returns: the final structure after all symmetry operations
-#
-#     """
-#     all_pos = copy.deepcopy(monomer_pos)
-#     if list(cyclic_group.keys())[0] == "T_Q":
-#         Q = cyclic_group["T_Q"][0]
-#         f = cyclic_group["T_Q"][1]
-#         for ii in range(np.ceil(Q).astype(np.int32)):
-#             if ii == 0:
-#                 tmp_monomer_pos = T_Q(Q, f, monomer_pos)
-#                 all_pos = np.vstack((all_pos, tmp_monomer_pos))
-#             else:
-#                 tmp_monomer_pos = T_Q(Q, f, tmp_monomer_pos)
-#                 all_pos = np.vstack((all_pos, tmp_monomer_pos))
-#                 judge = np.sum(
-#                     (
-#                         sortrows(np.round(monomer_pos[:, :2], symec))
-#                         - sortrows(np.round(tmp_monomer_pos[:, :2], symec))
-#                     )
-#                     ** 2
-#                 )
-#                 if judge < 0.1:
-#                     Q = ii + 1
-#                     break
-#         all_pos = np.unique(np.round(all_pos, symec), axis=0)
-#         A = Q * f
-#
-#     elif list(cyclic_group.keys())[0] == "T_V":
-#         f = cyclic_group["T_V"]
-#         for ii in range(2):
-#             all_pos = np.vstack((all_pos, T_v(f, all_pos)))
-#         all_pos = np.unique(np.round(all_pos, symec), axis=0)
-#         A = 2 * f
-#     else:
-#         print("A error input about cyclic_group")
-#
-#     p0 = np.max(np.sqrt(all_pos[:, 0] ** 2 + all_pos[:, 1] ** 2))
-#     cell = np.array([[p0 * 3, 0, 0], [0, p0 * 3, 0], [0, 0, A]])
-#
-#     st1 = Atoms(symbols="C" + str(len(all_pos)), positions=all_pos, cell=cell)
-#
-#     refine_pos, refine_num = refine_cell(
-#         st1.get_scaled_positions(), st1.numbers
-#     )
-#     st2 = Atoms(numbers=refine_num, scaled_positions=refine_pos, cell=cell)
-#     st3 = change_center(st2)  # change the axis center to cell center
-#     return st3
-
-
 def generate_line_group_structure(
     monomer_pos: np.ndarray,
     monomer_symbols,
@@ -275,12 +217,20 @@ def generate_line_group_structure(
     p0 = np.max(np.sqrt(all_pos[:, 0] ** 2 + all_pos[:, 1] ** 2))
     cell = np.array([[p0 * 3, 0, 0], [0, p0 * 3, 0], [0, 0, A]])
     st1 = Atoms(symbols=all_symbols, positions=all_pos, cell=cell)
-    refine_pos, refine_num = refine_cell(
-        st1.get_scaled_positions(), st1.numbers
+
+    st2 = change_center(st1)
+
+    pos_round = np.round(st2.get_scaled_positions(), symec) % 1
+    pos_uni, idx = np.unique(pos_round, return_index=True, axis=0)
+    symbols = st2.symbols[idx]
+
+    st3 = Atoms(
+        symbols=symbols,
+        scaled_positions=pos_uni,
+        cell=cell,
+        pbc=[False, False, True],
     )
 
-    st2 = Atoms(numbers=refine_num, scaled_positions=refine_pos, cell=cell)
-    st3 = change_center(st2)  # change the axis center to cell center
     return st3
 
 

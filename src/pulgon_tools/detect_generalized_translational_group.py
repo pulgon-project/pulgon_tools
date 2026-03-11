@@ -22,7 +22,7 @@ from typing import Union
 import ase
 import numpy as np
 from ase import Atoms
-from ase.io.vasp import read_vasp, write_vasp
+from ase.io import read
 from ipdb import set_trace
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
@@ -688,7 +688,7 @@ def main():
         )
 
     st_name = args.POSCAR
-    st = read_vasp(st_name)
+    st = read(st_name)
 
     cyclic = CyclicGroupAnalyzer(st, tolerance=args.tolerance)
     cy, mononers = cyclic.get_cyclic_group()

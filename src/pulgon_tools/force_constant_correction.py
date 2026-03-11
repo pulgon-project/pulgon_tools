@@ -1,11 +1,14 @@
 import argparse
 import ast
+import collections
 import os
 
 import numpy as np
 import phonopy.file_IO
+import scipy as sp
 import scipy.sparse as ssp
 from ase import Atoms
+from ase.io import read
 from ipdb import set_trace
 from phonopy import Phonopy
 from phonopy.file_IO import parse_FORCE_CONSTANTS, read_force_constants_hdf5
@@ -14,6 +17,37 @@ from phonopy.harmonic.force_constants import (
     full_fc_to_compact_fc,
 )
 from phonopy.interface.vasp import read_vasp
+from phonopy.structure.atoms import PhonopyAtoms
+
+
+def calc_dists(atoms, tolerance=1e-4):
+    """
+    Return the distances between atoms in the supercell, their
+    degeneracies and the associated displacements along OZ.
+    """
+    MIN_DELTA = -2
+    MAX_DELTA = 2
+    positions = atoms.positions
+    cell = atoms.cell
+    n_satoms = positions.shape[0]
+    d2s = np.empty((MAX_DELTA - MIN_DELTA + 1, n_satoms, n_satoms))
+    # TODO: This could not be enough and eventually we should do a proper check
+    # for the sjortest distance.
+    for j, j_c in enumerate(range(MIN_DELTA, MAX_DELTA + 1)):
+        shifted_positions = positions + (j_c * cell[2, :])[np.newaxis, :]
+        d2s[j, :, :] = sp.spatial.distance.cdist(
+            positions, shifted_positions, "sqeuclidean"
+        )
+    d2min = d2s.min(axis=0)
+    dmin = np.sqrt(d2min)
+    degenerate = np.abs(d2s - d2min) < tolerance
+    nequi = degenerate.sum(axis=0, dtype=int)
+    maxequi = nequi.max()
+    shifts = np.empty((n_satoms, n_satoms, maxequi))
+    sorting = np.argsort(np.logical_not(degenerate), axis=0)
+    shifts = np.transpose(sorting[:maxequi, :, :], (1, 2, 0)).astype(np.intc)
+    shifts = np.asarray(range(MIN_DELTA, MAX_DELTA + 1))[shifts]
+    return (dmin, nequi, shifts)
 
 
 def build_constraint_matrix(
@@ -43,18 +77,67 @@ def build_constraint_matrix(
 
     phonon.symmetrize_force_constants()
     IFC = phonon.force_constants.copy()
-    if IFC.shape[0] == IFC.shape[1]:
-        IFC = full_fc_to_compact_fc(phonon.primitive, IFC)
-        n_atoms, n_satoms = IFC.shape[:2]
-    else:
-        n_atoms, n_satoms = IFC.shape[:2]
 
-    average_delta = atoms_scell.get_all_distances(mic=True, vector=True)
+    # if IFC.shape[0] == IFC.shape[1]:
+    #     IFC = full_fc_to_compact_fc(phonon.primitive, IFC)
+    #     n_atoms, n_satoms = IFC.shape[:2]
+    # else:
+    #     n_atoms, n_satoms = IFC.shape[:2]
+    # average_delta = atoms_scell.get_all_distances(mic=True, vector=True)
+    # average_products = np.einsum(
+    #     "...i,...j->...ij", average_delta, average_delta
+    # )
+
     average_distance = atoms_scell.get_all_distances(mic=True, vector=False)
+    motif_indices = [
+        phonon.primitive.p2p_map[i] for i in phonon.primitive.s2p_map
+    ]
+    supercell_indices = []
+    counter = collections.Counter()
+    for i_atom in motif_indices:
+        supercell_indices.append(counter[i_atom])
+        counter[i_atom] += 1
+    n_cells = max(supercell_indices) + 1
 
-    average_products = np.einsum(
-        "...i,...j->...ij", average_delta, average_delta
-    )
+    symbols = scell.symbols
+    cell = scell.cell
+
+    positions = (
+        (scell.scaled_positions + np.asarray([0.0, 0.0, 0.0])[np.newaxis, :])
+        % 1.0
+    ) @ cell
+    ase_atoms = Atoms(symbols, positions, cell=cell, pbc=True)
+
+    dists, degeneracy, shifts = calc_dists(ase_atoms)
+    # %%
+    n_atoms, n_satoms = IFC.shape[:2]
+
+    # %%
+    average_delta = np.zeros((n_satoms, n_satoms, 3))
+    for i in range(n_satoms):
+        for j in range(n_satoms):
+            n_elements = degeneracy[i, j]
+            for i_d in range(n_elements):
+                average_delta[i, j, :] += (
+                    positions[j, :]
+                    - positions[i, :]
+                    + shifts[i, j, i_d] * cell[2, :]
+                )
+            average_delta[i, j, :] /= n_elements
+
+    # %%
+    average_products = np.zeros((n_satoms, n_satoms, 3, 3))
+    for i in range(n_satoms):
+        for j in range(n_satoms):
+            n_elements = degeneracy[i, j]
+            for i_d in range(n_elements):
+                delta = (
+                    positions[j, :]
+                    - positions[i, :]
+                    + shifts[i, j, i_d] * cell[2, :]
+                )
+                average_products[i, j, :, :] += np.outer(delta, delta)
+            average_products[i, j, :, :] /= n_elements
 
     # %%
     n_rows = 0
@@ -149,7 +232,7 @@ def build_constraint_matrix(
                     n_rows += 1
     print("now finish symmetric rules")
 
-    # Add extra constraints to make the force constants short-sighted
+    # Add extra constraints to make the force constants short-sighted(cut-off)
     idx_x, idx_y = np.where(average_distance > cut_off)
     for ii, ix in enumerate(idx_x):
         if ix in phonon.primitive.p2s_map:
@@ -163,7 +246,53 @@ def build_constraint_matrix(
                     )
                     data.append(1.0)
                     n_rows += 1
-    print("now finish the fourth constrains")
+    print("now finish the short-sighted(cut-off) constrains")
+
+    # Make the tensor symmetric in a PBC setting (H01 = transpose(H10)).
+    for i in range(n_atoms):
+        for j in range(n_atoms):
+            for alpha in range(3):
+                for beta in range(3):
+                    rows.append(n_rows)
+
+                    j_in_second_cell = [
+                        m for m, n in enumerate(motif_indices) if n == j
+                    ][1]
+                    cols.append(
+                        np.ravel_multi_index(
+                            (i, j_in_second_cell, alpha, beta), IFC.shape
+                        )
+                    )
+                    data.append(1.0)
+                    rows.append(n_rows)
+                    i_in_last_cell = [
+                        m for m, n in enumerate(motif_indices) if n == i
+                    ][-1]
+                    cols.append(
+                        np.ravel_multi_index(
+                            (j, i_in_last_cell, beta, alpha), IFC.shape
+                        )
+                    )
+                    data.append(-1.0)
+                    n_rows += 1
+    print("now finish the (H01 = transpose(H10) constrains")
+
+    # Add extra constraints to make the force constants short-sighted for the cell
+    # transmission calculations.
+    for j in range(n_satoms):
+        if supercell_indices[j] not in (0, 1, n_cells - 1):
+            for i in range(n_atoms):
+                for alpha in range(3):
+                    for beta in range(3):
+                        rows.append(n_rows)
+                        cols.append(
+                            np.ravel_multi_index(
+                                (i, j, alpha, beta), IFC.shape
+                            )
+                        )
+                        data.append(1.0)
+                        n_rows += 1
+    print("now finish the short-sighted(the cell) constrains")
 
     # Rebuild the sparse matrix.
     M = ssp.coo_array((data, (rows, cols)), shape=(n_rows, IFC.size))
@@ -218,7 +347,8 @@ def main():
     parser = argparse.ArgumentParser(description="Apply the sum rules to fcs")
     parser.add_argument(
         "-p",
-        default="./POSCAR",
+        "--POSCAR",
+        default="POSCAR",
         help="The path of poscar",
     )
     parser.add_argument(
@@ -301,10 +431,16 @@ def main():
             phonopy_yaml=path_yaml, force_constants_filename=fcs_name
         )
     else:
-        poscar = args.poscar
-        unitcell = read_vasp(poscar)
-        phonon = Phonopy(unitcell, supercell_matrix=np.diag(supercell_matrix))
+        poscar = args.POSCAR
+        atoms = read(poscar)
 
+        unitcell = PhonopyAtoms(
+            symbols=atoms.get_chemical_symbols(),
+            cell=atoms.cell.array,
+            scaled_positions=atoms.get_scaled_positions(),
+        )
+
+        phonon = Phonopy(unitcell, supercell_matrix=np.diag(supercell_matrix))
         file_ext = os.path.splitext(fcs_name)[1].lower()
         if file_ext == ".hdf5":
             fcs = read_force_constants_hdf5(fcs_name)
