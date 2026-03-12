@@ -68,10 +68,9 @@ pulgon-irreps-tables -p POSCAR -q 0.0 -r
 
 ### 4. force constant correction:
 ```
-pulgon-fcs-correction  -p POSCAR -b [False,False,True]  -x [1,1,3]
+pulgon-fcs-correction  -p POSCAR  -x [1,1,3] -f FORCE_CONSTANTS
 ```
 -p: The file of POSCAR. Default=`./POSCAR`.  
--b: The periodic boundary conduction of your structure. e.g.`--pbc [False, False, False]` correspond to cluster, `--pbc [True, Ture, False]` correspond to 2D structure.  
 -x: The supercell matrix that used to calculate fcs. e.g.`--supercell_matrix [1, 1, 3]`. Default=`None`.    
 -y: The path of `phonopy.yaml`. Default=`None`. If it's provided, `POSCAR` and `supercell_matrix` are not necessary.      
 -f: The path of fcs. `FORCE_CONSTANTS` or `force_constants.hdf5`.  Default=`./FORCE_CONSTANTS`.   

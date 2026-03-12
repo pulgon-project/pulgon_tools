@@ -283,7 +283,11 @@ class CyclicGroupAnalyzer:
                 for pe in point_end
             ]
         )
-        return np.unique(np.round(arr, self._round_symprec))
+
+        angles = np.unique(np.round(arr, self._round_symprec))
+        angles = angles[np.abs(angles) > self._symprec]
+
+        return angles
 
     # def _detect_rotation(
     #     self, monomer: ase.atoms.Atoms, tran: np.float64, ind: int
@@ -436,11 +440,18 @@ class CyclicGroupAnalyzer:
                         break
                     sym_ops.append(op)
                 if all_pass:
-                    Q = (
-                        Fraction(360, int(round(test_ind))).limit_denominator()
-                        if float(test_ind).is_integer()
-                        else Fraction(360 / test_ind).limit_denominator(1000)
-                    )
+                    try:
+                        Q = (
+                            Fraction(
+                                360, int(round(test_ind))
+                            ).limit_denominator()
+                            if float(test_ind).is_integer()
+                            else Fraction(360 / test_ind).limit_denominator(
+                                1000
+                            )
+                        )
+                    except:
+                        set_trace()
                     return True, Q, sym_ops
 
         return False, 1, None

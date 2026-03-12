@@ -208,45 +208,45 @@ def build_constraint_matrix(
                     n_rows += 1
     print("Adding Huang invariances")
 
-    # Make sure the IFC matrix is symmetric.
-    for i in range(n_atoms):
-        for j in range(n_atoms):
-            for alpha in range(3):
-                for beta in range(3):
-                    rows.append(n_rows)
-                    cols.append(
-                        np.ravel_multi_index(
-                            (i, phonon.primitive.p2s_map[j], alpha, beta),
-                            IFC.shape,
-                        )
-                    )
-                    data.append(1.0)
-                    rows.append(n_rows)
-                    cols.append(
-                        np.ravel_multi_index(
-                            (j, phonon.primitive.p2s_map[i], beta, alpha),
-                            IFC.shape,
-                        )
-                    )
-                    data.append(-1.0)
-                    n_rows += 1
-    print("now finish symmetric rules")
+    # # Make sure the IFC matrix is symmetric.
+    # for i in range(n_atoms):
+    #     for j in range(n_atoms):
+    #         for alpha in range(3):
+    #             for beta in range(3):
+    #                 rows.append(n_rows)
+    #                 cols.append(
+    #                     np.ravel_multi_index(
+    #                         (i, phonon.primitive.p2s_map[j], alpha, beta),
+    #                         IFC.shape,
+    #                     )
+    #                 )
+    #                 data.append(1.0)
+    #                 rows.append(n_rows)
+    #                 cols.append(
+    #                     np.ravel_multi_index(
+    #                         (j, phonon.primitive.p2s_map[i], beta, alpha),
+    #                         IFC.shape,
+    #                     )
+    #                 )
+    #                 data.append(-1.0)
+    #                 n_rows += 1
+    # print("now finish symmetric rules")
 
-    # Add extra constraints to make the force constants short-sighted(cut-off)
-    idx_x, idx_y = np.where(average_distance > cut_off)
-    for ii, ix in enumerate(idx_x):
-        if ix in phonon.primitive.p2s_map:
-            i = phonon.primitive.p2p_map[ix]
-            j = idx_y[ii]
-            for alpha in range(3):
-                for beta in range(3):
-                    rows.append(n_rows)
-                    cols.append(
-                        np.ravel_multi_index((i, j, alpha, beta), IFC.shape)
-                    )
-                    data.append(1.0)
-                    n_rows += 1
-    print("now finish the short-sighted(cut-off) constrains")
+    # # Add extra constraints to make the force constants short-sighted(cut-off)
+    # idx_x, idx_y = np.where(average_distance > cut_off)
+    # for ii, ix in enumerate(idx_x):
+    #     if ix in phonon.primitive.p2s_map:
+    #         i = phonon.primitive.p2p_map[ix]
+    #         j = idx_y[ii]
+    #         for alpha in range(3):
+    #             for beta in range(3):
+    #                 rows.append(n_rows)
+    #                 cols.append(
+    #                     np.ravel_multi_index((i, j, alpha, beta), IFC.shape)
+    #                 )
+    #                 data.append(1.0)
+    #                 n_rows += 1
+    # print("now finish the short-sighted(cut-off) constrains")
 
     # Make the tensor symmetric in a PBC setting (H01 = transpose(H10)).
     for i in range(n_atoms):
@@ -351,14 +351,14 @@ def main():
         default="POSCAR",
         help="The path of poscar",
     )
-    parser.add_argument(
-        "-b",
-        "--pbc",
-        # required=True,
-        default=[False, False, True],
-        type=parse_bool_list,
-        help="The periodic boundary conduction of structure",
-    )
+    # parser.add_argument(
+    #     "-b",
+    #     "--pbc",
+    #     # required=True,
+    #     default=[False, False, True],
+    #     type=parse_bool_list,
+    #     help="The periodic boundary conduction of structure",
+    # )
     parser.add_argument(
         "-x",
         "--supercell_matrix",
@@ -417,7 +417,6 @@ def main():
     supercell_matrix = args.supercell_matrix
     path_yaml = args.path_yaml
     fcs_name = args.fcs
-    pbc = args.pbc
     cut_off = args.cut_off
     methods = args.methods
     plot_phonon = args.plot_phonon
@@ -425,6 +424,9 @@ def main():
     k_path = args.k_path
     fcs_savename = "FORCE_CONSTANTS_correction"
     phononfig_savename = "phonon_fix"
+
+    # pbc = args.pbc
+    pbc = [False, False, True]
 
     if path_yaml is not None:
         phonon = phonopy.load(
