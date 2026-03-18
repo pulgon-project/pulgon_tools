@@ -7,7 +7,7 @@ This repository contains the software backbone of [project PULGON](https://pulgo
 After downloading the package, for instance by cloning the git repository, you can run an in-place installation with
 
 ```
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 ## Basic usage

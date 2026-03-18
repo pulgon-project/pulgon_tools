@@ -10,7 +10,7 @@ authors = [
     {name = "Yujie Cen", email = "yujie.cen@tuwien.ac.at"}
 ]
 description = "Foundation libraries of the PULGON project"
-requires-python = ">=3.9, <3.11"
+requires-python = ">=3.9, <=3.12"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent"
@@ -41,7 +41,8 @@ pulgon-irreps-tables = "pulgon_tools:generate_irreps_tables.main"
 [tool.setuptools.dynamic]
 version = {attr = "pulgon_tools.__version__"}
 
-[dependency-groups]
+
+[project.optional-dependencies]
 dev = [
     "pretty-errors>=1.2.25",
     "pytest>=8.4.2",

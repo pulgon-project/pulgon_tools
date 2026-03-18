@@ -12,14 +12,7 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-import os
-from pathlib import Path
-from pdb import set_trace
-
 import numpy as np
-import pretty_errors
-import pytest
-import pytest_datadir
 from ase.io.vasp import read_vasp
 from pymatgen.core import Molecule
 
