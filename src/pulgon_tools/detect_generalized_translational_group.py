@@ -104,7 +104,9 @@ class CyclicGroupAnalyzer:
             self._sym_operations,
         ) = self._get_translations(monomer, potential_trans)
 
-    def _find_axis_center_of_nanotube(self, atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
+    def _find_axis_center_of_nanotube(
+        self, atom: ase.atoms.Atoms
+    ) -> ase.atoms.Atoms:
         """remove the center of structure to (x,y):(0.5,0.5)
         Args:
             atom: initial structure
@@ -136,7 +138,10 @@ class CyclicGroupAnalyzer:
         """
         n_st = atom.copy()
         center = self._get_center_of_mass_periodic(atom)
-        pos = np.remainder(atom.get_scaled_positions() - center, [1, 1, 1]) @ atom.cell
+        pos = (
+            np.remainder(atom.get_scaled_positions() - center, [1, 1, 1])
+            @ atom.cell
+        )
         atoms = Atoms(
             cell=n_st.cell,
             numbers=n_st.numbers,
@@ -177,7 +182,9 @@ class CyclicGroupAnalyzer:
 
         """
         cyclic_group, mono, sym_op = [], [], []
-        invariant_op = SymmOp([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]])
+        invariant_op = SymmOp(
+            [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]
+        )
         for ii, monomer in enumerate(monomer_atoms):
             logging.debug("---Start detecting Item %d monomer" % (ii + 1))
             tran = potential_tans[ii]
@@ -196,7 +203,9 @@ class CyclicGroupAnalyzer:
                 sym_op.append(invariant_op)
             else:
                 # detect rotation
-                logging.debug("The scaled translational distance is %s " % (1 / ind))
+                logging.debug(
+                    "The scaled translational distance is %s " % (1 / ind)
+                )
                 logging.debug("Start detecting rotation")
 
                 rotation, Q, tmp_sym_operations = self._detect_rotation(
@@ -204,10 +213,12 @@ class CyclicGroupAnalyzer:
                 )
                 if rotation:
                     logging.debug(
-                        "Append rotational cyclic group, Q is 360/degree=%s" % Q
+                        "Append rotational cyclic group, Q is 360/degree=%s"
+                        % Q
                     )
                     cyclic_group.append(
-                        "(C%s|T%s(%s))" % (Q, ind, np.round(tran * self._pure_trans, 3))
+                        "(C%s|T%s(%s))"
+                        % (Q, ind, np.round(tran * self._pure_trans, 3))
                     )
                     mono.append(monomer)
                     tmp_sym_operations.insert(0, invariant_op)
@@ -228,7 +239,9 @@ class CyclicGroupAnalyzer:
                         monomer, self._pure_trans / 2
                     )
                     if mirror:
-                        logging.debug("Mirror plane exist, append to cyclic group")
+                        logging.debug(
+                            "Mirror plane exist, append to cyclic group"
+                        )
                         cyclic_group.append(
                             "T'(%s)" % np.round(self._pure_trans / 2, 3)
                         )
@@ -258,9 +271,9 @@ class CyclicGroupAnalyzer:
         if len(itp) == 0:
             raise RuntimeError(f"No atoms found at target z={target_z:.4f}")
 
-        point_end = (self._primitive.get_scaled_positions() @ self._primitive.cell)[
-            itp
-        ][:, :2]
+        point_end = (
+            self._primitive.get_scaled_positions() @ self._primitive.cell
+        )[itp][:, :2]
         center = ([0.5, 0.5, 0] @ self._primitive.cell)[:2]
 
         # calculate the angle
@@ -356,7 +369,9 @@ class CyclicGroupAnalyzer:
     #             return True, Q, tmp_sym_op
     #     return False, 1, None
 
-    def _detect_rotation(self, monomer: ase.atoms.Atoms, tran: np.float64, ind: int):
+    def _detect_rotation(
+        self, monomer: ase.atoms.Atoms, tran: np.float64, ind: int
+    ):
         """Detect helical/rotational symmetry between monomer layers in a nanotube.
 
         For each candidate rotation angle, verifies that rotating the base monomer
@@ -428,9 +443,13 @@ class CyclicGroupAnalyzer:
                 if all_pass:
                     try:
                         Q = (
-                            Fraction(360, int(round(test_ind))).limit_denominator()
+                            Fraction(
+                                360, int(round(test_ind))
+                            ).limit_denominator()
                             if float(test_ind).is_integer()
-                            else Fraction(360 / test_ind).limit_denominator(1000)
+                            else Fraction(360 / test_ind).limit_denominator(
+                                1000
+                            )
                         )
                     except:
                         set_trace()
@@ -465,7 +484,9 @@ class CyclicGroupAnalyzer:
         if diff_st_ind.ndim > 1:
             diff_st_ind = diff_st_ind.T[0]
         # diff_st: diff_st + monomer = primitive cell
-        diff_st = self._primitive[np.setdiff1d(range(len(coords)), diff_st_ind)]
+        diff_st = self._primitive[
+            np.setdiff1d(range(len(coords)), diff_st_ind)
+        ]
         for itp1, itp2 in itertools.combinations_with_replacement(
             range(len(monomer)), 2
         ):
@@ -489,15 +510,22 @@ class CyclicGroupAnalyzer:
                 itp = []
                 for site in monomer:
                     coord = op.operate(site.position)
-                    tmp = find_in_coord_list(diff_st.positions, coord, self._symprec)
+                    tmp = find_in_coord_list(
+                        diff_st.positions, coord, self._symprec
+                    )
                     # tmp = find_in_coord_list(diff_st.get_scaled_positions(), coord, self._symprec)
-                    itp.append(len(tmp) == 1 and diff_st.numbers[tmp[0]] == site.number)
+                    itp.append(
+                        len(tmp) == 1
+                        and diff_st.numbers[tmp[0]] == site.number
+                    )
                 # set_trace()
                 if np.array(itp).all():
                     return True, op
         return False, None
 
-    def _get_monomer_ind(self, z_round: np.ndarray, z_uniq: np.ndarray) -> [list, list]:
+    def _get_monomer_ind(
+        self, z_round: np.ndarray, z_uniq: np.ndarray
+    ) -> [list, list]:
         monomer_ind = [np.where(z_round == val)[0] for val in z_uniq]
 
         monomer_ind_sum = []
