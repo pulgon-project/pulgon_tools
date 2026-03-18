@@ -14,10 +14,11 @@
 
 import copy
 from decimal import Decimal
-from typing import Any, Union
+from typing import Any, Tuple, Union
 
 import ase
 import cvxpy as cp
+import numpy as np
 import scipy as sp
 import scipy.interpolate
 import scipy.sparse as ss
@@ -132,11 +133,6 @@ def sortrows(a: np.ndarray) -> np.ndarray:
     :return: Compare each row in ascending order
     """
     return a[np.lexsort(np.rot90(a))]
-
-
-from typing import Tuple
-
-import numpy as np
 
 
 def refine_cell(

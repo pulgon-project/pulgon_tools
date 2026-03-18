@@ -12,7 +12,7 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-from pulgon_tools.generate_structures import main
+from pulgon_tools.structures_sym_based import main
 
 if __name__ == "__main__":
     main()

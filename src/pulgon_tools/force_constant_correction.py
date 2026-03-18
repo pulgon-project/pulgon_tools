@@ -3,21 +3,19 @@ import ast
 import collections
 import os
 
+import cvxpy as cp
+import matplotlib.pyplot as plt
 import numpy as np
 import phonopy.file_IO
 import scipy as sp
 import scipy.sparse as ssp
 from ase import Atoms
 from ase.io import read
-from ipdb import set_trace
 from phonopy import Phonopy
 from phonopy.file_IO import parse_FORCE_CONSTANTS, read_force_constants_hdf5
-from phonopy.harmonic.force_constants import (
-    compact_fc_to_full_fc,
-    full_fc_to_compact_fc,
-)
-from phonopy.interface.vasp import read_vasp
+from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
 from phonopy.structure.atoms import PhonopyAtoms
+from sklearn.linear_model import Ridge
 
 
 def calc_dists(atoms, tolerance=1e-4):
@@ -307,7 +305,6 @@ def solve_fcs(IFC, M, methods="convex_opt"):
     """
 
     if methods == "convex_opt":
-        import cvxpy as cp
 
         # ###############  CVXPY  #################
         flat_IFCs = IFC.ravel()
@@ -320,7 +317,6 @@ def solve_fcs(IFC, M, methods="convex_opt"):
         print("M @ x  after:", np.abs(M.dot(IFC_sym.ravel())).sum())
         ##########################################
     elif methods == "ridge_model":
-        from sklearn.linear_model import Ridge
 
         ################ Ridge Model ###############
         # before fit
@@ -459,11 +455,6 @@ def main():
     IFC_sym = solve_fcs(IFC, M, methods=methods)
 
     if plot_phonon:
-        import matplotlib.pyplot as plt
-        from phonopy.phonon.band_structure import (
-            get_band_qpoints_and_path_connections,
-        )
-
         print("Start drawing the phonon spectrum")
         if k_path is None:
             phonon.auto_band_structure()

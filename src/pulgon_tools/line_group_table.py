@@ -2,7 +2,6 @@ import logging
 import re
 
 import numpy as np
-from ipdb import set_trace
 
 
 def get_family_num_from_sym_symbol(trans_sym, rota_sym):

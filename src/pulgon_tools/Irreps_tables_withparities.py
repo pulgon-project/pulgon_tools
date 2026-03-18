@@ -1,15 +1,9 @@
-import argparse
 import itertools
 import logging
-import math
-import typing
-from pdb import set_trace
 
 import numpy as np
 import sympy
 from sympy import symbols
-from sympy.ntheory.factor_ import totient
-from tqdm import tqdm
 
 
 def sym_inverse_eye(n):

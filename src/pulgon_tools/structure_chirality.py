@@ -3,8 +3,7 @@ import argparse
 import numpy as np
 import sympy
 from ase import Atoms
-from ase.io.vasp import read_vasp, write_vasp
-from ipdb import set_trace
+from ase.io.vasp import write_vasp
 from pulp import LpMinimize, LpProblem, LpVariable, value
 from pymatgen.core.operations import SymmOp
 from scipy.optimize import fsolve

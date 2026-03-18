@@ -17,13 +17,11 @@ import itertools
 import logging
 import warnings
 from fractions import Fraction
-from typing import Union
 
 import ase
 import numpy as np
 from ase import Atoms
 from ase.io import read
-from ipdb import set_trace
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
 
@@ -441,18 +439,11 @@ class CyclicGroupAnalyzer:
                         break
                     sym_ops.append(op)
                 if all_pass:
-                    try:
-                        Q = (
-                            Fraction(
-                                360, int(round(test_ind))
-                            ).limit_denominator()
-                            if float(test_ind).is_integer()
-                            else Fraction(360 / test_ind).limit_denominator(
-                                1000
-                            )
-                        )
-                    except:
-                        set_trace()
+                    Q = (
+                        Fraction(360, int(round(test_ind))).limit_denominator()
+                        if float(test_ind).is_integer()
+                        else Fraction(360 / test_ind).limit_denominator(1000)
+                    )
                     return True, Q, sym_ops
 
         return False, 1, None
@@ -501,8 +492,6 @@ class CyclicGroupAnalyzer:
                 op = SymmOp.reflection(
                     normal, origin=([0.5, 0.5, 0.5] @ self._primitive.cell)
                 )
-                # op = SymmOp.reflection(normal)
-                # set_trace()
                 op = SymmOp.from_rotation_and_translation(
                     op.rotation_matrix,
                     op.translation_vector + np.array([0, 0, tran]),
@@ -513,12 +502,10 @@ class CyclicGroupAnalyzer:
                     tmp = find_in_coord_list(
                         diff_st.positions, coord, self._symprec
                     )
-                    # tmp = find_in_coord_list(diff_st.get_scaled_positions(), coord, self._symprec)
                     itp.append(
                         len(tmp) == 1
                         and diff_st.numbers[tmp[0]] == site.number
                     )
-                # set_trace()
                 if np.array(itp).all():
                     return True, op
         return False, None

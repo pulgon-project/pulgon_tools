@@ -20,8 +20,6 @@ import ase
 import numpy as np
 from ase import Atoms
 from ase.io import read
-from ase.io.vasp import write_vasp
-from ipdb import set_trace
 from pymatgen.core import Molecule
 from pymatgen.core.operations import SymmOp
 from pymatgen.symmetry.analyzer import PointGroupAnalyzer

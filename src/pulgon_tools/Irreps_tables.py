@@ -12,18 +12,12 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-import argparse
 import itertools
 import logging
-import math
-import typing
-from pdb import set_trace
 
 import numpy as np
 import sympy
 from sympy import symbols
-from sympy.ntheory.factor_ import totient
-from tqdm import tqdm
 
 
 def frac_range(
@@ -339,8 +333,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
                         tmp0 = fc[tmp]
                     else:
                         tmp0 = tmp0 * fc[tmp]
-                        # tmp0 = fc[tmp] * tmp0
-                        set_trace()
                 if len(paras_symbol) == 4:
                     tmp1 = tmp0.evalf(
                         subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piH: -1}
@@ -868,7 +860,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     fc = func[idx_fc]
                     paras_symbol = [k1, m1]
             else:
-                set_trace()
                 logging.ERROR("Wrong value for k1")
 
             res = []
