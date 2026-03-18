@@ -10,9 +10,9 @@ from pulgon_tools.detect_generalized_translational_group import (
     CyclicGroupAnalyzer,
 )
 from pulgon_tools.detect_point_group import LineGroupAnalyzer
-from pulgon_tools.line_group_table import get_family_Num_from_sym_symbol
+from pulgon_tools.line_group_table import get_family_num_from_sym_symbol
 from pulgon_tools.utils import (
-    brute_force_generate_group_subsquent,
+    brute_force_generate_group_subsequent,
     find_axis_center_of_nanotube,
     get_character_num_withparities,
     get_character_withparities,
@@ -40,7 +40,7 @@ def get_linegroup_symmetry_dataset(poscar):
     trans_op = np.round(cyclic.get_generators(), 6)
     rots_op = np.round(obj.get_generators(), 6)
     mats = np.vstack(([trans_op], rots_op))
-    ops, order_ops = brute_force_generate_group_subsquent(mats, symec=1e-2)
+    ops, order_ops = brute_force_generate_group_subsequent(mats, symec=1e-2)
 
     ops_car_sym = []
     for op in ops:
@@ -48,7 +48,7 @@ def get_linegroup_symmetry_dataset(poscar):
             op[:3, :3], op[:3, 3] * aL
         )
         ops_car_sym.append(tmp_sym)
-    family = get_family_Num_from_sym_symbol(trans_sym, rota_sym)
+    family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
     return atom_center, family, nrot, aL, ops_car_sym, order_ops
 
 

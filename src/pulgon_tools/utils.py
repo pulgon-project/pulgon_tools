@@ -1,4 +1,4 @@
-# Copyright 2023 The PULGON Project Developers
+# Copyright 2023-2026 The PULGON Project Developers
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -785,7 +785,7 @@ def brute_force_generate_group(generators: np.ndarray, symec: float = 0.01):
     return L
 
 
-def brute_force_generate_group_subsquent(
+def brute_force_generate_group_subsequent(
     generators: np.ndarray, symec: float = 0.01
 ):
     """generate all the group elements by brute force algorithm
@@ -953,7 +953,7 @@ def dimino_affine_matrix(
     return L
 
 
-def dimino_affine_matrix_and_subsquent(
+def dimino_affine_matrix_and_subsequent(
     generators: np.ndarray, symec: float = 0.001
 ) -> np.ndarray:
     """

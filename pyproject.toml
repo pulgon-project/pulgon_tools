@@ -9,7 +9,7 @@ name = "pulgon_tools"
 authors = [
     {name = "Yujie Cen", email = "yujie.cen@tuwien.ac.at"}
 ]
-description = "Work-in-progress foundation libraries of the PULGON project"
+description = "Foundation libraries of the PULGON project"
 requires-python = ">=3.9, <3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -38,9 +38,12 @@ pulgon-detect-CyclicGroup = "pulgon_tools:detect_generalized_translational_group
 pulgon-fcs-correction = "pulgon_tools:force_constant_correction.main"
 pulgon-irreps-tables = "pulgon_tools:generate_irreps_tables.main"
 
-
-[project.optional-dependencies]
-test = ["pytest", "pytest-datadir"]
-
 [tool.setuptools.dynamic]
 version = {attr = "pulgon_tools.__version__"}
+
+[dependency-groups]
+dev = [
+    "pretty-errors>=1.2.25",
+    "pytest>=8.4.2",
+    "pytest-datadir>=1.8.0",
+]

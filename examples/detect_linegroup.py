@@ -9,12 +9,12 @@ from pulgon_tools.detect_generalized_translational_group import (
     CyclicGroupAnalyzer,
 )
 from pulgon_tools.detect_point_group import LineGroupAnalyzer
-from pulgon_tools.line_group_table import get_family_Num_from_sym_symbol
+from pulgon_tools.line_group_table import get_family_num_from_sym_symbol
 from pulgon_tools.utils import (
     Cn,
     S2n,
-    brute_force_generate_group_subsquent,
-    dimino_affine_matrix_and_subsquent,
+    brute_force_generate_group_subsequent,
+    dimino_affine_matrix_and_subsequent,
     fast_orth,
     find_axis_center_of_nanotube,
     get_character,
@@ -27,7 +27,7 @@ from pulgon_tools.utils import (
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Compute the transmission across a defective Si nanowire"
+        description="Detect the line group of a nanostructure"
     )
 
     parser.add_argument("data_poscar", help="poscar")
@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     trans_sym = cyclic.cyclic_group[0]
     rota_sym = obj.sch_symbol
-    family = get_family_Num_from_sym_symbol(trans_sym, rota_sym)
+    family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
 
     print("family=", family)
     print("generalized translation:", cyclic.cyclic_group)

@@ -1,4 +1,4 @@
-# Copyright 2023 The PULGON Project Developers
+# Copyright 2023-2026 The PULGON Project Developers
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -175,7 +175,7 @@ class CyclicGroupAnalyzer:
         """
 
         Args:
-            monomer_atoms: possible monomers molecular
+            monomer_atoms: possible monomers
             potential_tans: translational distances in z direction of monomers
 
         Returns: cyclic groups and monomers
@@ -186,7 +186,7 @@ class CyclicGroupAnalyzer:
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]
         )
         for ii, monomer in enumerate(monomer_atoms):
-            logging.debug("---Start deticting Item %d monomer" % (ii + 1))
+            logging.debug("---Start detecting Item %d monomer" % (ii + 1))
             tran = potential_tans[ii]
             ind = int(np.round(1 / tran))
 
@@ -224,14 +224,15 @@ class CyclicGroupAnalyzer:
                     tmp_sym_operations.insert(0, invariant_op)
                     sym_op.append(tmp_sym_operations)
                 else:
-                    logging.debug("All the candidate degree can not succeed")
+                    logging.debug("None of the candidate rotations works")
 
                 if (
                     ind == 2 and abs(tran - 0.5) < self._layer_symprec
                 ):  # only 2 layer in primitive cell
                     # detect mirror
                     logging.debug(
-                        "The scaled translational distance is 1/2, start detecting mirror symmetry"
+                        "The scaled translational distance is 1/2,"
+                        " start detecting mirror symmetry"
                     )
 
                     mirror, tmp_sym_operations = self._detect_mirror(

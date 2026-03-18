@@ -1,4 +1,4 @@
-# Copyright 2023 The PULGON Project Developers
+# Copyright 2023-2026 The PULGON Project Developers
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -116,7 +116,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
     def _inertia_tensor(self) -> np.ndarray:
         """
 
-        Returns: inertia_tensor of the molecular
+        Returns: inertia_tensor of the molecule
 
         """
 
