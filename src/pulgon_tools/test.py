@@ -22,7 +22,7 @@ from pulgon_tools.detect_generalized_translational_group import (
     CyclicGroupAnalyzer,
 )
 from pulgon_tools.detect_point_group import LineGroupAnalyzer, get_symcell
-from pulgon_tools.line_group_table import get_family_Num_from_sym_symbol
+from pulgon_tools.line_group_table import get_family_num_from_sym_symbol
 from pulgon_tools.utils import get_symbols_from_ops
 
 

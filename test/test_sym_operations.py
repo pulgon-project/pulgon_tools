@@ -6,7 +6,7 @@ from pulgon_tools.detect_generalized_translational_group import (
     CyclicGroupAnalyzer,
 )
 from pulgon_tools.detect_point_group import LineGroupAnalyzer
-from pulgon_tools.line_group_table import get_family_Num_from_sym_symbol
+from pulgon_tools.line_group_table import get_family_num_from_sym_symbol
 from pulgon_tools.utils import get_perms, get_symbols_from_ops
 
 
@@ -43,7 +43,7 @@ def test_lingroupfamily(shared_datadir):
     trans_sym = cyclic.cyclic_group[0]
     obj = LineGroupAnalyzer(poscar)
     rota_sym = obj.sch_symbol
-    family = get_family_Num_from_sym_symbol(trans_sym, rota_sym)
+    family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
     assert family == 4
 
 
