@@ -116,7 +116,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
     def _inertia_tensor(self) -> np.ndarray:
         """
 
-        Returns: inertia_tensor of the molecular
+        Returns: inertia_tensor of the molecule
 
         """
 

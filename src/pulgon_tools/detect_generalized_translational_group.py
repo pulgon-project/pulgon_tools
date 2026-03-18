@@ -175,7 +175,7 @@ class CyclicGroupAnalyzer:
         """
 
         Args:
-            monomer_atoms: possible monomers molecular
+            monomer_atoms: possible monomers
             potential_tans: translational distances in z direction of monomers
 
         Returns: cyclic groups and monomers
