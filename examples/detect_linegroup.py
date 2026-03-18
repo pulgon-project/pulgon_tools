@@ -1,7 +1,5 @@
 import argparse
-import logging
 
-import pretty_errors
 from ase.io.vasp import read_vasp
 
 from pulgon_tools.detect_generalized_translational_group import (
@@ -9,17 +7,7 @@ from pulgon_tools.detect_generalized_translational_group import (
 )
 from pulgon_tools.detect_point_group import LineGroupAnalyzer
 from pulgon_tools.line_group_table import get_family_num_from_sym_symbol
-from pulgon_tools.utils import (
-    Cn,
-    S2n,
-    brute_force_generate_group_subsequent,
-    dimino_affine_matrix_and_subsequent,
-    fast_orth,
-    find_axis_center_of_nanotube,
-    get_character,
-    get_matrices,
-    sigmaH,
-)
+from pulgon_tools.utils import find_axis_center_of_nanotube
 
 # logging.basicConfig(level=logging.DEBUG)
 

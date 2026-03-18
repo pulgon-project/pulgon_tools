@@ -18,7 +18,6 @@ from typing import Any, Tuple, Union
 
 import ase
 import cvxpy as cp
-import numpy as np
 import scipy as sp
 import scipy.interpolate
 import scipy.sparse as ss

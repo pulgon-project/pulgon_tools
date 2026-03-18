@@ -1,4 +1,3 @@
-import pytest_datadir
 from ase.io.vasp import read_vasp
 
 from pulgon_tools.detect_generalized_translational_group import (
