@@ -186,7 +186,7 @@ class CyclicGroupAnalyzer:
             [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0]]
         )
         for ii, monomer in enumerate(monomer_atoms):
-            logging.debug("---Start deticting Item %d monomer" % (ii + 1))
+            logging.debug("---Start detecting Item %d monomer" % (ii + 1))
             tran = potential_tans[ii]
             ind = int(np.round(1 / tran))
 
