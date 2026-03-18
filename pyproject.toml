@@ -9,7 +9,7 @@ name = "pulgon_tools"
 authors = [
     {name = "Yujie Cen", email = "yujie.cen@tuwien.ac.at"}
 ]
-description = "Work-in-progress foundation libraries of the PULGON project"
+description = "Foundation libraries of the PULGON project"
 requires-python = ">=3.9, <3.11"
 classifiers = [
     "Programming Language :: Python :: 3",
