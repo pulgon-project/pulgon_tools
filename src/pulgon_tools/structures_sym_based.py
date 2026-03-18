@@ -24,6 +24,7 @@ from ase.io.vasp import write_vasp
 from pulgon_tools.utils import (
     Cn,
     brute_force_generate_group,
+    dimino,
     e,
     sigmaV,
     sortrows,
@@ -44,12 +45,12 @@ def T_Q(
 
     """
     if pos.ndim == 2:
-        pos = np.dot(Cn(Q), pos.T)
+        result = np.dot(Cn(Q), pos.T).T
     else:
         print("error with dim")
-    pos = pos.T
-    pos[:, 2] = pos[:, 2] + f
-    return pos
+        return pos
+    result[:, 2] = result[:, 2] + f
+    return result
 
 
 def T_v(f: Union[float, int], pos: np.ndarray) -> np.ndarray:
@@ -63,57 +64,57 @@ def T_v(f: Union[float, int], pos: np.ndarray) -> np.ndarray:
 
     """
     if pos.ndim == 2:
-        pos = np.dot(sigmaV(), pos.T)
+        result = np.dot(sigmaV(), pos.T).T
     else:
         print("error with dim")
-    pos = pos.T
-    pos[:, 2] = pos[:, 2] + f
-    return pos
+        return pos
+    result[:, 2] = result[:, 2] + f
+    return result
 
 
-def dimino(generators: np.ndarray, symec: int = 4) -> np.ndarray:
-    """
-
-    Args:
-        generators: the generators of point group
-        symec: system precision
-
-    Returns: all the group elements
-
-    """
-    G = generators
-    g, g1 = copy.deepcopy(G[0]), copy.deepcopy(G[0])
-    L = np.array([e()])
-    while not (np.round(g, symec) == e()).all():
-        L = np.vstack((L, [g]))
-        g = np.dot(g, g1)
-    L = np.round(L, symec)
-
-    for ii in range(len(G)):
-        C = np.array([e()])
-        L1 = copy.deepcopy(L)
-        more = True
-        while more:
-            more = False
-            for g in list(C):
-                for s in G[: ii + 1]:
-                    sg = np.round(np.dot(s, g), symec)
-                    itp = (sg == L).all(axis=1).all(axis=1).any()
-                    if not itp:
-                        if C.ndim == 3:
-                            C = np.vstack((C, [sg]))
-                        else:
-                            C = np.array((C, sg))
-                        if L.ndim == 3:
-                            L = np.vstack(
-                                (L, np.array([np.dot(sg, t) for t in L1]))
-                            )
-                        else:
-                            L = np.array(
-                                L, np.array([np.dot(sg, t) for t in L1])
-                            )
-                        more = True
-    return L
+# def dimino(generators: np.ndarray, symec: int = 4) -> np.ndarray:
+#     """
+#
+#     Args:
+#         generators: the generators of point group
+#         symec: system precision
+#
+#     Returns: all the group elements
+#
+#     """
+#     G = generators
+#     g, g1 = copy.deepcopy(G[0]), copy.deepcopy(G[0])
+#     L = np.array([e()])
+#     while not (np.round(g, symec) == e()).all():
+#         L = np.vstack((L, [g]))
+#         g = np.dot(g, g1)
+#     L = np.round(L, symec)
+#
+#     for ii in range(len(G)):
+#         C = np.array([e()])
+#         L1 = copy.deepcopy(L)
+#         more = True
+#         while more:
+#             more = False
+#             for g in list(C):
+#                 for s in G[: ii + 1]:
+#                     sg = np.round(np.dot(s, g), symec)
+#                     itp = (sg == L).all(axis=1).all(axis=1).any()
+#                     if not itp:
+#                         if C.ndim == 3:
+#                             C = np.vstack((C, [sg]))
+#                         else:
+#                             C = np.array((C, sg))
+#                         if L.ndim == 3:
+#                             L = np.vstack(
+#                                 (L, np.array([np.dot(sg, t) for t in L1]))
+#                             )
+#                         else:
+#                             L = np.array(
+#                                 L, np.array([np.dot(sg, t) for t in L1])
+#                             )
+#                         more = True
+#     return L
 
 
 def change_center(st1: ase.atoms.Atoms) -> ase.atoms.Atoms:
@@ -159,7 +160,7 @@ def generate_line_group_structure(
         Q = cyclic_group["T_Q"][0]
         f = cyclic_group["T_Q"][1]
 
-        tmp_monomer_pos = monomer_pos
+        tmp_monomer_pos = monomer_pos.copy()
         for ii in range(np.ceil(Q).astype(np.int32)):
 
             tmp_monomer_pos = T_Q(Q, f, tmp_monomer_pos)
@@ -179,44 +180,43 @@ def generate_line_group_structure(
                 Q = ii + 1
                 break
 
-        # unique positions while keeping symbols aligned
+        # Remove exact cartesian duplicates
         pos_round = np.round(all_pos, symec)
         _, unique_idx = np.unique(pos_round, axis=0, return_index=True)
-
         all_pos = all_pos[unique_idx]
         all_symbols = [all_symbols[i] for i in unique_idx]
 
         A = Q * f
 
     elif list(cyclic_group.keys())[0] == "T_V":
-
         f = cyclic_group["T_V"]
-
         for ii in range(2):
-
             new_pos = T_v(f, all_pos)
-
             all_pos = np.vstack((all_pos, new_pos))
             all_symbols.extend(all_symbols[: len(new_pos)])
 
+        # Remove exact cartesian duplicates
         pos_round = np.round(all_pos, symec)
         _, unique_idx = np.unique(pos_round, axis=0, return_index=True)
-
         all_pos = all_pos[unique_idx]
         all_symbols = [all_symbols[i] for i in unique_idx]
 
         A = 2 * f
-
     else:
         print("A error input about cyclic_group")
+
     p0 = np.max(np.sqrt(all_pos[:, 0] ** 2 + all_pos[:, 1] ** 2))
     cell = np.array([[p0 * 3, 0, 0], [0, p0 * 3, 0], [0, 0, A]])
     st1 = Atoms(symbols=all_symbols, positions=all_pos, cell=cell)
 
     st2 = change_center(st1)
 
-    pos_round = np.round(st2.get_scaled_positions(), symec) % 1
-    pos_uni, idx = np.unique(pos_round, return_index=True, axis=0)
+    # Remove periodic duplicates along z using scaled positions
+    scaled = st2.get_scaled_positions()
+    # Fold into [0, 1) and round; snap near-boundary values to 0
+    scaled_folded = np.round(scaled % 1, symec)
+    scaled_folded[scaled_folded >= 1.0] = 0.0
+    pos_uni, idx = np.unique(scaled_folded, return_index=True, axis=0)
     symbols = st2.symbols[idx]
 
     st3 = Atoms(
@@ -300,7 +300,7 @@ def main():
     for sym in rot_sym:
         if pos.ndim == 1:
             monomer_pos.append(np.dot(sym, pos.reshape(pos.shape[0], 1)).T[0])
-            monomer_symbols = symbols.copy()
+            monomer_symbols.extend(symbols)
         else:
             monomer_pos.extend([np.dot(sym, line) for line in pos])
             monomer_symbols.extend(symbols)
