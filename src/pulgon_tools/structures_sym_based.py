@@ -14,7 +14,6 @@
 
 import argparse
 import copy
-from pdb import set_trace
 from typing import Union
 
 import ase
@@ -24,12 +23,8 @@ from ase.io.vasp import write_vasp
 
 from pulgon_tools.utils import (
     Cn,
-    S2n,
-    U,
-    U_d,
+    brute_force_generate_group,
     e,
-    refine_cell,
-    sigmaH,
     sigmaV,
     sortrows,
 )
