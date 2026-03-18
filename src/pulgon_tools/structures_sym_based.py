@@ -21,14 +21,7 @@ import numpy as np
 from ase import Atoms
 from ase.io.vasp import write_vasp
 
-from pulgon_tools.utils import (
-    Cn,
-    brute_force_generate_group,
-    dimino,
-    e,
-    sigmaV,
-    sortrows,
-)
+from pulgon_tools.utils import Cn, dimino, sigmaV, sortrows
 
 
 def T_Q(
@@ -70,51 +63,6 @@ def T_v(f: Union[float, int], pos: np.ndarray) -> np.ndarray:
         return pos
     result[:, 2] = result[:, 2] + f
     return result
-
-
-# def dimino(generators: np.ndarray, symec: int = 4) -> np.ndarray:
-#     """
-#
-#     Args:
-#         generators: the generators of point group
-#         symec: system precision
-#
-#     Returns: all the group elements
-#
-#     """
-#     G = generators
-#     g, g1 = copy.deepcopy(G[0]), copy.deepcopy(G[0])
-#     L = np.array([e()])
-#     while not (np.round(g, symec) == e()).all():
-#         L = np.vstack((L, [g]))
-#         g = np.dot(g, g1)
-#     L = np.round(L, symec)
-#
-#     for ii in range(len(G)):
-#         C = np.array([e()])
-#         L1 = copy.deepcopy(L)
-#         more = True
-#         while more:
-#             more = False
-#             for g in list(C):
-#                 for s in G[: ii + 1]:
-#                     sg = np.round(np.dot(s, g), symec)
-#                     itp = (sg == L).all(axis=1).all(axis=1).any()
-#                     if not itp:
-#                         if C.ndim == 3:
-#                             C = np.vstack((C, [sg]))
-#                         else:
-#                             C = np.array((C, sg))
-#                         if L.ndim == 3:
-#                             L = np.vstack(
-#                                 (L, np.array([np.dot(sg, t) for t in L1]))
-#                             )
-#                         else:
-#                             L = np.array(
-#                                 L, np.array([np.dot(sg, t) for t in L1])
-#                             )
-#                         more = True
-#     return L
 
 
 def change_center(st1: ase.atoms.Atoms) -> ase.atoms.Atoms:
