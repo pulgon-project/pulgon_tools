@@ -27,7 +27,7 @@ from pulgon_tools.utils import (
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Compute the transmission across a defective Si nanowire"
+        description="Detect the line group of a nanostructure"
     )
 
     parser.add_argument("data_poscar", help="poscar")
