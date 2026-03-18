@@ -222,7 +222,6 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
         func = [func0, func1]
         qps_value = [qpoint]
         m1_value = list(range(0, int(nrot / 2) + 1))
-        # set_trace()
 
         def value_fc(fc, tmp_k1, tmp_m1, tmp_piV, nrot, order):
             res = []
@@ -681,9 +680,7 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
                     paras_values.append(
                         [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                     )
-
             else:
-                set_trace()
                 logging.ERROR("Wrong value for k1")
     else:
         raise NotImplementedError("Family %d is not supported yet" % family)

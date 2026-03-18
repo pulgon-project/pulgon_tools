@@ -14,7 +14,6 @@
 
 import numpy as np
 import pytest
-from ipdb import set_trace
 
 from pulgon_tools.structures_sym_based import generate_line_group_structure
 from pulgon_tools.utils import Cn, S2n, U, U_d, dimino, sigmaH, sigmaV

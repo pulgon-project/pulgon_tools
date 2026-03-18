@@ -3,7 +3,6 @@ import argparse
 import numpy as np
 from ase import Atom, Atoms
 from ase.io import read
-from ipdb import set_trace
 from pymatgen.core.operations import SymmOp
 
 from pulgon_tools.detect_generalized_translational_group import (
@@ -140,7 +139,6 @@ def main():
         ) = get_character_num_withparities(DictParams, symprec=symprec)
 
         # np.savetxt("character.txt", np.round(characters.real, 3))
-        # set_trace()
         np.savez(
             chara_filename,
             characters=characters,

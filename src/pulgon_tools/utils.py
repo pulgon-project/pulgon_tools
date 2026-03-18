@@ -24,7 +24,6 @@ import scipy.interpolate
 import scipy.sparse as ss
 import scipy.spatial.distance
 from ase import Atoms
-from ipdb import set_trace
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
 from sympy.physics.quantum import TensorProduct
@@ -384,7 +383,6 @@ def get_perms_from_ops(atoms: Atoms, ops_sym, symprec=1e-2, round=4):
                     perms[-1].append(eq)
             else:
                 print(ii, aid)
-                set_trace()
                 raise ValueError
     perms_table = np.array(perms).astype(np.int32)
     return perms_table
@@ -447,15 +445,6 @@ def get_modified_projector(DictParams, atom):
                 )
                 ops_car_apg.append(op)
         matrices_apg = get_matrices(atom, ops_car_apg)
-
-        # res, err = [], []
-        # for ii in range(len(matrices_apg)):
-        #     tmp1 = np.array_equal(np.dot(D, matrices_apg[ii]), np.dot(matrices_apg[ii], D))
-        #     tmp2 = np.abs(np.dot(D, matrices_apg[ii]) - np.dot(matrices_apg[ii], D)).sum()
-        #
-        #     res.append(tmp1)
-        #     err.append(tmp2)
-        # set_trace()
 
         ops_car_cyc = [
             SymmOp.from_rotation_and_translation(
@@ -529,7 +518,6 @@ def get_modified_projector(DictParams, atom):
                 logging.ERROR("the error is lager than 0.05")
 
             if Dmu_tran_conj.ndim == 0:
-                # set_trace()
                 basis.append(u[:, :num_modes])
                 dimensions.append(num_modes)
             else:
@@ -618,7 +606,6 @@ def get_modified_projector(DictParams, atom):
             )
 
             if error > 0.05:
-                # set_trace()
                 logging.ERROR("the error is lager than 0.05")
 
             if Dmu_tran_conj.ndim == 0:
@@ -638,8 +625,6 @@ def get_modified_projector(DictParams, atom):
                 dimensions.append(basis_block1.shape[1])
 
     adapted = np.concatenate(basis, axis=1)
-    # if adapted.shape[0] != adapted.shape[1]:
-    #     set_trace()
     return adapted, dimensions
 
 
@@ -659,11 +644,6 @@ def affine_matrix_op(af1, af2, symprec=1e-8):
     ro = af2[:3, :3] @ af1[:3, :3]
     # ro = af1[:3, :3] @ af2[:3, :3]
     tran = np.remainder(af2[:3, 3] + af2[:3, :3] @ af1[:3, 3], [1, 1, 1])
-
-    # tran = (af2[:3, 3] + af2[:3, :3] @ af1[:3, 3]) % 1
-    if np.isclose(tran[0], 1):
-        set_trace()
-    # tran = np.round(tran / symprec).astype(int) * symprec
 
     af = np.eye(4)
     af[:3, :3] = ro
@@ -1256,11 +1236,6 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
         xl = ss.coo_array((data, (rows, cols)), shape=(IFC.size, IFC.size))
         xl = xl.tocsc()
 
-        res = abs(xl.dot(IFC.flatten())).sum()
-        print(res)
-        # if res < 1e-8:
-        # set_trace()
-
         tmp = abs(xl.dot(IFC.flatten()))
         print("max value equation=%s" % max(tmp))
         M.append(xl)
@@ -1525,7 +1500,6 @@ def get_symbols_from_ops(ops_sym):
         itp1 = np.isclose(val1, 1, atol=1e-4)
         itp2 = np.isclose(val1, -1, atol=1e-4)
 
-        # set_trace()
         if np.logical_or(itp1, itp2).all():  # test if it is a reflection h,v,U
             if itp1.sum() == 3:
                 symbols.append("E")

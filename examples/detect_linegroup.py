@@ -3,7 +3,6 @@ import logging
 
 import pretty_errors
 from ase.io.vasp import read_vasp
-from ipdb import set_trace
 
 from pulgon_tools.detect_generalized_translational_group import (
     CyclicGroupAnalyzer,

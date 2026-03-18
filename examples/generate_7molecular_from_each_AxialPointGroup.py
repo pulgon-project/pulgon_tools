@@ -12,25 +12,11 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-from pdb import set_trace
-
 import numpy as np
-import pretty_errors
 from ase.io.vasp import write_vasp
 
-from pulgon_tools.generate_structures import (
-    T_Q,
-    Cn,
-    S2n,
-    T_v,
-    U,
-    U_d,
-    change_center,
-    dimino,
-    generate_line_group_structure,
-    sigmaH,
-    sigmaV,
-)
+from pulgon_tools.structures_sym_based import generate_line_group_structure
+from pulgon_tools.utils import Cn, S2n, U, U_d, dimino, sigmaH, sigmaV
 
 
 def input1():
@@ -126,7 +112,6 @@ def main():
     monomer_pos = np.array(monomer_pos)
 
     st = generate_line_group_structure(monomer_pos, cg)
-    # set_trace()
     write_vasp("%s" % st_name, st, direct=True, sort=True)
 
 
