@@ -152,7 +152,6 @@ pulgon-detect-AxialPointGroup -p POSCAR [OPTIONS]
 ```bash
 pulgon-detect-CyclicGroup -p POSCAR
 pulgon-detect-AxialPointGroup -p POSCAR
-# Output: T₁₀(L/2)C₅ → Line-group family 4
 ```
 
 The 13 line-group families are classified by the combination of generalized translational group Z (pure translation T, screw T_Q, or glide T_C) and axial point group P. See Table 1 in the paper for a complete listing.
@@ -179,7 +178,6 @@ pulgon-irreps-tables -p POSCAR [OPTIONS]
 
 ```bash
 pulgon-irreps-tables -p POSCAR -q 0.0 -s mos2_chartable.npz
-# Produces 8 irreps labeled (k, m, Πᵥ) and 20 symmetry operations
 ```
 
 ---
