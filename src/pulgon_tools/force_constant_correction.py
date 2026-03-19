@@ -1,3 +1,18 @@
+# Copyright 2023-2026 The PULGON Project Developers
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+
+
 import argparse
 import ast
 import collections
@@ -41,7 +56,6 @@ def calc_dists(atoms, tolerance=1e-4):
     degenerate = np.abs(d2s - d2min) < tolerance
     nequi = degenerate.sum(axis=0, dtype=int)
     maxequi = nequi.max()
-    shifts = np.empty((n_satoms, n_satoms, maxequi))
     sorting = np.argsort(np.logical_not(degenerate), axis=0)
     shifts = np.transpose(sorting[:maxequi, :, :], (1, 2, 0)).astype(np.intc)
     shifts = np.asarray(range(MIN_DELTA, MAX_DELTA + 1))[shifts]
@@ -76,17 +90,6 @@ def build_constraint_matrix(
     phonon.symmetrize_force_constants()
     IFC = phonon.force_constants.copy()
 
-    # if IFC.shape[0] == IFC.shape[1]:
-    #     IFC = full_fc_to_compact_fc(phonon.primitive, IFC)
-    #     n_atoms, n_satoms = IFC.shape[:2]
-    # else:
-    #     n_atoms, n_satoms = IFC.shape[:2]
-    # average_delta = atoms_scell.get_all_distances(mic=True, vector=True)
-    # average_products = np.einsum(
-    #     "...i,...j->...ij", average_delta, average_delta
-    # )
-
-    average_distance = atoms_scell.get_all_distances(mic=True, vector=False)
     motif_indices = [
         phonon.primitive.p2p_map[i] for i in phonon.primitive.s2p_map
     ]
@@ -206,45 +209,29 @@ def build_constraint_matrix(
                     n_rows += 1
     print("Adding Huang invariances")
 
-    # # Make sure the IFC matrix is symmetric.
-    # for i in range(n_atoms):
-    #     for j in range(n_atoms):
-    #         for alpha in range(3):
-    #             for beta in range(3):
-    #                 rows.append(n_rows)
-    #                 cols.append(
-    #                     np.ravel_multi_index(
-    #                         (i, phonon.primitive.p2s_map[j], alpha, beta),
-    #                         IFC.shape,
-    #                     )
-    #                 )
-    #                 data.append(1.0)
-    #                 rows.append(n_rows)
-    #                 cols.append(
-    #                     np.ravel_multi_index(
-    #                         (j, phonon.primitive.p2s_map[i], beta, alpha),
-    #                         IFC.shape,
-    #                     )
-    #                 )
-    #                 data.append(-1.0)
-    #                 n_rows += 1
-    # print("now finish symmetric rules")
-
-    # # Add extra constraints to make the force constants short-sighted(cut-off)
-    # idx_x, idx_y = np.where(average_distance > cut_off)
-    # for ii, ix in enumerate(idx_x):
-    #     if ix in phonon.primitive.p2s_map:
-    #         i = phonon.primitive.p2p_map[ix]
-    #         j = idx_y[ii]
-    #         for alpha in range(3):
-    #             for beta in range(3):
-    #                 rows.append(n_rows)
-    #                 cols.append(
-    #                     np.ravel_multi_index((i, j, alpha, beta), IFC.shape)
-    #                 )
-    #                 data.append(1.0)
-    #                 n_rows += 1
-    # print("now finish the short-sighted(cut-off) constrains")
+    # Make sure the IFC matrix is symmetric.
+    for i in range(n_atoms):
+        for j in range(n_atoms):
+            for alpha in range(3):
+                for beta in range(3):
+                    rows.append(n_rows)
+                    cols.append(
+                        np.ravel_multi_index(
+                            (i, phonon.primitive.p2s_map[j], alpha, beta),
+                            IFC.shape,
+                        )
+                    )
+                    data.append(1.0)
+                    rows.append(n_rows)
+                    cols.append(
+                        np.ravel_multi_index(
+                            (j, phonon.primitive.p2s_map[i], beta, alpha),
+                            IFC.shape,
+                        )
+                    )
+                    data.append(-1.0)
+                    n_rows += 1
+    print("now finish symmetric rules")
 
     # Make the tensor symmetric in a PBC setting (H01 = transpose(H10)).
     for i in range(n_atoms):
@@ -347,14 +334,6 @@ def main():
         default="POSCAR",
         help="The path of poscar",
     )
-    # parser.add_argument(
-    #     "-b",
-    #     "--pbc",
-    #     # required=True,
-    #     default=[False, False, True],
-    #     type=parse_bool_list,
-    #     help="The periodic boundary conduction of structure",
-    # )
     parser.add_argument(
         "-x",
         "--supercell_matrix",
@@ -421,7 +400,6 @@ def main():
     fcs_savename = "FORCE_CONSTANTS_correction"
     phononfig_savename = "phonon_fix"
 
-    # pbc = args.pbc
     pbc = [False, False, True]
 
     if path_yaml is not None:

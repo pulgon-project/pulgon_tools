@@ -276,24 +276,24 @@ def line_group_sympy(DictParams, symprec=1e-6):
         func0 = sympy.Matrix(
             [
                 1,
-                # sympy.exp(1j * k1 * a),
+                sympy.exp(1j * k1 * a),
                 piH * sympy.exp(1j * m1 * sympy.pi / n),
             ]
         )
         func1 = [
             sympy.Matrix([[1, 0], [0, 1]]),
-            # sympy.Matrix(
-            #     [
-            #         [
-            #             sympy.exp(1j * k1 * a),
-            #             0,
-            #         ],
-            #         [
-            #             0,
-            #             sympy.exp(-1j * k1 * a),
-            #         ],
-            #     ]
-            # ),
+            sympy.Matrix(
+                [
+                    [
+                        sympy.exp(1j * k1 * a),
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(-1j * k1 * a),
+                    ],
+                ]
+            ),
             sympy.Matrix(
                 [
                     [
@@ -312,7 +312,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
         qps_value = [qpoint]
         n_value = [nrot]
         m1_value = list(range(int(-nrot / 2) + 1, int(nrot / 2) + 1))
-        piH_value = [-1, 1]
 
         if np.isclose(qpoint, 0, atol=symprec) or np.isclose(
             qpoint, np.pi / a, atol=symprec
@@ -344,7 +343,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     tmp1 = tmp0.evalf(subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n})
                     res.append(tmp1)
             characters.append(np.array(res).astype(np.complex128))
-        # characters = np.array(characters).astype(np.complex128)
     elif family == 3:
         qpoint = DictParams["qpoints"]
         nrot = DictParams["nrot"]
@@ -355,25 +353,24 @@ def line_group_sympy(DictParams, symprec=1e-6):
         func0 = sympy.Matrix(
             [
                 1,
-                # sympy.exp(1j * k1 * a),
                 sympy.exp(1j * m1 * 2 * sympy.pi / n),
                 piH,
             ]
         )
         func1 = [
             sympy.Matrix([[1, 0], [0, 1]]),
-            # sympy.Matrix(
-            #     [
-            #         [
-            #             sympy.exp(1j * k1 * a),
-            #             0,
-            #         ],
-            #         [
-            #             0,
-            #             sympy.exp(-1j * k1 * a),
-            #         ],
-            #     ]
-            # ),
+            sympy.Matrix(
+                [
+                    [
+                        sympy.exp(1j * k1 * a),
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(-1j * k1 * a),
+                    ],
+                ]
+            ),
             sympy.Matrix(
                 [
                     [
@@ -425,7 +422,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     tmp1 = tmp0.evalf(subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n})
                     res.append(tmp1)
             characters.append(np.array(res).astype(np.complex128))
-        # characters = np.array(characters).astype(np.complex128)
     elif family == 4:
         qpoint = DictParams["qpoints"]
         nrot = DictParams["nrot"]

@@ -24,7 +24,10 @@ from pymatgen.core import Molecule
 from pymatgen.core.operations import SymmOp
 from pymatgen.symmetry.analyzer import PointGroupAnalyzer
 
-from pulgon_tools.utils import find_axis_center_of_nanotube
+from pulgon_tools.utils import (
+    brute_force_generate_group,
+    find_axis_center_of_nanotube,
+)
 
 
 class LineGroupAnalyzer(PointGroupAnalyzer):
@@ -56,7 +59,6 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         logging.debug("--------------------start detecting axial point group")
 
         if type(mol) == Atoms:
-            # mol = self._find_axis_center_of_nanotube(mol)
             mol = find_axis_center_of_nanotube(mol)
             mol = Molecule(species=mol.numbers, coords=mol.positions)
 
@@ -69,8 +71,6 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self._zaxis = np.array([0, 0, 1])
 
         self._analyze()
-        # if self.sch_symbol in ["C1v", "C1h"]:
-        #     self.sch_symbol = "Cs"
 
     def _analyze(self):
         """Rewrite the _analyze method, calculate the axial point group elements."""
@@ -175,11 +175,15 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         )
         return atoms
 
-    # def get_symmetry_operations(self):
-    #     generators = [op.affine_matrix for op in self.symmops if not np.allclose(op.affine_matrix, np.eye(4))]
-    #     ops = brute_force_generate_group(generators, self.tol)
-    #     ops_sym = [SymmOp(op) for op in ops]
-    #     return ops_sym
+    def get_symmetry_operations(self):
+        generators = [
+            op.affine_matrix
+            for op in self.symmops
+            if not np.allclose(op.affine_matrix, np.eye(4))
+        ]
+        ops = brute_force_generate_group(generators, self.tol)
+        ops_sym = [SymmOp(op) for op in ops]
+        return ops_sym
 
     def get_generators(self):
         generators = [
@@ -239,7 +243,6 @@ def main():
 
     mol = Molecule(species=st.numbers, coords=st.positions)
     obj = LineGroupAnalyzer(mol, tolerance=args.tolerance)
-    # apg = obj.get_pointgroup()
     apg = obj.sch_symbol
     print(" Axial point group: ", apg)
 

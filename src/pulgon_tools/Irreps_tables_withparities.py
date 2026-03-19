@@ -1,3 +1,18 @@
+# Copyright 2023-2026 The PULGON Project Developers
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+
+
 import itertools
 import logging
 
@@ -406,8 +421,9 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
                     [0, sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2))],
                 ]
             ),
-            # sympy.Matrix([[0, 1], [1, 0]]),
-            sympy.Matrix([[1, 0], [0, 1]]),
+            sympy.Matrix(
+                [[0, 1], [1, 0]]
+            ),  # Suspecting it's an error in the book of line group
             sympy.Matrix([[0, piV], [piV, 0]]),
             sympy.Matrix([[piV, 0], [0, piV]]),
         ]
@@ -471,10 +487,8 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
 
         if np.isclose(np.abs(qpoint), np.pi / a, atol=symprec):
             m1_value = list(range(0, np.floor(nrot / 2 + 1).astype(np.int32)))
-            # m1_value = list(range(-np.floor(nrot / 2 + 1).astype(np.int32) + 1, np.floor(nrot / 2 + 1).astype(np.int32)))
         else:
             m1_value = list(range(0, nrot + 1))
-            # m1_value = list(range(-nrot + 1, nrot + 1))
 
         def value_fc(
             fc,
@@ -536,8 +550,6 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
                             order,
                         )
                         characters.append(np.array(res).astype(np.complex128))
-                        # paras_values.append([tmp_k1, tmp_m1, tmp_piU, tmp_piV])
-                        # paras_symbol.append([k1, m1, piU, piV])
                         paras_values.append(
                             [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                         )
@@ -558,12 +570,9 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
                             order,
                         )
                         characters.append(np.array(res).astype(np.complex128))
-                        # paras_values.append([tmp_k1, tmp_m1, tmp_piH])
                         paras_values.append(
                             [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                         )
-                        # paras_symbol.append([k1, m1, piH])
-
             elif np.isclose(np.abs(tmp_k1), np.pi / a, atol=symprec):
                 if np.isclose(np.abs(tmp_m1), nrot / 2, atol=symprec):
                     idx_fc = 3
@@ -582,8 +591,6 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
                             order,
                         )
                         characters.append(np.array(res).astype(np.complex128))
-                        # paras_values.append([tmp_k1, tmp_m1, tmp_piU])
-                        # paras_symbol.append([k1, m1, piU])
                         paras_values.append(
                             [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                         )
@@ -605,12 +612,9 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
                             order,
                         )
                         characters.append(np.array(res).astype(np.complex128))
-                        # paras_values.append([tmp_k1, tmp_m1, tmp_piV])
-                        # paras_symbol.append([k1, m1, piV])
                         paras_values.append(
                             [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                         )
-
                 else:
                     idx_fc = 4
                     fc = func[idx_fc]
@@ -627,8 +631,6 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
                         order,
                     )
                     characters.append(np.array(res).astype(np.complex128))
-                    # paras_values.append([tmp_k1, tmp_m1])
-                    # paras_symbol.append([k1, m1])
                     paras_values.append(
                         [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                     )
@@ -653,8 +655,6 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
                             order,
                         )
                         characters.append(np.array(res).astype(np.complex128))
-                        # paras_values.append([tmp_k1, tmp_m1, tmp_piV])
-                        # paras_symbol.append([k1, m1, piV])
                         paras_values.append(
                             [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                         )
@@ -675,8 +675,6 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
                         order,
                     )
                     characters.append(np.array(res).astype(np.complex128))
-                    # paras_values.append([tmp_k1, tmp_m1])
-                    # paras_symbol.append([k1, m1])
                     paras_values.append(
                         [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                     )

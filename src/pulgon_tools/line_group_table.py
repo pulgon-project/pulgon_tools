@@ -64,7 +64,6 @@ def get_family_num_from_sym_symbol(trans_sym, rota_sym):
     elif trans_sym == "T":
         sym_map = family_map["T"]
     else:
-        # trans_sym.startswith("T"):
         trans_sym_C = trans_sym.split("|")[0]
         trans_sym_T = trans_sym.split("|")[1]
         sym_map = family_map["TN"]
@@ -76,7 +75,6 @@ def get_family_num_from_sym_symbol(trans_sym, rota_sym):
             if np.isclose(num_trans, 2 * num_rots, 1e-4)
             else sym_map["TQ"]
         )
-
         if rota_sym[0] == "S" and not np.isclose(num_trans, num_rots, 1e-4):
             return log_error()
 
@@ -89,5 +87,4 @@ def get_family_num_from_sym_symbol(trans_sym, rota_sym):
         return value
     if key == "C" and suffix.isdigit() and "digit" in sym_map.get(key, {}):
         return sym_map[key]["digit"]
-
     return log_error()
