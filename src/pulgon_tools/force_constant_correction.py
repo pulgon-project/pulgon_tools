@@ -62,9 +62,7 @@ def calc_dists(atoms, tolerance=1e-4):
     return (dmin, nequi, shifts)
 
 
-def build_constraint_matrix(
-    phonon, cut_off=15, recenter=False, pbc=[False, False, True]
-):
+def build_constraint_matrix(phonon, recenter=False, pbc=[False, False, True]):
     """
     Build the sparse constraint matrix encoding translational
     acoustic sum rules, Born-Huang rotational sum rules,
@@ -73,19 +71,7 @@ def build_constraint_matrix(
     """
     scell = phonon.supercell
     if recenter:
-        atoms_scell = Atoms(
-            numbers=scell.numbers,
-            cell=scell.cell,
-            scaled_positions=(scell.scaled_positions - [0.5, 0.5, 0.5]) % 1,
-            pbc=pbc,
-        )
-    else:
-        atoms_scell = Atoms(
-            numbers=scell.numbers,
-            cell=scell.cell,
-            scaled_positions=scell.scaled_positions,
-            pbc=pbc,
-        )
+        scell.scaled_positions = (scell.scaled_positions - [0.5, 0.5, 0.5]) % 1
 
     phonon.symmetrize_force_constants()
     IFC = phonon.force_constants.copy()
@@ -355,13 +341,6 @@ def main():
         help="The path of force_constants.hdf5 or FORCE_CONSTANTS",
     )
     parser.add_argument(
-        "-c",
-        "--cut_off",
-        default=15,
-        type=float,
-        help="Cutoff radius for interatomic interactions",
-    )
-    parser.add_argument(
         "-n",
         "--plot_phonon",
         action="store_true",
@@ -392,7 +371,6 @@ def main():
     supercell_matrix = args.supercell_matrix
     path_yaml = args.path_yaml
     fcs_name = args.fcs
-    cut_off = args.cut_off
     methods = args.methods
     plot_phonon = args.plot_phonon
     recenter = args.recenter
@@ -425,9 +403,7 @@ def main():
 
         phonon.force_constants = fcs
 
-    M, IFC = build_constraint_matrix(
-        phonon, cut_off=cut_off, recenter=recenter, pbc=pbc
-    )
+    M, IFC = build_constraint_matrix(phonon, recenter=recenter, pbc=pbc)
 
     print("Start solving constraints")
     IFC_sym = solve_fcs(IFC, M, methods=methods)

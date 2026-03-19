@@ -23,6 +23,7 @@ dependencies = [
     "cvxpy",
     "phonopy",
     "seekpath",
+    "pulp",
 ]
 
 dynamic = ["version"]

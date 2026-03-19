@@ -178,7 +178,7 @@ pulgon-irreps-tables -p POSCAR [OPTIONS]
 **Example** — character table of MoS₂-(5,0) at k = 0:
 
 ```bash
-pulgon-irreps-tables -p POSCAR -q 0.0 -s mos2_chartable.txt
+pulgon-irreps-tables -p POSCAR -q 0.0 -s mos2_chartable.npz
 # Produces 8 irreps labeled (k, m, Πᵥ) and 20 symmetry operations
 ```
 
@@ -195,10 +195,8 @@ pulgon-fcs-correction -p POSCAR -b -x SUPERCELL_MATRIX -f FORCE_CONSTANTS [OPTIO
 | Flag | Description | Default |
 |------|-------------|---------|
 | `-p`, `--poscar` | Path to primitive structure | — |
-| `-b`, `--pbc` | Periodic boundary conditions, e.g. `"[False, False, True]"` | — |
 | `-x`, `--supercell` | Supercell matrix, e.g. `"[1,1,3]"` | — |
 | `-f`, `--force_constants` | Path to force constants file (Phonopy format) | — |
-| `-c`, `--cutoff` | Cutoff distance for IFC interactions in Å | — |
 | `-n`, `--plot` | Plot phonon spectrum before and after correction | `False` |
 | `-m`, `--method` | Optimization backend: `convex_opt` (CVXPY/OSQP) or `ridge_model` (sklearn) | `convex_opt` |
 
@@ -207,10 +205,8 @@ pulgon-fcs-correction -p POSCAR -b -x SUPERCELL_MATRIX -f FORCE_CONSTANTS [OPTIO
 ```bash
 pulgon-fcs-correction \
   -p POSCAR \
-  -b "[False, False, True]" \
   -x "[1,1,3]" \
   -f FORCE_CONSTANTS \
-  -c 15.0 \
   -n \
   -m convex_opt
 ```
