@@ -62,7 +62,7 @@ def calc_dists(atoms, tolerance=1e-4):
     return (dmin, nequi, shifts)
 
 
-def build_constraint_matrix(phonon, recenter=False, pbc=[False, False, True]):
+def build_constraint_matrix(phonon, recenter=False):
     """
     Build the sparse constraint matrix encoding translational
     acoustic sum rules, Born-Huang rotational sum rules,
@@ -93,7 +93,7 @@ def build_constraint_matrix(phonon, recenter=False, pbc=[False, False, True]):
         (scell.scaled_positions + np.asarray([0.0, 0.0, 0.0])[np.newaxis, :])
         % 1.0
     ) @ cell
-    ase_atoms = Atoms(symbols, positions, cell=cell, pbc=True)
+    ase_atoms = Atoms(symbols, positions, cell=cell)
 
     dists, degeneracy, shifts = calc_dists(ase_atoms)
     # %%
@@ -378,8 +378,6 @@ def main():
     fcs_savename = "FORCE_CONSTANTS_correction"
     phononfig_savename = "phonon_fix"
 
-    pbc = [False, False, True]
-
     if path_yaml is not None:
         phonon = phonopy.load(
             phonopy_yaml=path_yaml, force_constants_filename=fcs_name
@@ -403,7 +401,9 @@ def main():
 
         phonon.force_constants = fcs
 
-    M, IFC = build_constraint_matrix(phonon, recenter=recenter, pbc=pbc)
+    IFC_raw_backup = phonon.force_constants.copy()
+
+    M, IFC = build_constraint_matrix(phonon, recenter=recenter)
 
     print("Start solving constraints")
     IFC_sym = solve_fcs(IFC, M, methods=methods)
@@ -411,6 +411,8 @@ def main():
     if plot_phonon:
         print("Start drawing the phonon spectrum")
         if k_path is None:
+            phonon.force_constants = IFC_raw_backup
+
             phonon.auto_band_structure()
             phonon.plot_band_structure().savefig(phononfig_savename, dpi=500)
         else:
@@ -418,6 +420,7 @@ def main():
                 [k_path], npoints=101
             )
 
+            phonon.force_constants = IFC_raw_backup
             phonon.run_band_structure(
                 qpoints, path_connections=connections, with_eigenvectors=True
             )
@@ -477,7 +480,6 @@ def parse_bool_list(value):
 
 
 def parse_int_list(value):
-    """Parse a string representing a list of booleans into a Python list"""
     try:
         parsed = ast.literal_eval(value)
         if not isinstance(parsed, list) or not all(

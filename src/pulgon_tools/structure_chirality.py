@@ -70,7 +70,7 @@ def helical_group_analysis(a1, a2, n1, n2, L1):
     return q, f, r, R, Ch, t, t1, t2, n_gcd
 
 
-def bond_constrains_equations(
+def bond_constraints_equations(
     variables, pos_cyl1, pos_cyl2, pos_cyl3, pos_cyl4, bond_length
 ):
     del_phi, del_r, del_z = variables
@@ -165,12 +165,12 @@ def generate_symcell_and_linegroup_elements(
 
     initial_guess = np.array([0, 0, 0])
     solutions1 = fsolve(
-        bond_constrains_equations,
+        bond_constraints_equations,
         initial_guess,
         args=(pos_cyl0, pos_cyl2, pos_cyl3, pos_cyl4, bond_length),
     )
     solutions2 = fsolve(
-        bond_constrains_equations,
+        bond_constraints_equations,
         initial_guess,
         args=(pos_cyl1, pos_cyl2, pos_cyl3, pos_cyl4, bond_length),
     )
