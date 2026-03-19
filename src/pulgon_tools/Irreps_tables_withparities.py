@@ -166,7 +166,7 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
                     else:
                         tmp0 = fc[tmp] * tmp0
                 tmp1 = tmp0.evalf(
-                    subs={k1: tmp_k1, m1: tmp_m1, n: nrot, piV: tmp_piH}
+                    subs={k1: tmp_k1, m1: tmp_m1, n: nrot, piH: tmp_piH}
                 )
                 res.append(tmp1)
             return res
@@ -179,17 +179,17 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
             if np.isclose(tmp_k1, 0, atol=symprec):
                 idx_fc = 0
                 fc = func[idx_fc]
-                for tmp_piV in [-1, 1]:
-                    res = value_fc(fc, tmp_k1, tmp_m1, tmp_piV, nrot, order)
+                for tmp_piH in [-1, 1]:
+                    res = value_fc(fc, tmp_k1, tmp_m1, tmp_piH, nrot, order)
                     characters.append(np.array(res).astype(np.complex128))
-                    paras_values.append([tmp_k1, tmp_m1, tmp_piV])
+                    paras_values.append([tmp_k1, tmp_m1, tmp_piH])
             else:
                 idx_fc = 1
                 fc = func[idx_fc]
-                tmp_piV = 0
-                res = value_fc(fc, tmp_k1, tmp_m1, tmp_piV, nrot, order)
+                tmp_piH = 0
+                res = value_fc(fc, tmp_k1, tmp_m1, tmp_piH, nrot, order)
                 characters.append(np.array(res).astype(np.complex128))
-                paras_values.append([tmp_k1, tmp_m1, tmp_piV])
+                paras_values.append([tmp_k1, tmp_m1, tmp_piH])
 
     elif family == 6:
         qpoint = DictParams["qpoints"]

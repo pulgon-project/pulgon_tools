@@ -51,7 +51,11 @@ def get_linegroup_symmetry_dataset(poscar):
 
     trans_op = np.round(cyclic.get_generators(), 6)
     rots_op = np.round(obj.get_generators(), 6)
-    mats = np.vstack(([trans_op], rots_op))
+
+    if rots_op.size != 0:
+        mats = np.vstack(([trans_op], rots_op))
+    else:
+        mats = trans_op.copy()
     ops, order_ops = brute_force_generate_group_subsequent(mats, symec=1e-2)
 
     ops_car_sym = []
@@ -106,6 +110,7 @@ def main():
     enable_rep_matrix = args.enable_rep_matrix
 
     atom = read(st_name)
+
     (
         atom_center,
         family,
@@ -145,6 +150,7 @@ def main():
         )
 
     else:
+
         (
             characters,
             irreps_values,

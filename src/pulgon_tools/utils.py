@@ -777,6 +777,7 @@ def brute_force_generate_group_subsequent(
         L: all group elements
         L_seq: the multiplication order of the generators
     """
+
     e_in = np.eye(4)
     G = generators
     L = np.array([e_in])
