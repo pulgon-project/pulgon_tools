@@ -34,6 +34,17 @@ from pulgon_tools.utils import (
 
 
 def get_linegroup_symmetry_dataset(poscar):
+    """Extract the full line group symmetry dataset from a structure.
+
+    Detects the axial point group and cyclic group, then generates all
+    symmetry operations via brute-force group multiplication.
+
+    Args:
+        poscar: path to a POSCAR file, or an ASE Atom/Atoms object.
+
+    Returns:
+        tuple of (atom_center, family, nrot, aL, ops_car_sym, order_ops).
+    """
     if type(poscar) == str:
         atom = read(poscar)
     elif type(poscar) == Atom or type(poscar) == Atoms:
@@ -69,11 +80,12 @@ def get_linegroup_symmetry_dataset(poscar):
 
 
 def main():
+    """CLI entry point for computing irreps tables and character tables."""
     parser = argparse.ArgumentParser(
         description="Return the representation matrices or character table from a structure"
     )
     parser.add_argument(
-        "-p", "--POSCAR", help="path to the file of a strcuture"
+        "-p", "--POSCAR", help="path to the file of a structure"
     )
     parser.add_argument(
         "-q",
@@ -99,7 +111,7 @@ def main():
         "-r",
         "--enable_rep_matrix",
         action="store_true",
-        help="open the detection of point group",
+        help="Enable output of irreducible representation matrices",
     )
 
     args = parser.parse_args()

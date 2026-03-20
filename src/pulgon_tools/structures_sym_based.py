@@ -30,11 +30,11 @@ def T_Q(
     """
 
     Args:
-        Q: rotate 2*pi/n
+        Q: rotate 2*pi/Q
         f: movement distance along z axis
         pos: monomer positions
 
-    Returns: the positions of all atoms
+    Returns: atom positions after rotation by 2*pi/Q and translation by f along z
 
     """
     if pos.ndim == 2:
@@ -53,7 +53,7 @@ def T_v(f: Union[float, int], pos: np.ndarray) -> np.ndarray:
         f: movement distance along z axis
         pos: monomer positions
 
-    Returns: the positions of all atoms
+    Returns: atom positions after mirror reflection (sigmaV) and translation by f along z
 
     """
     if pos.ndim == 2:
@@ -96,6 +96,7 @@ def generate_line_group_structure(
         monomer_pos: the positions of monomer
         monomer_symbols: atomic symbols of monomer
         cyclic_group: the generalized translation group
+        symec: number of decimal places for rounding in deduplication
 
     Returns:
         the final structure after all symmetry operations
@@ -151,7 +152,7 @@ def generate_line_group_structure(
 
         A = 2 * f
     else:
-        print("A error input about cyclic_group")
+        print("Invalid cyclic_group key, expected 'T_Q' or 'T_V'")
 
     p0 = np.max(np.sqrt(all_pos[:, 0] ** 2 + all_pos[:, 1] ** 2))
     cell = np.array([[p0 * 3, 0, 0], [0, p0 * 3, 0], [0, 0, A]])

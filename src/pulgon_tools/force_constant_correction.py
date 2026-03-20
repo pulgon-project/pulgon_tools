@@ -45,7 +45,7 @@ def calc_dists(atoms, tolerance=1e-4):
     n_satoms = positions.shape[0]
     d2s = np.empty((MAX_DELTA - MIN_DELTA + 1, n_satoms, n_satoms))
     # TODO: This could not be enough and eventually we should do a proper check
-    # for the sjortest distance.
+    # for the shortest distance.
     for j, j_c in enumerate(range(MIN_DELTA, MAX_DELTA + 1)):
         shifted_positions = positions + (j_c * cell[2, :])[np.newaxis, :]
         d2s[j, :, :] = sp.spatial.distance.cdist(
@@ -96,10 +96,9 @@ def build_constraint_matrix(phonon, recenter=False):
     ase_atoms = Atoms(symbols, positions, cell=cell)
 
     dists, degeneracy, shifts = calc_dists(ase_atoms)
-    # %%
+
     n_atoms, n_satoms = IFC.shape[:2]
 
-    # %%
     average_delta = np.zeros((n_satoms, n_satoms, 3))
     for i in range(n_satoms):
         for j in range(n_satoms):
@@ -112,7 +111,6 @@ def build_constraint_matrix(phonon, recenter=False):
                 )
             average_delta[i, j, :] /= n_elements
 
-    # %%
     average_products = np.zeros((n_satoms, n_satoms, 3, 3))
     for i in range(n_satoms):
         for j in range(n_satoms):
@@ -126,7 +124,6 @@ def build_constraint_matrix(phonon, recenter=False):
                 average_products[i, j, :, :] += np.outer(delta, delta)
             average_products[i, j, :, :] /= n_elements
 
-    # %%
     n_rows = 0
     rows = []
     cols = []
@@ -279,7 +276,7 @@ def solve_fcs(IFC, M, methods="convex_opt"):
 
     if methods == "convex_opt":
 
-        # ###############  CVXPY  #################
+        # CVXPY convex optimization
         flat_IFCs = IFC.ravel()
         print("M @ x  before:", np.abs(M.dot(flat_IFCs)).sum())
         x = cp.Variable(IFC.size)
@@ -288,31 +285,28 @@ def solve_fcs(IFC, M, methods="convex_opt"):
         prob.solve()
         IFC_sym = x.value.reshape(IFC.shape)
         print("M @ x  after:", np.abs(M.dot(IFC_sym.ravel())).sum())
-        ##########################################
+
     elif methods == "ridge_model":
 
-        ################ Ridge Model ###############
-        # before fit
+        # Ridge regression
         parameters = IFC.ravel().copy()
         d = M.dot(parameters)
         delta = np.linalg.norm(d)
         print("Rotational sum-rules before, ||Ax|| = {:20.15f}".format(delta))
-        ## fitting
         ridge = Ridge(
             alpha=1e-6, fit_intercept=False, solver="sparse_cg", tol=1e-10
         )
         ridge.fit(M, d)
         parameters -= ridge.coef_
-        ## after fit
         d = M.dot(parameters)
         delta = np.linalg.norm(d)
         print("Rotational sum-rules after,  ||Ax|| = {:20.15f}".format(delta))
         IFC_sym = parameters.reshape(IFC.shape)
-        ########################################################
     return IFC_sym
 
 
 def main():
+    """CLI entry point for correcting force constants with sum rules."""
     parser = argparse.ArgumentParser(description="Apply the sum rules to fcs")
     parser.add_argument(
         "-p",
@@ -476,10 +470,11 @@ def parse_bool_list(value):
             )
         return parsed
     except (ValueError, SyntaxError):
-        raise argparse.ArgumentTypeError(f"Invalid boolean list: {value}")
+        raise argparse.ArgumentTypeError(f"Invalid bool list: {value}")
 
 
 def parse_int_list(value):
+    """Parse a string representing a list of 3 integers into a Python list."""
     try:
         parsed = ast.literal_eval(value)
         if not isinstance(parsed, list) or not all(
@@ -492,10 +487,11 @@ def parse_int_list(value):
             )
         return parsed
     except (ValueError, SyntaxError):
-        raise argparse.ArgumentTypeError(f"Invalid boolean list: {value}")
+        raise argparse.ArgumentTypeError(f"Invalid int list: {value}")
 
 
 def str2list(v):
+    """Parse a string into a Python list via ast.literal_eval."""
     if v is None:
         return None
     try:

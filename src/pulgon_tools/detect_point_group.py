@@ -47,14 +47,11 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         mol: Union[Molecule, Atoms],
         tolerance: float = 0.01,
     ):
-        """The default settings are usually sufficient. (Totally the same with PointGroupAnalyzer)
-
+        """
         Args:
-            mol (Molecule): Molecule to determine point group.
+            mol (Molecule or Atoms): Structure to determine axial point group.
             tolerance (float): Distance tolerance to consider sites as
-                symmetrically equivalent. Defaults to 0.3 Angstrom.
-            matrix_tolerance (float): Tolerance used to generate the full set of
-                symmetry operations of the point group.
+                symmetrically equivalent. Defaults to 0.01 Angstrom.
         """
         logging.debug("--------------------start detecting axial point group")
 
@@ -63,7 +60,6 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
             mol = Molecule(species=mol.numbers, coords=mol.positions)
 
         self.mol = mol
-        # self.centered_mol = mol
         self.centered_mol = mol.get_centered_molecule()
 
         self.tol = tolerance
@@ -83,8 +79,8 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
 
         logging.debug("Start detecting rotational number")
         self._check_rot_sym(self._zaxis)
-        # if len(self.rot_sym) > 0 and self.rot_sym[0][1]!=1:     # modify the case when i==1
-        if len(self.rot_sym) > 0:  # modify the case when i==1
+        # Include C1 rotational symmetry (rot_num=1) as a valid case
+        if len(self.rot_sym) > 0:
             logging.debug(
                 "The rot_num along zaxis is: %d" % self.rot_sym[0][1]
             )
@@ -139,6 +135,14 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         return inertia_tensor
 
     def _get_center_of_mass_periodic(self, atom):
+        """Compute the center of mass in scaled coordinates with periodic wrapping.
+
+        Args:
+            atom: ASE Atoms object.
+
+        Returns:
+            np.ndarray of scaled center-of-mass coordinates [cx, cy, cz].
+        """
         cell_max = [1, 1, 1]
         tmp = atom.get_scaled_positions() / cell_max * 2 * np.pi
         itp1 = np.cos(tmp)
@@ -154,7 +158,8 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
     def _find_axis_center_of_nanotube(
         self, atom: ase.atoms.Atoms
     ) -> ase.atoms.Atoms:
-        """remove the center of structure to (x,y):(0,0)
+        """Shift the center of mass to scaled position (x,y) = (0.5, 0.5).
+
         Args:
             atom: initial structure
 
@@ -176,6 +181,11 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         return atoms
 
     def get_symmetry_operations(self):
+        """Generate all symmetry operations of the axial point group.
+
+        Returns:
+            list of SymmOp: all group elements as pymatgen SymmOp objects.
+        """
         generators = [
             op.affine_matrix
             for op in self.symmops
@@ -186,6 +196,11 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         return ops_sym
 
     def get_generators(self):
+        """Return the generator affine matrices (excluding identity).
+
+        Returns:
+            list of 4x4 np.ndarray: generator affine matrices.
+        """
         generators = [
             op.affine_matrix
             for op in self.symmops
@@ -195,12 +210,21 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
 
 
 def get_symcell(monomer: Atoms) -> Atoms:
+    """Extract the symmetrically independent atoms from a monomer.
+
+    Args:
+        monomer: ASE Atoms object representing the monomer.
+
+    Returns:
+        Atoms: subset containing one representative atom per equivalent set.
+    """
     apg = LineGroupAnalyzer(monomer)
     equ = list(apg.get_equivalent_atoms()["eq_sets"].keys())
     return monomer[equ]
 
 
 def main():
+    """CLI entry point for detecting the axial point group of a structure."""
     parser = argparse.ArgumentParser(
         description="Detect the line group of a system"
     )

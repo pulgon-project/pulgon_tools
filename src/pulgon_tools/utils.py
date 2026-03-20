@@ -217,15 +217,27 @@ def frac_range(
 
 
 def get_num_of_decimal(num: float) -> int:
+    """Return the number of decimal places in the string representation of num."""
     return len(np.format_float_positional(num).split(".")[1])
 
 
 def decimal_places(x):
+    """Return the number of decimal places of x using exact Decimal arithmetic."""
     d = Decimal(str(x))
     return abs(d.as_tuple().exponent)
 
 
 def get_center_of_mass_periodic(atom):
+    """Compute center of mass in scaled coordinates with periodic wrapping.
+
+    Uses circular mean for x and y; standard mean for z.
+
+    Args:
+        atom: ASE Atoms object.
+
+    Returns:
+        np.ndarray of scaled center-of-mass coordinates [cx, cy, cz].
+    """
     L = np.array([1, 1, 1])
     x = atom.get_scaled_positions()
     theta = 2.0 * np.pi * x / L
@@ -277,6 +289,14 @@ def find_axis_center_of_nanotube(atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
 
 
 def atom_move_z(atom):
+    """Shift all atoms so that the first atom has z=0 in scaled coordinates.
+
+    Args:
+        atom: ASE Atoms object.
+
+    Returns:
+        ASE Atoms with shifted positions.
+    """
     n_st = atom.copy()
 
     pos = (
@@ -392,6 +412,16 @@ def get_perms_from_ops(atoms: Atoms, ops_sym, symprec=1e-2, round=4):
 
 
 def get_matrices(atoms, ops_sym, symprec=1e-5):
+    """Build 3N x 3N representation matrices from symmetry operations and permutations.
+
+    Args:
+        atoms: ASE Atoms object.
+        ops_sym: list of SymmOp symmetry operations.
+        symprec: tolerance for permutation detection.
+
+    Returns:
+        list of np.ndarray: representation matrices of shape (3N, 3N).
+    """
     perms_table = get_perms_from_ops(atoms, ops_sym, symprec=symprec)
 
     natoms = len(atoms.numbers)
@@ -408,6 +438,17 @@ def get_matrices(atoms, ops_sym, symprec=1e-5):
 
 
 def get_matrices_withPhase(atoms, ops_sym, qpoint, symprec=1e-3):
+    """Build complex 3N x 3N representation matrices with Bloch phase factors.
+
+    Args:
+        atoms: ASE Atoms object.
+        ops_sym: list of SymmOp symmetry operations.
+        qpoint: q-point value along z for the phase factor exp(i*q*f).
+        symprec: tolerance for permutation detection.
+
+    Returns:
+        list of complex np.ndarray of shape (3N, 3N).
+    """
     perms_table = get_perms_from_ops(atoms, ops_sym, symprec=symprec)
 
     natoms = len(atoms.numbers)
@@ -426,6 +467,21 @@ def get_matrices_withPhase(atoms, ops_sym, qpoint, symprec=1e-3):
 
 
 def get_modified_projector(DictParams, atom):
+    """Build symmetry-adapted basis via modified projector method.
+
+    Constructs projectors from axial point group and cyclic group
+    representation matrices, then extracts the symmetry-adapted basis
+    vectors via SVD.
+
+    Args:
+        DictParams: dict with keys 'family', 'nrot', 'generator_rot',
+            'generator_tran'.
+        atom: ASE Atoms object.
+
+    Returns:
+        tuple of (adapted, dimensions) where adapted is the concatenated
+        basis matrix and dimensions is a list of mode counts per irrep.
+    """
     family = DictParams["family"]
 
     if family == 4:
@@ -747,6 +803,15 @@ def dimino_affine_matrix_and_character(
 
 
 def brute_force_generate_group(generators: np.ndarray, symec: float = 0.01):
+    """Generate all group elements by brute-force multiplication of generators.
+
+    Args:
+        generators: array of 4x4 affine matrices as group generators.
+        symec: tolerance for comparing matrix elements.
+
+    Returns:
+        np.ndarray: array of all group element affine matrices.
+    """
     e_in = np.eye(4)
     G = generators
     L = np.array([e_in])
@@ -1010,6 +1075,15 @@ def dimino_affine_matrix_and_subsequent(
 
 
 def get_character(DictParams, symprec=1e-8):
+    """Compute symbolic representation matrices for the line group.
+
+    Args:
+        DictParams: dict with keys 'qpoints', 'nrot', 'order', 'family', 'a'.
+        symprec: tolerance for symbolic evaluation.
+
+    Returns:
+        tuple of (characters, paras_values, paras_symbols).
+    """
     characters, paras_values, paras_symbols = line_group_sympy(
         DictParams, symprec
     )
@@ -1019,6 +1093,15 @@ def get_character(DictParams, symprec=1e-8):
 def get_character_withparities(
     DictParams: object, symprec: object = 1e-8
 ) -> tuple[list[Any], list[Any], list[Any]]:
+    """Compute symbolic representation matrices with parity operations.
+
+    Args:
+        DictParams: dict with keys 'qpoints', 'nrot', 'order', 'family', 'a'.
+        symprec: tolerance for symbolic evaluation.
+
+    Returns:
+        tuple of (characters, paras_values, paras_symbols).
+    """
     characters, paras_values, paras_symbols = line_group_sympy_withparities(
         DictParams, symprec
     )
@@ -1026,6 +1109,18 @@ def get_character_withparities(
 
 
 def get_character_num(DictParams, symprec=1e-8):
+    """Compute numerical character table from representation matrices.
+
+    Takes the trace of each representation matrix to obtain characters.
+
+    Args:
+        DictParams: dict with keys 'qpoints', 'nrot', 'order', 'family', 'a'.
+        symprec: tolerance for symbolic evaluation.
+
+    Returns:
+        tuple of (characters, paras_values, paras_symbols) where
+        characters is a numpy array of traces.
+    """
     representation_mat, paras_values, paras_symbols = line_group_sympy(
         DictParams, symprec
     )
@@ -1041,6 +1136,19 @@ def get_character_num(DictParams, symprec=1e-8):
 
 
 def get_character_num_withparities(DictParams, symprec=1e-8):
+    """Compute numerical character table with parity operations.
+
+    Takes the trace of each representation matrix (including parities)
+    to obtain characters.
+
+    Args:
+        DictParams: dict with keys 'qpoints', 'nrot', 'order', 'family', 'a'.
+        symprec: tolerance for symbolic evaluation.
+
+    Returns:
+        tuple of (characters, paras_values, paras_symbols) where
+        characters is a numpy array of traces.
+    """
     (
         representation_mat,
         paras_values,
@@ -1142,6 +1250,26 @@ def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
 def _one_constrains(
     x, natom_pri, natom, perm, perms_trans, p2s_map, size1, C, I, supercell
 ):
+    """Apply one symmetry constraint to the sparse constraint matrix.
+
+    Maps force constant indices through a symmetry permutation and
+    writes the constraint C * FC - I * FC' = 0 into the sparse matrix x.
+
+    Args:
+        x: sparse constraint matrix to modify (in-place).
+        natom_pri: number of atoms in the primitive cell.
+        natom: total number of atoms in the supercell.
+        perm: permutation array for the symmetry operation.
+        perms_trans: permutation arrays for translational operations.
+        p2s_map: primitive-to-supercell atom index mapping.
+        size1: block size (dimension^2, typically 9).
+        C: rotation block (Kronecker product of rotation matrices).
+        I: identity block of same shape as C.
+        supercell: supercell multiplicity factor.
+
+    Returns:
+        sparse matrix with the constraint applied.
+    """
     idx1 = np.repeat(np.arange(natom_pri), natom)
     idx2 = np.tile(np.arange(natom), natom_pri)
 
@@ -1282,6 +1410,18 @@ def _calc_dists(atoms, tolerance=1e-3):
 
 
 def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
+    """Build constraint matrix enforcing acoustic and rotational sum rules.
+
+    Constructs a sparse matrix M such that M @ K = 0 encodes translational
+    (acoustic), Born-Huang, and Huang invariance conditions on compact
+    force constants.
+
+    Args:
+        phonon: Phonopy object with force_constants and supercell set.
+
+    Returns:
+        scipy sparse COO matrix encoding all continuum constraints.
+    """
     IFC = phonon.force_constants.copy()
     scell = phonon.supercell
 
@@ -1427,6 +1567,17 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
 
 
 def get_IFCSYM_from_cvxpy_M(M, IFC):
+    """Symmetrize force constants by solving a constrained optimization.
+
+    Minimizes ||x - IFC||^2 subject to M @ x = 0 using CVXPY.
+
+    Args:
+        M: sparse constraint matrix encoding symmetry/sum rules.
+        IFC: original force constant array.
+
+    Returns:
+        np.ndarray: symmetrized force constants with the same shape as IFC.
+    """
     flat_IFCs = IFC.ravel()
     x = cp.Variable(IFC.size)
     cost = cp.sum_squares(x - flat_IFCs)
@@ -1436,28 +1587,15 @@ def get_IFCSYM_from_cvxpy_M(M, IFC):
     return IFC_sym
 
 
-# def get_freq_and_dis_from_phonopy(phonon, qpoints):
-#     frequencies = []
-#     distances = []
-#     for ii, q in enumerate(qpoints[0]):
-#         D = phonon.get_dynamical_matrix_at_q(q)
-#         eigvals, eigvecs = np.linalg.eigh(D)
-#         eigvals = eigvals.real
-#         frequencies.append(
-#             np.sqrt(abs(eigvals)) * np.sign(eigvals) * VaspToTHz
-#         )
-#         if ii == 0:
-#             distances.append(0)
-#             q_last = q.copy()
-#         else:
-#             distances.append(
-#                 np.linalg.norm(np.dot(q - q_last, phonon.supercell.get_cell()))
-#             )
-#     frequencies = np.array(frequencies).T
-#     return frequencies, distances
-
-
 def get_independent_atoms(perms):
+    """Find symmetrically independent atoms from permutation arrays.
+
+    Args:
+        perms: 2D array of permutations (ops x atoms) or 1D atom indices.
+
+    Returns:
+        np.ndarray: indices of independent (inequivalent) atoms.
+    """
     atom_num = []
     if perms.ndim == 2:
         for line in perms.T:
@@ -1468,6 +1606,16 @@ def get_independent_atoms(perms):
 
 
 def get_site_symmetry(atom_num, perms_ops, ops_sym):
+    """Get the site symmetry operations for each independent atom.
+
+    Args:
+        atom_num: array of independent atom indices.
+        perms_ops: 2D permutation array (ops x atoms).
+        ops_sym: list of SymmOp symmetry operations.
+
+    Returns:
+        list of np.ndarray: rotation matrices that leave each atom invariant.
+    """
     site_symmetry = []
     for num in atom_num:
         idx = np.where(perms_ops[:, num] == num)[0]
@@ -1572,6 +1720,16 @@ def divide_irreps(vec, adapted, dimensions):
 
 
 def get_p_from_qrn(q, r, n):
+    """Compute the parameter p from q, r, and n using Euler's totient.
+
+    Args:
+        q: helical parameter Q.
+        r: helical parameter r.
+        n: number of rotational units.
+
+    Returns:
+        int: the computed parameter p.
+    """
     q_tilder = q / n  # q_tilder = a / f
     if np.isclose(q_tilder, int(q_tilder)):
         q_tilder = int(q_tilder)

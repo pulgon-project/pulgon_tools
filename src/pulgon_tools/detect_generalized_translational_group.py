@@ -58,18 +58,16 @@ class CyclicGroupAnalyzer:
         tolerance: float = 0.001,
     ) -> None:
         """
-
         Args:
             atom: Line group structure to determine the generalized translational group
-            spmprec: system precise tolerance
-            round_symprec: system precise tolerance when take "np.round"
+            tolerance: distance tolerance for symmetry detection
 
         """
         logging.debug(
             "--------------------start detecting generalized translational group"
         )
         alongOZ = self._check_if_along_OZ(atom)
-        if alongOZ == False:
+        if not alongOZ:
             logging.error(
                 "Error while detect cyclic group: The axis direction is not OZ"
             )
@@ -81,8 +79,6 @@ class CyclicGroupAnalyzer:
             self._round_symprec = round_symprec
             self._zaxis = np.array([0, 0, 1])
 
-            # self._center_atom = self._center_of_nanotube(atom)
-
             self._atom = self._find_axis_center_of_nanotube(atom)
             self._primitive = self._find_primitive()
             self.supercell_mutiple = int(
@@ -92,7 +88,10 @@ class CyclicGroupAnalyzer:
             self._analyze()
 
     def _analyze(self) -> None:
-        """print all possible monomers and their cyclic group"""
+        """Detect all possible monomers and determine their cyclic groups.
+
+        Sets self.cyclic_group, self.monomers, and self._sym_operations.
+        """
         monomer, potential_trans = self._potential_translation()
 
         logging.debug("There are %d monomer candidates" % len(monomer))
@@ -105,7 +104,8 @@ class CyclicGroupAnalyzer:
     def _find_axis_center_of_nanotube(
         self, atom: ase.atoms.Atoms
     ) -> ase.atoms.Atoms:
-        """remove the center of structure to (x,y):(0.5,0.5)
+        """Shift the center of mass to scaled position (x,y) = (0.5, 0.5).
+
         Args:
             atom: initial structure
 
@@ -127,7 +127,8 @@ class CyclicGroupAnalyzer:
         return atoms
 
     def _center_of_nanotube(self, atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
-        """remove the center of structure to (x,y):(0,0)
+        """Shift the center of mass to scaled position (x,y) = (0, 0).
+
         Args:
             atom: initial structure
 
@@ -148,6 +149,16 @@ class CyclicGroupAnalyzer:
         return atoms
 
     def _get_center_of_mass_periodic(self, atom):
+        """Compute the center of mass in scaled coordinates with periodic wrapping.
+
+        Uses circular mean for x and y; standard mean for z.
+
+        Args:
+            atom: ASE Atoms object.
+
+        Returns:
+            np.ndarray of scaled center-of-mass coordinates [cx, cy, cz].
+        """
         L = np.array([1, 1, 1])
         x = atom.get_scaled_positions()
         theta = 2.0 * np.pi * x / L
@@ -169,7 +180,7 @@ class CyclicGroupAnalyzer:
 
     def _get_translations(
         self, monomer_atoms: ase.atoms.Atoms, potential_tans: list
-    ) -> [list, list]:
+    ) -> tuple:
         """
 
         Args:
@@ -252,6 +263,15 @@ class CyclicGroupAnalyzer:
         return cyclic_group, mono, sym_op
 
     def _detect_possible_helical_angle(self, ind, monomer):
+        """Compute candidate helical rotation angles between monomer layers.
+
+        Args:
+            ind: number of monomer layers in the primitive cell.
+            monomer: ASE Atoms of the base monomer.
+
+        Returns:
+            np.ndarray of unique candidate angles in degrees.
+        """
         scaled = monomer.get_scaled_positions()
         z = scaled[:, 2]
 
@@ -430,7 +450,7 @@ class CyclicGroupAnalyzer:
 
     def _get_monomer_ind(
         self, z_round: np.ndarray, z_uniq: np.ndarray
-    ) -> [list, list]:
+    ) -> tuple:
         monomer_ind = [np.where(z_round == val)[0] for val in z_uniq]
 
         monomer_ind_sum = []
@@ -440,7 +460,7 @@ class CyclicGroupAnalyzer:
             monomer_ind_sum.append(accumulated.copy())
         return monomer_ind, monomer_ind_sum
 
-    def _potential_translation(self) -> [list, list]:
+    def _potential_translation(self) -> tuple:
         """generate the potential monomer and the scaled translational distance in z axis
 
         Returns: possible monomers and translational distances
@@ -533,6 +553,14 @@ class CyclicGroupAnalyzer:
         return atom
 
     def _check_if_along_OZ(self, atom):
+        """Check whether the cell's periodic axis is aligned along z.
+
+        Args:
+            atom: ASE Atoms object.
+
+        Returns:
+            bool: True if the third cell vector is along z only.
+        """
         if (
             np.isclose(atom.cell[2, :2], [0, 0]).all()
             and np.isclose(atom.cell[:2, 2], [0, 0]).all()
@@ -541,15 +569,28 @@ class CyclicGroupAnalyzer:
         else:
             return False
 
-    def get_cyclic_group(self) -> [list, list]:
-        """Returns a PointGroup object for the molecule."""
+    def get_cyclic_group(self) -> tuple:
+        """Return the detected cyclic group symbols and corresponding monomers.
+
+        Returns:
+            tuple of (cyclic_group, monomers).
+        """
         return self.cyclic_group, self.monomers
 
-    def get_cyclic_group_and_op(self) -> [list, list]:
-        """Returns a PointGroup object for the molecule."""
+    def get_cyclic_group_and_op(self) -> tuple:
+        """Return cyclic group symbols, monomers, and symmetry operations.
+
+        Returns:
+            tuple of (cyclic_group, monomers, sym_operations).
+        """
         return self.cyclic_group, self.monomers, self._sym_operations
 
     def get_generators(self):
+        """Return the generator affine matrix of the cyclic group.
+
+        Returns:
+            np.ndarray: 4x4 affine matrix of the generator operation.
+        """
         if len(self._sym_operations) == 1:
             return self._sym_operations[0].affine_matrix
         else:
@@ -569,6 +610,7 @@ class CyclicGroupAnalyzer:
 
 
 def main():
+    """CLI entry point for detecting the generalized translational group."""
     parser = argparse.ArgumentParser(
         description="Try to detect the generalized translational group of a line group structure"
     )
@@ -603,10 +645,10 @@ def main():
     st = read(st_name)
 
     cyclic = CyclicGroupAnalyzer(st, tolerance=args.tolerance)
-    cy, mononers = cyclic.get_cyclic_group()
+    cy, monomers = cyclic.get_cyclic_group()
     print("The generalized translational group symbol:")
     for ii, cg in enumerate(cy):
-        print("Monomer %s:" % mononers[ii].symbols, cg)
+        print("Monomer %s:" % monomers[ii].symbols, cg)
 
 
 if __name__ == "__main__":

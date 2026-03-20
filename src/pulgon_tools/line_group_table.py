@@ -54,10 +54,10 @@ def get_family_num_from_sym_symbol(trans_sym, rota_sym):
 
     def resolve_value(sym_map, key, suffix=None):
         """Helper to resolve the value from the symbol map."""
-        value = sym_map.get(key)
-        if isinstance(value, dict) and suffix:
-            return value.get(suffix)
-        return value
+        result = sym_map.get(key)
+        if isinstance(result, dict) and suffix:
+            return result.get(suffix)
+        return result
 
     if trans_sym.startswith("T'"):
         sym_map = family_map["T'"]

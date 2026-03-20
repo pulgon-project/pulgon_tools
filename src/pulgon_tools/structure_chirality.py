@@ -26,11 +26,35 @@ from pulgon_tools.utils import Cn, brute_force_generate_group
 
 
 def cyl2car(cyl):
+    """Convert cylindrical coordinates (phi, r, z) to Cartesian (x, y, z).
+
+    Args:
+        cyl: array-like of [phi, r, z] in cylindrical coordinates.
+
+    Returns:
+        np.ndarray of [x, y, z] in Cartesian coordinates.
+    """
     car = np.array([cyl[1] * np.cos(cyl[0]), cyl[1] * np.sin(cyl[0]), cyl[2]])
     return car
 
 
 def helical_group_analysis(a1, a2, n1, n2, L1):
+    """Compute helical group parameters for a chiral nanotube (n1, n2).
+
+    Derives the screw-axis order q, translational pitch f, tube radius r,
+    helical quantum number R, chiral vector direction Ch, translational
+    period t, translation indices (t1, t2), and GCD of (n1, n2).
+
+    Args:
+        a1: first 2D lattice vector of the hexagonal sheet.
+        a2: second 2D lattice vector of the hexagonal sheet.
+        n1: first chiral index.
+        n2: second chiral index.
+        L1: lattice constant (length of a1).
+
+    Returns:
+        symmetry indices: (q, f, r, R, Ch, t, t1, t2, n_gcd).
+    """
     n_gcd = np.gcd(n1, n2)
     n1_tilde = int(n1 / n_gcd)
     n2_tilde = int(n2 / n_gcd)
@@ -73,6 +97,23 @@ def helical_group_analysis(a1, a2, n1, n2, L1):
 def bond_constraints_equations(
     variables, pos_cyl1, pos_cyl2, pos_cyl3, pos_cyl4, bond_length
 ):
+    """Nonlinear equations enforcing equal bond lengths on a nanotube surface.
+
+    Solves for (del_phi, del_r, del_z) corrections to pos_cyl1 such that
+    its distances to pos_cyl2, pos_cyl3, and pos_cyl4 are all equal to
+    bond_length. Used as input to scipy.optimize.fsolve.
+
+    Args:
+        variables: array of [del_phi, del_r, del_z] corrections.
+        pos_cyl1: cylindrical coordinates [phi, r, z] of the atom to adjust.
+        pos_cyl2: cylindrical coordinates of the first neighbor.
+        pos_cyl3: cylindrical coordinates of the second neighbor.
+        pos_cyl4: cylindrical coordinates of the third neighbor.
+        bond_length: target bond length.
+
+    Returns:
+        list of 3 residual equations [eq1, eq2, eq3].
+    """
     del_phi, del_r, del_z = variables
     pos_car1 = np.array(
         [
@@ -125,6 +166,30 @@ def generate_symcell_and_linegroup_elements(
     symbol2=16,
     tol_round=10,
 ):
+    """Generate the symmetry cell (monomer) for a MoS2-type chiral nanotube.
+
+    Maps flat-sheet atomic positions onto the tube surface in cylindrical
+    coordinates, then optimizes chalcogen positions to satisfy bond-length
+    constraints via fsolve.
+
+    Args:
+        a1: first 2D lattice vector.
+        a2: second 2D lattice vector.
+        Ch: unit chiral vector direction.
+        t1: first translational index.
+        t2: second translational index.
+        r: tube radius.
+        bond_length: target bond length between atoms.
+        delta_Z: vertical offset of chalcogen atoms from the metal layer.
+        symbol1: atomic number of the metal atom (default 74, W).
+        symbol2: atomic number of the chalcogen atom (default 16, S).
+        tol_round: decimal precision for rounding intermediate values.
+
+    Returns:
+        tuple of (pos_cyl, symbols) where pos_cyl is an (N, 3) array of
+        cylindrical coordinates [phi, r, z] and symbols is an (N,) array
+        of atomic numbers.
+    """
     pos1 = 1 / 3 * a1 + 1 / 3 * a2
     pos2 = 2 / 3 * a1 + 2 / 3 * a2
     pos_auxiliary1 = 4 / 3 * a1 + 1 / 3 * a2
@@ -183,6 +248,22 @@ def generate_symcell_and_linegroup_elements(
 
 
 def get_nanotube_from_n1n2(n1, n2, symbol1, symbol2, bond_length, delta_Z):
+    """Build a complete MoS2-type chiral nanotube from chiral indices (n1, n2).
+
+    Computes helical group parameters, generates the symmetry cell, applies
+    all line group operations, and returns a deduplicated ASE Atoms object.
+
+    Args:
+        n1: first chiral index.
+        n2: second chiral index.
+        symbol1: atomic number or symbol of the metal atom.
+        symbol2: atomic number or symbol of the chalcogen atom.
+        bond_length: metal-chalcogen bond length in Angstrom.
+        delta_Z: vertical offset of chalcogen atoms from the metal layer.
+
+    Returns:
+        ase.Atoms: the nanotube structure with periodic boundary along z.
+    """
     L1 = np.sqrt(bond_length**2 - delta_Z**2) * np.sqrt(
         2 - 2 * np.cos(2 * np.pi / 3)
     )  # the length of hex lattice
@@ -241,7 +322,7 @@ def get_nanotube_from_n1n2(n1, n2, symbol1, symbol2, bond_length, delta_Z):
                 judge = (
                     np.sqrt((pos_car - tmp) ** 2).sum(axis=1) < 1e-8
                 ).any()
-                if judge == False:
+                if not judge:
                     pos_car = np.vstack((pos_car, tmp))
     symbols = np.tile(symbols, len(ops_sym))
     pos_car = np.array(pos_car)
@@ -256,8 +337,9 @@ def get_nanotube_from_n1n2(n1, n2, symbol1, symbol2, bond_length, delta_Z):
 
 
 def main():
+    """CLI entry point for generating a chiral nanotube and saving as POSCAR."""
     parser = argparse.ArgumentParser(
-        description="generating line group structure by symmetry-based approach"
+        description="generating chiral nanotube structure from (n1, n2) indices"
     )
 
     parser.add_argument(
