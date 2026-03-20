@@ -507,7 +507,6 @@ def line_group_sympy_withparities(DictParams, symprec=1e-6):
                     if jj == 0:
                         tmp0 = fc[tmp]
                     else:
-                        # tmp0 = fc[tmp] * tmp0
                         tmp0 = tmp0 * fc[tmp]
                 tmp1 = tmp0.xreplace(
                     {

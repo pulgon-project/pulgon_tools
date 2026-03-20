@@ -390,7 +390,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
         qps_value = [qpoint]
         n_value = [nrot]
         m1_value = list(range(int(-nrot / 2) + 1, int(nrot / 2) + 1))
-        # piH_value = [-1, 1]
 
         if np.isclose(qpoint, 0, atol=symprec) or np.isclose(
             qpoint, np.pi / a, atol=symprec
@@ -556,7 +555,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
         qps_value = [qpoint]
         n_value = [nrot]
         m1_value = list(range(0, int(nrot / 2) + 1))
-        # piV_value = [-1, 1]
 
         paras_values = list(itertools.product(*[qps_value, m1_value, n_value]))
         characters = []
@@ -578,7 +576,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     if jj == 0:
                         tmp0 = fc[tmp]
                     else:
-                        # tmp0 = tmp0 * fc[tmp]
                         tmp0 = fc[tmp] * tmp0
                 if len(paras_symbol) == 4:
                     tmp1 = tmp0.evalf(
@@ -591,7 +588,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     tmp1 = tmp0.evalf(subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n})
                     res.append(tmp1)
             characters.append(np.array(res).astype(np.complex128))
-        # characters = np.array(characters).astype(np.complex128)
     elif family == 8:
         qpoint = DictParams["qpoints"]
         nrot = DictParams["nrot"]
@@ -665,7 +661,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     if jj == 0:
                         tmp0 = fc[tmp]
                     else:
-                        # tmp0 = tmp0 * fc[tmp]
                         tmp0 = fc[tmp] * tmp0
                 if len(paras_symbol) == 4:
                     tmp1 = tmp0.evalf(
@@ -673,7 +668,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     ) + tmp0.evalf(
                         subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piV: 1}
                     )
-                    # tmp1 = tmp0.evalf(subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n, piV: 0})
                     res.append(tmp1)
                 else:
                     tmp1 = tmp0.evalf(subs={k1: tmp_k1, m1: tmp_m1, n: tmp_n})
@@ -808,11 +802,9 @@ def line_group_sympy(DictParams, symprec=1e-6):
         if np.isclose(np.abs(qpoint), np.pi / a, atol=symprec):
             m1_value = list(range(0, np.floor(nrot / 2 + 1).astype(np.int32)))
         else:
-            # m1_value = list(range(0, np.floor(nrot / 2 + 1).astype(np.int32)))
             m1_value = list(range(0, nrot + 1))
 
         f_value = [a / 2]
-        # paras_values = list(itertools.product(*[qps_value, m1_value, n_value, f_value]))
         paras_values = list(itertools.product(*[qps_value, m1_value, n_value]))
         characters = []
         for ii, paras_value in enumerate(paras_values):
@@ -849,7 +841,6 @@ def line_group_sympy(DictParams, symprec=1e-6):
                     idx_fc = 2
                     fc = func[idx_fc]
                     paras_symbol = [k1, m1, piV]
-                    # paras_symbol = [k1, m1, n, f, piU, piV]
 
                 elif 0 < np.abs(tmp_m1) < tmp_n:
                     idx_fc = 4

@@ -512,8 +512,6 @@ def get_modified_projector(DictParams, atom):
             )
         ]
         matrices_cyc = get_matrices(atom, ops_car_cyc)
-        # m1_range = list(range(-nrot + 1, nrot + 1))
-        # m1_range = list(range(1, nrot + 1))
         m1_range = list(range(-nrot + 1, 1))
 
         basis, dimensions = [], []
@@ -546,33 +544,14 @@ def get_modified_projector(DictParams, atom):
 
             ###### generate the projector for cyclic group ######
             projector_cyc = TensorProduct(Dmu_tran_conj, matrices_cyc[0])
-            # projector_cyc2 = np.tensordot(Dmu_tran_conj, matrices_cyc[0], axes=0)
 
-            # projector_cyc2 = np.einsum("ij,kl->ijkl",Dmu_tran_conj, matrices_cyc[0])
-            # projector_cyc2 = projector_cyc2.transpose(0,2,1,3).reshape(projector_cyc2.shape[0]*projector_cyc2.shape[2], projector_cyc2.shape[0]*projector_cyc2.shape[2])
-            # res = (projector_cyc1==projector_cyc2).all()
-
-            # eigenvectors,eigenvalues,_ = scipy.linalg.svd(projector_cyc)
-            # eigenprojectors = []
-            # for i in range(len(eigenvalues)):
-            #     v = eigenvectors[:, i]
-            #     P = np.outer(v, v.conj())
-            #     eigenprojectors.append(P)
-            # eigenprojectors = np.array(eigenprojectors)
-            # mask_eig = np.isclose(eigenvalues, 1, atol=1e-5)
-            # projector_cyc1 =  eigenprojectors[mask_eig].sum(axis=0)
-
-            # projector = projector_cyc1 @ projector_apg
-            # projector = eigenvectors @ projector_apg
             projector = projector_cyc @ projector_apg.conj()
-            # projector = projector_apg
 
             u, s, vh = scipy.linalg.svd(projector)
             error = 1 - np.abs(s[num_modes - 1] - s[num_modes]) / np.abs(
                 s[num_modes - 1]
             )
 
-            # print("m=%s" % tmp_m1, "error=%s" % error)
             if error > 0.05:
                 logging.ERROR("the error is lager than 0.05")
 
@@ -582,17 +561,10 @@ def get_modified_projector(DictParams, atom):
             else:
                 tmp_basis = u[:, :num_modes]
                 tmp_basis1 = np.array(np.array_split(tmp_basis, 2, axis=0))
-                # tmp_basis1 = tmp_basis1[0] + tmp_basis1[1]
-
-                # tmp_basis1 = np.array(np.array_split(tmp_basis1, 2, axis=1))[0]
-                # basis_Dmu = Dmu_rot_conj[ii]
-                # basis_Dmu = scipy.linalg.orth(Dmu_rot_conj[ii])
-                # basis_Dmu = np.abs(basis_Dmu).reshape(-1)
                 basis_Dmu = np.array([[0, 1], [1, 0]])
                 basis_block1 = np.einsum(
                     "ij,jlm->ilm", basis_Dmu[0][np.newaxis], tmp_basis1
                 )[0]
-                # basis_partial_scalar_product = np.tensordot(basis_Dmu, basis_block, axes=([0, 1], [0, 1]))
 
                 basis.append(basis_block1)
                 dimensions.append(basis_block1.shape[1])
@@ -651,12 +623,6 @@ def get_modified_projector(DictParams, atom):
 
             ###### generate the projector for cyclic group ######
             projector_cyc = TensorProduct(matrices_cyc[0], Dmu_tran_conj)
-            # projector_cyc2 = np.einsum("ij,kl->ijkl",Dmu_tran_conj, matrices_cyc[0])
-            # projector_cyc2 = projector_cyc2.transpose(0,2,1,3).reshape(projector_cyc2.shape[0]*projector_cyc2.shape[2], projector_cyc2.shape[0]*projector_cyc2.shape[2])
-
-            # projector = projector_cyc1 @ projector_apg
-            # projector = eigenvectors @ projector_apg
-            # projector = projector_cyc @ projector_apg
             projector = projector_apg
 
             u, s, vh = scipy.linalg.svd(projector)
@@ -678,7 +644,6 @@ def get_modified_projector(DictParams, atom):
                 basis_block1 = np.einsum(
                     "ij,jlm->ilm", basis_Dmu[0][np.newaxis], tmp_basis1
                 )[0]
-                # basis_partial_scalar_product = np.tensordot(basis_Dmu, basis_block, axes=([0, 1], [0, 1]))
 
                 basis.append(basis_block1)
                 dimensions.append(basis_block1.shape[1])
@@ -701,7 +666,6 @@ def affine_matrix_op(af1, af2, symprec=1e-8):
     af2 = np.round(af2 / symprec).astype(int) * symprec
 
     ro = af2[:3, :3] @ af1[:3, :3]
-    # ro = af1[:3, :3] @ af2[:3, :3]
     tran = np.remainder(af2[:3, 3] + af2[:3, :3] @ af1[:3, 3], [1, 1, 1])
 
     af = np.eye(4)
@@ -740,7 +704,6 @@ def dimino_affine_matrix_and_character(
         L = np.vstack((L, [g]))
         L_chara = np.vstack((L_chara, [g_chara]))
 
-        # g = np.dot(g, g1)
         g = affine_matrix_op(g, g1)
         g_chara = np.dot(g_chara, g1_chara)
 
@@ -1205,7 +1168,6 @@ def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
     tmp1 = (idx1 * natom + idx2) * size1
     tmp2 = (idx1 * natom + idx2 + 1) * size1
     tmp3 = np.linspace(tmp1, tmp2, size1 + 1).astype(np.int64)[:-1, :].T
-    # tmp3 = np.array([np.arange(tmp1[ii], tmp2[ii]) for ii in range(len(tmp1))])
     for ii, op in enumerate(ops):
         print("now run in %s operarion" % ii)
         perm = permutations[ii]
@@ -1216,23 +1178,14 @@ def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
         ).reshape(size1, size1)
         x = ss.csc_matrix((size1 * natom**2, size1 * natom**2))
         if (perm == np.arange(natom)).all():
-            # x[np.arange(size1*(natom**2)), np.arange(size1*(natom**2))] = 1
             M.append(x)
             continue
-        # for ii, jj in list(itertools.product(np.arange(natom), np.arange(natom))):
-        #     x[(ii * natom + jj) * size1:(ii * natom + jj + 1) * size1, (ii * natom + jj) * size1:(ii * natom + jj + 1) * size1] = C
-        #     pii, pjj = perm[ii], perm[jj]
-        #     x[(ii * natom + jj) * size1:(ii * natom + jj + 1) * size1, (pii * natom + pjj) * size1:(pii * natom + pjj + 1) * size1] = -I
-        # ptmp1 = np.hstack(([(pidx1[ii] * natom + pidx2) * size1 for ii in range(len(pidx1))]))
-        # ptmp2 = np.hstack(([(pidx1[ii] * natom + pidx2 + 1) * size1 for ii in range(len(pidx1))]))
 
         pidx1 = perm[idx1]
         pidx2 = perm[idx2]
 
         ptmp1 = (pidx1 * natom + pidx2) * size1
         ptmp2 = (pidx1 * natom + pidx2 + 1) * size1
-
-        # ptmp3 = np.array([np.arange(ptmp1[ii], ptmp2[ii]) for ii in range(len(ptmp1))])
         ptmp3 = np.linspace(ptmp1, ptmp2, size1 + 1).astype(np.int64)[:-1, :].T
 
         itp1 = np.repeat(tmp3, size1, axis=1)
@@ -1440,7 +1393,6 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
     for i in range(n_satoms):
         for j in range(n_satoms):
             n_elements = degeneracy[i, j]
-            # n_elements=1
             for i_d in range(n_elements):
                 average_delta[i, j, :] += (
                     positions[j, :]
@@ -1456,7 +1408,6 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
     for i in range(n_satoms):
         for j in range(n_satoms):
             n_elements = degeneracy[i, j]
-            # n_elements=1
             for i_d in range(n_elements):
                 delta = (
                     positions[j, :]
@@ -1702,14 +1653,12 @@ def divide_irreps(vec, adapted, dimensions):
         The projected length of each irrep
     """
     tmp1 = vec @ adapted.conj()
-    # tmp1 = vec @ adapted
     start = 0
     means, vectors = [], []
     for im, dim in enumerate(dimensions):
         end = start + dim
         if vec.ndim == 1:
             means.append((np.abs(tmp1[start:end]) ** 2).sum())
-            # vectors.append((tmp1 * adapted)[:, start:end].sum(axis=1))
         else:
             means.append((np.abs(tmp1[:, start:end]) ** 2).sum(axis=1))
         start = copy.copy(end)
