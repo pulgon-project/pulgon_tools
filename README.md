@@ -6,6 +6,17 @@ This repository contains the software backbone of [project PULGON](https://pulgo
 
 ## Installation
 
+### With uv:
+
+```bash
+git clone https://github.com/pulgon-project/pulgon_tools.git
+cd pulgon_tools
+uv sync --extra dev
+uv run pytest                    # run the test suite
+```
+
+### With pip:
+
 ```bash
 git clone https://github.com/pulgon-project/pulgon_tools.git
 cd pulgon_tools
@@ -14,8 +25,6 @@ pytest                    # run the test suite
 ```
 
 **Requirements:** Python ≥ 3.9, ≤ 3.12
-
-**Dependencies:** `numpy`, `ase`, `pymatgen`, `phonopy`, `seekpath`, `cvxpy`, `ipdb`
 
 ---
 
@@ -26,26 +35,26 @@ pytest                    # run the test suite
 Input motif / Generators / Chiral indices
         │
         ▼
-┌─────────────────────┐
-│  Structure Generation│  → POSCAR / cif / xyz
-└─────────────────────┘
+┌───────────────────────┐
+│  Structure Generation │  → POSCAR / cif / xyz
+└───────────────────────┘
         │
         ▼
-┌─────────────────────┐
+┌──────────────────────┐
 │  Symmetry Detection  │  → Line group symbol, symmetry operations
-└─────────────────────┘
+└──────────────────────┘
         │
         ▼
-┌─────────────────────┐
+┌──────────────────────┐
 │ Irreps & Char. Table │  → Irrep matrices, character table
-└─────────────────────┘
+└──────────────────────┘
 
 Structure + Supercell + IFC
         │
         ▼
-┌─────────────────────┐
-│   IFC Correction     │  → Modified IFC
-└─────────────────────┘
+┌───────────────────┐
+│   IFC Correction  │  → Modified IFC
+└───────────────────┘
 ```
 
 ---
