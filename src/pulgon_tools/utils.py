@@ -216,11 +216,6 @@ def frac_range(
     return close
 
 
-def get_num_of_decimal(num: float) -> int:
-    """Return the number of decimal places in the string representation of num."""
-    return len(np.format_float_positional(num).split(".")[1])
-
-
 def decimal_places(x):
     """Return the number of decimal places of x using exact Decimal arithmetic."""
     d = Decimal(str(x))
@@ -228,7 +223,7 @@ def decimal_places(x):
 
 
 def get_center_of_mass_periodic(atom):
-    """Compute center of mass in scaled coordinates with periodic wrapping.
+    """Compute the center of mass in scaled coordinates with periodic wrapping.
 
     Uses circular mean for x and y; standard mean for z.
 
@@ -275,34 +270,6 @@ def find_axis_center_of_nanotube(atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
             atom.get_scaled_positions()
             # - [center[0],center[1],0] + [0.5, 0.5, 0],
             - center + [0.5, 0.5, 0],
-            [1, 1, 1],
-        )
-        @ atom.cell
-    )
-
-    atoms = Atoms(
-        cell=n_st.cell,
-        numbers=n_st.numbers,
-        positions=pos,
-    )
-    return atoms
-
-
-def atom_move_z(atom):
-    """Shift all atoms so that the first atom has z=0 in scaled coordinates.
-
-    Args:
-        atom: ASE Atoms object.
-
-    Returns:
-        ASE Atoms with shifted positions.
-    """
-    n_st = atom.copy()
-
-    pos = (
-        np.remainder(
-            atom.get_scaled_positions()
-            - [0, 0, atom.get_scaled_positions()[0][2]],
             [1, 1, 1],
         )
         @ atom.cell
@@ -464,192 +431,6 @@ def get_matrices_withPhase(atoms, ops_sym, qpoint, symprec=1e-3):
             ].rotation_matrix.copy() * np.exp(1j * qpoint * phasefacter)
         matrices.append(matrix)
     return matrices
-
-
-def get_modified_projector(DictParams, atom):
-    """Build symmetry-adapted basis via modified projector method.
-
-    Constructs projectors from axial point group and cyclic group
-    representation matrices, then extracts the symmetry-adapted basis
-    vectors via SVD.
-
-    Args:
-        DictParams: dict with keys 'family', 'nrot', 'generator_rot',
-            'generator_tran'.
-        atom: ASE Atoms object.
-
-    Returns:
-        tuple of (adapted, dimensions) where adapted is the concatenated
-        basis matrix and dimensions is a list of mode counts per irrep.
-    """
-    family = DictParams["family"]
-
-    if family == 4:
-        nrot = DictParams["nrot"]
-        g_rot = DictParams["generator_rot"]
-        g_tran = DictParams["generator_tran"]
-
-        ops_car_apg = []
-        for s in range(nrot):
-            for j in range(2):
-                rot = np.linalg.matrix_power(
-                    g_rot[0].rotation_matrix, s
-                ) @ np.linalg.matrix_power(g_rot[1].rotation_matrix, j)
-                tran = (
-                    g_rot[0].translation_vector * s
-                    + g_rot[1].translation_vector * j
-                ) * atom.cell[2, 2]
-                op = SymmOp.from_rotation_and_translation(
-                    rotation_matrix=rot, translation_vec=tran
-                )
-                ops_car_apg.append(op)
-        matrices_apg = get_matrices(atom, ops_car_apg)
-
-        ops_car_cyc = [
-            SymmOp.from_rotation_and_translation(
-                rotation_matrix=g_tran[0].rotation_matrix,
-                translation_vec=g_tran[0].translation_vector * atom.cell[2, 2],
-            )
-        ]
-        matrices_cyc = get_matrices(atom, ops_car_cyc)
-        m1_range = list(range(-nrot + 1, 1))
-
-        basis, dimensions = [], []
-        for tmp_m1 in m1_range:
-            Dmu_rot_conj, Dmu_tran_conj = get_modified_Dmu(
-                DictParams, tmp_m1, symprec=1e-6
-            )
-
-            ###### generate the projector for axial point group ########
-            num_modes = 0
-            for ii in range(len(Dmu_rot_conj)):
-                if ii == 0:
-                    projector = TensorProduct(
-                        Dmu_rot_conj[ii], matrices_apg[ii]
-                    )
-                else:
-                    projector += TensorProduct(
-                        Dmu_rot_conj[ii], matrices_apg[ii]
-                    )
-
-                if Dmu_rot_conj[ii].ndim != 0:
-                    num_modes += (
-                        Dmu_rot_conj[ii].trace() * matrices_apg[ii].trace()
-                    )
-                else:
-                    num_modes += Dmu_rot_conj[ii] * matrices_apg[ii].trace()
-
-            num_modes = int(num_modes.real / (2 * nrot))
-            projector_apg = projector / (2 * nrot)
-
-            ###### generate the projector for cyclic group ######
-            projector_cyc = TensorProduct(Dmu_tran_conj, matrices_cyc[0])
-
-            projector = projector_cyc @ projector_apg.conj()
-
-            u, s, vh = scipy.linalg.svd(projector)
-            error = 1 - np.abs(s[num_modes - 1] - s[num_modes]) / np.abs(
-                s[num_modes - 1]
-            )
-
-            if error > 0.05:
-                logging.ERROR("the error is lager than 0.05")
-
-            if Dmu_tran_conj.ndim == 0:
-                basis.append(u[:, :num_modes])
-                dimensions.append(num_modes)
-            else:
-                tmp_basis = u[:, :num_modes]
-                tmp_basis1 = np.array(np.array_split(tmp_basis, 2, axis=0))
-                basis_Dmu = np.array([[0, 1], [1, 0]])
-                basis_block1 = np.einsum(
-                    "ij,jlm->ilm", basis_Dmu[0][np.newaxis], tmp_basis1
-                )[0]
-
-                basis.append(basis_block1)
-                dimensions.append(basis_block1.shape[1])
-    elif family == 2:
-        nrot = DictParams["nrot"]
-        g_rot = DictParams["generator_rot"]
-        g_tran = DictParams["generator_tran"]
-
-        ops_car_apg = []
-        for s in range(2 * nrot):
-            rot = np.linalg.matrix_power(g_rot[0].rotation_matrix, s)
-            tran = (g_rot[0].translation_vector * s) * atom.cell[2, 2]
-            op = SymmOp.from_rotation_and_translation(
-                rotation_matrix=rot, translation_vec=tran
-            )
-            ops_car_apg.append(op)
-        matrices_apg = get_matrices(atom, ops_car_apg)
-
-        ops_car_cyc = [
-            SymmOp.from_rotation_and_translation(
-                rotation_matrix=g_tran[0].rotation_matrix,
-                translation_vec=g_tran[0].translation_vector * atom.cell[2, 2],
-            )
-        ]
-        matrices_cyc = get_matrices(atom, ops_car_cyc)
-        m1_range = list(range(int(-nrot / 2 + 1), int(nrot / 2 + 1)))
-
-        basis, dimensions = [], []
-        for tmp_m1 in m1_range:
-            Dmu_rot_conj, Dmu_tran_conj = get_modified_Dmu(
-                DictParams, tmp_m1, symprec=1e-6
-            )
-            ###### generate the projector for axial point group ########
-            num_modes = 0
-            tmp = []
-            for ii in range(len(Dmu_rot_conj)):
-                if ii == 0:
-                    projector = TensorProduct(
-                        matrices_apg[ii], Dmu_rot_conj[ii]
-                    )
-                else:
-                    projector += TensorProduct(
-                        matrices_apg[ii], Dmu_rot_conj[ii]
-                    )
-
-                if Dmu_rot_conj[ii].ndim != 0:
-                    num_modes += (
-                        Dmu_rot_conj[ii].trace() * matrices_apg[ii].trace()
-                    )
-                    tmp.append(matrices_apg[ii].trace())
-                else:
-                    num_modes += Dmu_rot_conj[ii] * matrices_apg[ii].trace()
-
-            num_modes = int(num_modes.real / (2 * nrot))
-            projector_apg = projector / (2 * nrot)
-
-            ###### generate the projector for cyclic group ######
-            projector_cyc = TensorProduct(matrices_cyc[0], Dmu_tran_conj)
-            projector = projector_apg
-
-            u, s, vh = scipy.linalg.svd(projector)
-            error = 1 - np.abs(s[num_modes - 1] - s[num_modes]) / np.abs(
-                s[num_modes - 1]
-            )
-
-            if error > 0.05:
-                logging.ERROR("the error is lager than 0.05")
-
-            if Dmu_tran_conj.ndim == 0:
-                basis.append(u[:, :num_modes])
-                dimensions.append(num_modes)
-            else:
-                tmp_basis = u[:, :num_modes]
-                tmp_basis1 = np.array(np.array_split(tmp_basis, 2, axis=0))
-                basis_Dmu = np.array([[0, 1], [1, 0]])
-
-                basis_block1 = np.einsum(
-                    "ij,jlm->ilm", basis_Dmu[0][np.newaxis], tmp_basis1
-                )[0]
-
-                basis.append(basis_block1)
-                dimensions.append(basis_block1.shape[1])
-
-    adapted = np.concatenate(basis, axis=1)
-    return adapted, dimensions
 
 
 def affine_matrix_op(af1, af2, symprec=1e-8):
@@ -1127,16 +908,6 @@ def get_character_num_withparities(DictParams, symprec=1e-8):
     return characters, paras_values, paras_symbols
 
 
-def fast_orth(A, num):
-    """Reimplementation of scipy.linalg.orth() which takes only the vectors with
-    values almost equal to the maximum, and returns at most maxrank vectors.
-    """
-    # u, s, vh = scipy.linalg.interpolative.svd(A, maxrank)
-    u, s, vh = scipy.linalg.svd(A)
-    error = 1 - np.abs(s[num - 1] - s[num]) / np.abs(s[num - 1])
-    return u[:, :num], error
-
-
 def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
     """M K = 0
 
@@ -1538,44 +1309,6 @@ def get_IFCSYM_from_cvxpy_M(M, IFC):
     return IFC_sym
 
 
-def get_independent_atoms(perms):
-    """Find symmetrically independent atoms from permutation arrays.
-
-    Args:
-        perms: 2D array of permutations (ops x atoms) or 1D atom indices.
-
-    Returns:
-        np.ndarray: indices of independent (inequivalent) atoms.
-    """
-    atom_num = []
-    if perms.ndim == 2:
-        for line in perms.T:
-            atom_num.append(np.unique(line)[0])
-        return np.unique(atom_num)
-    else:
-        return perms
-
-
-def get_site_symmetry(atom_num, perms_ops, ops_sym):
-    """Get the site symmetry operations for each independent atom.
-
-    Args:
-        atom_num: array of independent atom indices.
-        perms_ops: 2D permutation array (ops x atoms).
-        ops_sym: list of SymmOp symmetry operations.
-
-    Returns:
-        list of np.ndarray: rotation matrices that leave each atom invariant.
-    """
-    site_symmetry = []
-    for num in atom_num:
-        idx = np.where(perms_ops[:, num] == num)[0]
-        site_symmetry.append(
-            np.array([ops_sym[ii].rotation_matrix for ii in idx])
-        )
-    return site_symmetry
-
-
 def get_symbols_from_ops(ops_sym):
     """
     Get the symbols of point group operations from the rotation matrix.
@@ -1666,27 +1399,6 @@ def divide_irreps(vec, adapted, dimensions):
     if means.ndim > 1:
         means = means.T
     return np.array(means)
-
-
-def get_p_from_qrn(q, r, n):
-    """Compute the parameter p from q, r, and n using Euler's totient.
-
-    Args:
-        q: helical parameter Q.
-        r: helical parameter r.
-        n: number of rotational units.
-
-    Returns:
-        int: the computed parameter p.
-    """
-    q_tilder = q / n  # q_tilder = a / f
-    if np.isclose(q_tilder, int(q_tilder)):
-        q_tilder = int(q_tilder)
-    else:
-        logging.ERROR("q_tilder is not an interger")
-    p_tilder = r ** (sympy.totient(q_tilder) - 1)
-    p = n * p_tilder
-    return p
 
 
 def angle_between_points(A, B, C):
