@@ -17,6 +17,7 @@ import argparse
 import ast
 import collections
 import os
+from typing import List, Optional, Tuple, Union
 
 import cvxpy as cp
 import matplotlib.pyplot as plt
@@ -33,7 +34,9 @@ from phonopy.structure.atoms import PhonopyAtoms
 from sklearn.linear_model import Ridge
 
 
-def calc_dists(atoms, tolerance=1e-4):
+def calc_dists(
+    atoms: Atoms, tolerance: float = 1e-4
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Return the distances between atoms in the supercell, their
     degeneracies and the associated displacements along OZ.
@@ -62,7 +65,9 @@ def calc_dists(atoms, tolerance=1e-4):
     return (dmin, nequi, shifts)
 
 
-def build_constraint_matrix(phonon, recenter=False):
+def build_constraint_matrix(
+    phonon: Phonopy, recenter: bool = False
+) -> Tuple[ssp.spmatrix, np.ndarray]:
     """
     Build the sparse constraint matrix encoding translational
     acoustic sum rules, Born-Huang rotational sum rules,
@@ -271,7 +276,11 @@ def build_constraint_matrix(phonon, recenter=False):
     return M, IFC
 
 
-def solve_fcs(IFC, M, methods="convex_opt"):
+def solve_fcs(
+    IFC: np.ndarray,
+    M: ssp.spmatrix,
+    methods: str = "convex_opt",
+) -> np.ndarray:
     """
     Solve the constrained quadratic optimization problem
     to correct the IFCs.
@@ -458,7 +467,7 @@ def main():
     )
 
 
-def parse_bool_list(value):
+def parse_bool_list(value: str) -> List[bool]:
     """Parse a string representing a list of booleans into a Python list"""
     try:
         parsed = ast.literal_eval(value)
@@ -477,7 +486,7 @@ def parse_bool_list(value):
         raise argparse.ArgumentTypeError(f"Invalid bool list: {value}")
 
 
-def parse_int_list(value):
+def parse_int_list(value: str) -> List[int]:
     """Parse a string representing a list of 3 integers into a Python list."""
     try:
         parsed = ast.literal_eval(value)
@@ -494,7 +503,7 @@ def parse_int_list(value):
         raise argparse.ArgumentTypeError(f"Invalid int list: {value}")
 
 
-def str2list(v):
+def str2list(v: Optional[str]) -> Optional[list]:
     """Parse a string into a Python list via ast.literal_eval."""
     if v is None:
         return None

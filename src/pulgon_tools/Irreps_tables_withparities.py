@@ -15,13 +15,14 @@
 
 import itertools
 import logging
+from typing import Tuple
 
 import numpy as np
 import sympy
 from sympy import symbols
 
 
-def sym_inverse_eye(n):
+def sym_inverse_eye(n: int) -> sympy.Matrix:
     A = sympy.zeros(n)
     for ii in range(n):
         A[ii, n - ii - 1] = 1

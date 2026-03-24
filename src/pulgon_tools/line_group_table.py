@@ -1,10 +1,13 @@
 import logging
 import re
+from typing import Optional
 
 import numpy as np
 
 
-def get_family_num_from_sym_symbol(trans_sym, rota_sym):
+def get_family_num_from_sym_symbol(
+    trans_sym: str, rota_sym: str
+) -> Optional[int]:
     """
     Determine the family number based on translational
     and rotational symmetry symbols.

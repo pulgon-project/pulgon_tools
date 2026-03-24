@@ -13,6 +13,7 @@
 # permissions and limitations under the License.
 
 import argparse
+from typing import List, Tuple, Union
 
 import numpy as np
 import sympy
@@ -25,7 +26,9 @@ from scipy.optimize import fsolve
 from pulgon_tools.utils import Cn, brute_force_generate_group
 
 
-def cyl2car(cyl):
+def cyl2car(
+    cyl: Union[list, np.ndarray],
+) -> np.ndarray:
     """Convert cylindrical coordinates (phi, r, z) to Cartesian (x, y, z).
 
     Args:
@@ -38,7 +41,13 @@ def cyl2car(cyl):
     return car
 
 
-def helical_group_analysis(a1, a2, n1, n2, L1):
+def helical_group_analysis(
+    a1: np.ndarray,
+    a2: np.ndarray,
+    n1: int,
+    n2: int,
+    L1: float,
+) -> tuple:
     """Compute helical group parameters for a chiral nanotube (n1, n2).
 
     Derives the screw-axis order q, translational pitch f, tube radius r,
@@ -95,8 +104,13 @@ def helical_group_analysis(a1, a2, n1, n2, L1):
 
 
 def bond_constraints_equations(
-    variables, pos_cyl1, pos_cyl2, pos_cyl3, pos_cyl4, bond_length
-):
+    variables: np.ndarray,
+    pos_cyl1: np.ndarray,
+    pos_cyl2: np.ndarray,
+    pos_cyl3: np.ndarray,
+    pos_cyl4: np.ndarray,
+    bond_length: float,
+) -> List[float]:
     """Nonlinear equations enforcing equal bond lengths on a nanotube surface.
 
     Solves for (del_phi, del_r, del_z) corrections to pos_cyl1 such that
@@ -154,18 +168,18 @@ def bond_constraints_equations(
 
 
 def generate_symcell_and_linegroup_elements(
-    a1,
-    a2,
-    Ch,
-    t1,
-    t2,
-    r,
-    bond_length,
-    delta_Z,
-    symbol1=74,
-    symbol2=16,
-    tol_round=10,
-):
+    a1: np.ndarray,
+    a2: np.ndarray,
+    Ch: np.ndarray,
+    t1: int,
+    t2: int,
+    r: float,
+    bond_length: float,
+    delta_Z: float,
+    symbol1: Union[int, str] = 74,
+    symbol2: Union[int, str] = 16,
+    tol_round: int = 10,
+) -> Tuple[np.ndarray, np.ndarray]:
     """Generate the symmetry cell (monomer) for a MoS2-type chiral nanotube.
 
     Maps flat-sheet atomic positions onto the tube surface in cylindrical
@@ -247,7 +261,14 @@ def generate_symcell_and_linegroup_elements(
     return pos_cyl, symbols
 
 
-def get_nanotube_from_n1n2(n1, n2, symbol1, symbol2, bond_length, delta_Z):
+def get_nanotube_from_n1n2(
+    n1: int,
+    n2: int,
+    symbol1: Union[int, str],
+    symbol2: Union[int, str],
+    bond_length: float,
+    delta_Z: float,
+) -> Atoms:
     """Build a complete MoS2-type chiral nanotube from chiral indices (n1, n2).
 
     Computes helical group parameters, generates the symmetry cell, applies

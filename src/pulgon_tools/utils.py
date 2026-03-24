@@ -16,7 +16,7 @@ import copy
 import itertools
 import logging
 from decimal import Decimal
-from typing import Any, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import ase
 import cvxpy as cp
@@ -217,14 +217,14 @@ def frac_range(
     return close
 
 
-def decimal_places(x):
+def decimal_places(x: float) -> int:
     """Return the number of decimal places of x
     using exact Decimal arithmetic."""
     d = Decimal(str(x))
     return abs(d.as_tuple().exponent)
 
 
-def get_center_of_mass_periodic(atom):
+def get_center_of_mass_periodic(atom: Atoms) -> np.ndarray:
     """Compute the center of mass in scaled coordinates
     with periodic wrapping.
 
@@ -286,7 +286,12 @@ def find_axis_center_of_nanotube(atom: ase.atoms.Atoms) -> ase.atoms.Atoms:
     return atoms
 
 
-def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
+def get_perms(
+    atoms: Atoms,
+    cyclic_group_ops: List[SymmOp],
+    point_group_ops: List[SymmOp],
+    symprec: float = 1e-2,
+) -> Tuple[np.ndarray, List[SymmOp]]:
     """get the permutation table from symmetry operations
 
     Args:
@@ -342,7 +347,12 @@ def get_perms(atoms, cyclic_group_ops, point_group_ops, symprec=1e-2):
     return perms_table, sym_operations
 
 
-def get_perms_from_ops(atoms: Atoms, ops_sym, symprec=1e-2, round=4):
+def get_perms_from_ops(
+    atoms: Atoms,
+    ops_sym: List[SymmOp],
+    symprec: float = 1e-2,
+    round: int = 4,
+) -> np.ndarray:
     """get the permutation table from symmetry operations
 
     Args:
@@ -381,7 +391,11 @@ def get_perms_from_ops(atoms: Atoms, ops_sym, symprec=1e-2, round=4):
     return perms_table
 
 
-def get_matrices(atoms, ops_sym, symprec=1e-5):
+def get_matrices(
+    atoms: Atoms,
+    ops_sym: List[SymmOp],
+    symprec: float = 1e-5,
+) -> List[np.ndarray]:
     """Build 3N x 3N representation matrices from
     symmetry operations and permutations.
 
@@ -408,7 +422,12 @@ def get_matrices(atoms, ops_sym, symprec=1e-5):
     return matrices
 
 
-def get_matrices_withPhase(atoms, ops_sym, qpoint, symprec=1e-3):
+def get_matrices_withPhase(
+    atoms: Atoms,
+    ops_sym: List[SymmOp],
+    qpoint: float,
+    symprec: float = 1e-3,
+) -> List[np.ndarray]:
     """Build complex 3N x 3N representation matrices
     with Bloch phase factors.
 
@@ -438,7 +457,9 @@ def get_matrices_withPhase(atoms, ops_sym, qpoint, symprec=1e-3):
     return matrices
 
 
-def affine_matrix_op(af1, af2, symprec=1e-8):
+def affine_matrix_op(
+    af1: np.ndarray, af2: np.ndarray, symprec: float = 1e-8
+) -> np.ndarray:
     """Definition of group multiplication
 
     Args:
@@ -462,8 +483,10 @@ def affine_matrix_op(af1, af2, symprec=1e-8):
 
 
 def dimino_affine_matrix_and_character(
-    generators: np.ndarray, character, symec: float = 0.001
-) -> np.ndarray:
+    generators: np.ndarray,
+    character: np.ndarray,
+    symec: float = 0.001,
+) -> Tuple[np.ndarray, np.ndarray]:
     """
 
     Args:
@@ -581,7 +604,7 @@ def brute_force_generate_group(generators: np.ndarray, symec: float = 0.01):
 
 def brute_force_generate_group_subsequent(
     generators: np.ndarray, symec: float = 0.01
-):
+) -> Tuple[np.ndarray, List[List[int]]]:
     """generate all the group elements by brute force algorithm
 
     Args:
@@ -755,7 +778,7 @@ def dimino_affine_matrix(
 
 def dimino_affine_matrix_and_subsequent(
     generators: np.ndarray, symec: float = 0.001
-) -> np.ndarray:
+) -> Tuple[np.ndarray, List[List[int]]]:
     """
 
     Args:
@@ -829,7 +852,9 @@ def dimino_affine_matrix_and_subsequent(
     return L, L_subs
 
 
-def get_character(DictParams, symprec=1e-8):
+def get_character(
+    DictParams: dict, symprec: float = 1e-8
+) -> Tuple[list, list, list]:
     """Compute symbolic representation matrices for the line group.
 
     Args:
@@ -846,8 +871,8 @@ def get_character(DictParams, symprec=1e-8):
 
 
 def get_character_withparities(
-    DictParams: object, symprec: object = 1e-8
-) -> tuple[list[Any], list[Any], list[Any]]:
+    DictParams: dict, symprec: float = 1e-8
+) -> Tuple[List[Any], List[Any], List[Any]]:
     """Compute symbolic representation matrices with parity operations.
 
     Args:
@@ -863,7 +888,9 @@ def get_character_withparities(
     return characters, paras_values, paras_symbols
 
 
-def get_character_num(DictParams, symprec=1e-8):
+def get_character_num(
+    DictParams: dict, symprec: float = 1e-8
+) -> Tuple[np.ndarray, list, list]:
     """Compute numerical character table from representation matrices.
 
     Takes the trace of each representation matrix to obtain characters.
@@ -890,7 +917,9 @@ def get_character_num(DictParams, symprec=1e-8):
     return characters, paras_values, paras_symbols
 
 
-def get_character_num_withparities(DictParams, symprec=1e-8):
+def get_character_num_withparities(
+    DictParams: dict, symprec: float = 1e-8
+) -> Tuple[np.ndarray, list, list]:
     """Compute numerical character table with parity operations.
 
     Takes the trace of each representation matrix (including parities)
@@ -919,7 +948,11 @@ def get_character_num_withparities(DictParams, symprec=1e-8):
     return characters, paras_values, paras_symbols
 
 
-def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
+def get_sym_constrains_matrices_M(
+    ops: np.ndarray,
+    permutations: np.ndarray,
+    diminsion: int = 3,
+) -> ss.spmatrix:
     """M K = 0
 
     :param ops:
@@ -983,8 +1016,17 @@ def get_sym_constrains_matrices_M(ops, permutations, diminsion=3):
 
 
 def _one_constrains(
-    x, natom_pri, natom, perm, perms_trans, p2s_map, size1, C, I, supercell
-):
+    x: ss.spmatrix,
+    natom_pri: int,
+    natom: int,
+    perm: np.ndarray,
+    perms_trans: np.ndarray,
+    p2s_map: np.ndarray,
+    size1: int,
+    C: np.ndarray,
+    I: np.ndarray,
+    supercell: int,
+) -> ss.spmatrix:
     """Apply one symmetry constraint to the sparse constraint matrix.
 
     Maps force constant indices through a symmetry permutation and
@@ -1046,8 +1088,14 @@ def _one_constrains(
 
 
 def get_sym_constrains_matrices_M_for_conpact_fc(
-    IFC, ops_sym, perms_ops, perms_trans, p2s_map, natom_pri, dimension=3
-):
+    IFC: np.ndarray,
+    ops_sym: List[SymmOp],
+    perms_ops: np.ndarray,
+    perms_trans: np.ndarray,
+    p2s_map: np.ndarray,
+    natom_pri: int,
+    dimension: int = 3,
+) -> ss.spmatrix:
     """
 
     :param ops:
@@ -1111,7 +1159,9 @@ def get_sym_constrains_matrices_M_for_conpact_fc(
     return M
 
 
-def _calc_dists(atoms, tolerance=1e-3):
+def _calc_dists(
+    atoms: Atoms, tolerance: float = 1e-3
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Return the distances between atoms in the supercell, their
     degeneracies and the associated displacements along OZ.
@@ -1145,7 +1195,9 @@ def _calc_dists(atoms, tolerance=1e-3):
     return (dmin, nequi, shifts)
 
 
-def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
+def get_continum_constrains_matrices_M_for_conpact_fc(
+    phonon,
+) -> ss.coo_array:
     """Build constraint matrix enforcing acoustic and rotational sum rules.
 
     Constructs a sparse matrix M such that M @ K = 0 encodes translational
@@ -1300,7 +1352,7 @@ def get_continum_constrains_matrices_M_for_conpact_fc(phonon):
     return M1
 
 
-def get_IFCSYM_from_cvxpy_M(M, IFC):
+def get_IFCSYM_from_cvxpy_M(M: ss.spmatrix, IFC: np.ndarray) -> np.ndarray:
     """Symmetrize force constants by solving a constrained optimization.
 
     Minimizes ||x - IFC||^2 subject to M @ x = 0 using CVXPY.
@@ -1321,7 +1373,9 @@ def get_IFCSYM_from_cvxpy_M(M, IFC):
     return IFC_sym
 
 
-def get_symbols_from_ops(ops_sym):
+def get_symbols_from_ops(
+    ops_sym: List[np.ndarray],
+) -> List[str]:
     """
     Get the symbols of point group operations from the rotation matrix.
 
@@ -1381,7 +1435,11 @@ def get_symbols_from_ops(ops_sym):
     return symbols
 
 
-def divide_irreps(vec, adapted, dimensions):
+def divide_irreps(
+    vec: np.ndarray,
+    adapted: np.ndarray,
+    dimensions: List[int],
+) -> np.ndarray:
     """
     Project vectors into IR space according to the adapted basis.
 
@@ -1416,7 +1474,11 @@ def divide_irreps(vec, adapted, dimensions):
     return np.array(means)
 
 
-def angle_between_points(A, B, C):
+def angle_between_points(
+    A: Union[list, np.ndarray],
+    B: Union[list, np.ndarray],
+    C: Union[list, np.ndarray],
+) -> float:
     """
     Calculate angle between three points. Point b is the vertex
 

@@ -89,7 +89,7 @@ def change_center(st1: ase.atoms.Atoms) -> ase.atoms.Atoms:
 
 def generate_line_group_structure(
     monomer_pos: np.ndarray,
-    monomer_symbols,
+    monomer_symbols: Union[list, np.ndarray],
     cyclic_group: dict,
     symec: int = 4,
 ) -> ase.atoms.Atoms:

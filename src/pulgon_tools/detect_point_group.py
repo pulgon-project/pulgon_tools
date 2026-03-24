@@ -14,7 +14,7 @@
 
 import argparse
 import logging
-from typing import Union
+from typing import List, Union
 
 import ase
 import numpy as np
@@ -75,7 +75,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
 
         self._analyze()
 
-    def _analyze(self):
+    def _analyze(self) -> None:
         """Calculate the axial point group elements."""
         inertia_tensor = self._inertia_tensor()
         _, eigvecs = np.linalg.eigh(inertia_tensor)
@@ -141,7 +141,9 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         ) / total_inertia
         return inertia_tensor
 
-    def _get_center_of_mass_periodic(self, atom):
+    def _get_center_of_mass_periodic(
+        self, atom: ase.atoms.Atoms
+    ) -> np.ndarray:
         """Compute the center of mass in scaled
         coordinates with periodic wrapping.
 
@@ -188,7 +190,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         )
         return atoms
 
-    def get_symmetry_operations(self):
+    def get_symmetry_operations(self) -> List[SymmOp]:
         """Generate all symmetry operations of the axial point group.
 
         Returns:
@@ -203,7 +205,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         ops_sym = [SymmOp(op) for op in ops]
         return ops_sym
 
-    def get_generators(self):
+    def get_generators(self) -> List[np.ndarray]:
         """Return the generator affine matrices (excluding identity).
 
         Returns:

@@ -14,6 +14,7 @@
 
 import itertools
 import logging
+from typing import Tuple
 
 import numpy as np
 import sympy
@@ -53,7 +54,9 @@ def frac_range(
     return close
 
 
-def line_group_sympy(DictParams, symprec=1e-6):
+def line_group_sympy(
+    DictParams: dict, symprec: float = 1e-6
+) -> Tuple[list, list, list]:
     family = DictParams["family"]
     if family == 2:
         qpoint = DictParams["qpoints"]

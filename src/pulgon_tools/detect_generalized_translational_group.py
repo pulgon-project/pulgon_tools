@@ -17,6 +17,7 @@ import itertools
 import logging
 import warnings
 from fractions import Fraction
+from typing import List, Optional, Tuple, Union
 
 import ase
 import numpy as np
@@ -153,7 +154,9 @@ class CyclicGroupAnalyzer:
         )
         return atoms
 
-    def _get_center_of_mass_periodic(self, atom):
+    def _get_center_of_mass_periodic(
+        self, atom: ase.atoms.Atoms
+    ) -> np.ndarray:
         """Compute the center of mass in scaled
         coordinates with periodic wrapping.
 
@@ -268,7 +271,9 @@ class CyclicGroupAnalyzer:
                         logging.debug("Mirror does not exist")
         return cyclic_group, mono, sym_op
 
-    def _detect_possible_helical_angle(self, ind, monomer):
+    def _detect_possible_helical_angle(
+        self, ind: int, monomer: ase.atoms.Atoms
+    ) -> np.ndarray:
         """Compute candidate helical rotation angles between monomer layers.
 
         Args:
@@ -314,8 +319,11 @@ class CyclicGroupAnalyzer:
         return angles
 
     def _detect_rotation(
-        self, monomer: ase.atoms.Atoms, tran: np.float64, ind: int
-    ):
+        self,
+        monomer: ase.atoms.Atoms,
+        tran: np.float64,
+        ind: int,
+    ) -> Tuple[bool, Union[Fraction, int], Optional[list]]:
         """Detect helical/rotational symmetry between
         monomer layers in a nanotube.
 
@@ -407,7 +415,7 @@ class CyclicGroupAnalyzer:
         self,
         monomer: ase.atoms.Atoms,
         tran: np.float64,
-    ) -> bool:
+    ) -> Tuple[bool, Optional[SymmOp]]:
         """
 
         Args:
@@ -467,7 +475,7 @@ class CyclicGroupAnalyzer:
 
     def _get_monomer_ind(
         self, z_round: np.ndarray, z_uniq: np.ndarray
-    ) -> tuple:
+    ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         monomer_ind = [np.where(z_round == val)[0] for val in z_uniq]
 
         monomer_ind_sum = []
@@ -572,7 +580,7 @@ class CyclicGroupAnalyzer:
         logging.debug(f"Primitive cell found with z-translation {pure_z}.")
         return atom
 
-    def _check_if_along_OZ(self, atom):
+    def _check_if_along_OZ(self, atom: ase.atoms.Atoms) -> bool:
         """Check whether the cell's periodic axis is aligned along z.
 
         Args:
@@ -605,7 +613,7 @@ class CyclicGroupAnalyzer:
         """
         return self.cyclic_group, self.monomers, self._sym_operations
 
-    def get_generators(self):
+    def get_generators(self) -> np.ndarray:
         """Return the generator affine matrix of the cyclic group.
 
         Returns:

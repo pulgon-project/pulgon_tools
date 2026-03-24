@@ -14,6 +14,7 @@
 
 
 import argparse
+from typing import List, Tuple, Union
 
 import numpy as np
 from ase import Atom, Atoms
@@ -33,7 +34,9 @@ from pulgon_tools.utils import (
 )
 
 
-def get_linegroup_symmetry_dataset(poscar):
+def get_linegroup_symmetry_dataset(
+    poscar: Union[str, Atom, Atoms],
+) -> Tuple[Atoms, int, int, float, List[SymmOp], List[List[int]]]:
     """Extract the full line group symmetry dataset from a structure.
 
     Detects the axial point group and cyclic group, then generates all
