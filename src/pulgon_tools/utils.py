@@ -25,13 +25,11 @@ import scipy as sp
 import scipy.interpolate
 import scipy.sparse as ss
 import scipy.spatial.distance
-import sympy
 from ase import Atoms
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
-from sympy.physics.quantum import TensorProduct
 
-from pulgon_tools.Irreps_tables import get_modified_Dmu, line_group_sympy
+from pulgon_tools.Irreps_tables import line_group_sympy
 from pulgon_tools.Irreps_tables_withparities import (
     line_group_sympy_withparities,
 )

@@ -75,6 +75,9 @@ def build_constraint_matrix(phonon, recenter=False):
 
     phonon.symmetrize_force_constants()
     IFC = phonon.force_constants.copy()
+    if IFC.shape[0] == IFC.shape[1]:
+        p2s_map = phonon.primitive.p2s_map
+        IFC = IFC[p2s_map]  # return to compact format
 
     motif_indices = [
         phonon.primitive.p2p_map[i] for i in phonon.primitive.s2p_map
@@ -426,9 +429,9 @@ def main():
             )
             bands_fix = phonon.get_band_structure_dict()
 
-            distances = bands_raws["distances"][0]
-            freq_raw = bands_raws["frequencies"][0]
-            freq_fix = bands_fix["frequencies"][0]
+            distances = np.concatenate(bands_raws["distances"])
+            freq_raw = np.concatenate(bands_raws["frequencies"])
+            freq_fix = np.concatenate(bands_fix["frequencies"])
 
             for ii, freq in enumerate(freq_raw.T):
                 if ii == 0:
