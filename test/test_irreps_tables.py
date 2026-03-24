@@ -611,3 +611,87 @@ class TestWithParitiesFamily6Boundary:
         G = chars.shape[1]
         orth = chars @ chars.conj().T / G
         assert np.allclose(np.diag(orth).real, 1.0, atol=1e-10)
+
+
+class TestGetLinegroupSymmetryDatasetExtra:
+    """Test additional branches of get_linegroup_symmetry_dataset."""
+
+    def test_string_input(self, shared_datadir, tmp_path):
+        """Pass a file path string instead of Atoms object (line 49)."""
+        import shutil
+
+        # Copy to a file named POSCAR so ase.io.read can detect format
+        src = shared_datadir / "10-0-ZZ"
+        dst = tmp_path / "POSCAR"
+        shutil.copy(src, dst)
+        _, family, nrot, _, ops, _ = get_linegroup_symmetry_dataset(str(dst))
+        assert family == 8
+        assert nrot == 10
+
+
+class TestMainCLI:
+    """Test the main() CLI entry point of generate_irreps_tables."""
+
+    def _make_poscar(self, shared_datadir, tmp_path, name):
+        """Copy a test structure to a POSCAR file ase.io.read can detect."""
+        import shutil
+
+        dst = tmp_path / "POSCAR"
+        shutil.copy(shared_datadir / name, dst)
+        return str(dst)
+
+    def test_main_default(self, shared_datadir, tmp_path, monkeypatch):
+        """Run main with default args (character table only)."""
+        import sys
+
+        from pulgon_tools.generate_irreps_tables import main
+
+        poscar = self._make_poscar(shared_datadir, tmp_path, "10-0-ZZ")
+        outfile = str(tmp_path / "chars")
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "pulgon-irreps-tables",
+                "-p",
+                poscar,
+                "-q",
+                "0.0",
+                "-s",
+                outfile,
+            ],
+        )
+        main()
+        data = np.load(outfile + ".npz", allow_pickle=True)
+        assert "characters" in data
+        assert "ireps_values" in data
+        assert "ireps_symbols" in data
+
+    def test_main_with_rep_matrix(self, shared_datadir, tmp_path, monkeypatch):
+        """Run main with -r flag to also save representation matrices."""
+        import sys
+
+        from pulgon_tools.generate_irreps_tables import main
+
+        poscar = self._make_poscar(shared_datadir, tmp_path, "10-0-ZZ")
+        outfile = str(tmp_path / "chars_rep")
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "pulgon-irreps-tables",
+                "-p",
+                poscar,
+                "-q",
+                "0.0",
+                "-s",
+                outfile,
+                "-r",
+            ],
+        )
+        main()
+        data = np.load(outfile + ".npz", allow_pickle=True)
+        assert "characters" in data
+        # Should have D_irrep_* keys
+        rep_keys = [k for k in data if k.startswith("D_irrep_")]
+        assert len(rep_keys) > 0
