@@ -42,6 +42,12 @@ pulgon-irreps-tables = "pulgon_tools:generate_irreps_tables.main"
 [tool.setuptools.dynamic]
 version = {attr = "pulgon_tools.__version__"}
 
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::PendingDeprecationWarning:osqp",
+]
+
 [dependency-groups]
 dev = [
     "pytest-cov>=7.1.0",

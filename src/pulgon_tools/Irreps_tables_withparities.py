@@ -29,7 +29,9 @@ def sym_inverse_eye(n: int) -> sympy.Matrix:
     return A
 
 
-def line_group_sympy_withparities(DictParams, symprec=1e-6):
+def line_group_sympy_withparities(
+    DictParams: dict, symprec: float = 1e-6
+) -> Tuple[list, list, list]:
     family = DictParams["family"]
 
     if family == 2:

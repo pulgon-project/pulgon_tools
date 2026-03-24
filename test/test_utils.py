@@ -28,6 +28,7 @@ from pulgon_tools.utils import (
     brute_force_generate_group,
     brute_force_generate_group_subsequent,
     decimal_places,
+    dimino,
     dimino_affine_matrix,
     dimino_affine_matrix_and_character,
     dimino_affine_matrix_and_subsequent,
@@ -40,16 +41,20 @@ from pulgon_tools.utils import (
     get_character_num,
     get_character_num_withparities,
     get_character_withparities,
+    get_continum_constrains_matrices_M_for_conpact_fc,
     get_IFCSYM_from_cvxpy_M,
     get_matrices,
     get_matrices_withPhase,
     get_perms_from_ops,
+    get_sym_constrains_matrices_M,
     get_symbols_from_ops,
     refine_cell,
     sigmaH,
     sigmaV,
     sortrows,
 )
+
+FCS_DATA = "test/data/fcs"
 
 # ── Helper: build an affine matrix from a 3x3 rotation ──
 
@@ -590,6 +595,302 @@ class TestGetCharacterNumWithparities:
         }
         chars, vals, syms = get_character_num_withparities(DictParams)
         assert len(chars) > 0
+
+
+# ================================================================
+#  dimino (non-affine, 3x3 matrices)
+# ================================================================
+
+
+class TestDimino:
+    def test_single_generator_c4(self):
+        gens = np.array([Cn(4)])
+        group = dimino(gens, symec=4)
+        assert group.shape == (4, 3, 3)
+
+    def test_two_generators_c6v(self):
+        gens = np.array([Cn(6), sigmaV()])
+        group = dimino(gens, symec=4)
+        # C6v has 12 elements
+        assert group.shape == (12, 3, 3)
+
+    def test_contains_identity(self):
+        gens = np.array([Cn(3)])
+        group = dimino(gens, symec=4)
+        has_id = any(np.allclose(g, np.eye(3), atol=1e-6) for g in group)
+        assert has_id
+
+    def test_closure(self):
+        """Every product of two group elements is in the group."""
+        gens = np.array([Cn(4)])
+        group = dimino(gens, symec=4)
+        for a in group:
+            for b in group:
+                prod = a @ b
+                found = any(np.allclose(prod, g, atol=1e-4) for g in group)
+                assert found
+
+
+# ================================================================
+#  dimino_affine_matrix — extra branches
+# ================================================================
+
+
+class TestDiminoAffineMatrixExtended:
+    def test_two_generators(self):
+        """Two generators expand L via coset enumeration."""
+        gen = np.array(
+            [
+                _make_affine(Cn(3)),
+                _make_affine(sigmaV()),
+            ]
+        )
+        group = dimino_affine_matrix(gen, symec=0.01)
+        # C3v has 6 elements
+        assert len(group) == 6
+
+
+# ================================================================
+#  dimino_affine_matrix_and_subsequent — extra branches
+# ================================================================
+
+
+class TestDiminoAffineMatrixAndSubsequentExtended:
+    def test_two_generators(self):
+        gen = np.array(
+            [
+                _make_affine(Cn(3)),
+                _make_affine(sigmaV()),
+            ]
+        )
+        group, subs = dimino_affine_matrix_and_subsequent(gen)
+        assert len(group) == 6
+        assert len(subs) == 6
+
+
+# ================================================================
+#  dimino_affine_matrix_and_character — extra branches
+# ================================================================
+
+
+class TestDiminoAffineMatrixAndCharacterExtended:
+    def test_two_generators_scalar(self):
+        """Two generators with scalar characters."""
+        gen = np.array(
+            [
+                _make_affine(Cn(3)),
+                _make_affine(sigmaV()),
+            ]
+        )
+        char = np.array(
+            [
+                np.complex128(1),
+                np.complex128(1),
+            ]
+        )
+        group, traces = dimino_affine_matrix_and_character(gen, char)
+        assert len(group) == 6
+        assert len(traces) == 6
+
+
+# ================================================================
+#  get_character_num with 2D irreps (trace branch)
+# ================================================================
+
+
+class TestGetCharacterNum2D:
+    def test_family6_has_2d_irreps(self):
+        """Family 6 produces 2D irreps, covering np.trace branch."""
+        params = {
+            "qpoints": 0.0,
+            "nrot": 6,
+            "order": [[0]],
+            "family": 6,
+            "a": 3.0,
+        }
+        chars, vals, syms = get_character_num(params)
+        assert len(chars) > 0
+
+
+class TestGetCharacterNumWithparities2D:
+    def test_family6_has_2d_irreps(self):
+        """Family 6 with parities, covering np.trace branch."""
+        params = {
+            "qpoints": 0.0,
+            "nrot": 6,
+            "order": [[0]],
+            "family": 6,
+            "a": 3.0,
+        }
+        chars, vals, syms = get_character_num_withparities(params)
+        assert len(chars) > 0
+
+
+# ================================================================
+#  get_sym_constrains_matrices_M
+# ================================================================
+
+
+# ================================================================
+#  get_character / get_character_num — more families & qpoints
+# ================================================================
+
+
+class TestGetCharacterMoreFamilies:
+    def test_family2(self):
+        params = {
+            "qpoints": 0.0,
+            "nrot": 6,
+            "order": [[0]],
+            "family": 2,
+            "a": 3.0,
+        }
+        chars, vals, syms = get_character(params)
+        assert len(chars) > 0
+
+    def test_family3(self):
+        params = {
+            "qpoints": 0.0,
+            "nrot": 6,
+            "order": [[0]],
+            "family": 3,
+            "a": 3.0,
+        }
+        chars, vals, syms = get_character(params)
+        assert len(chars) > 0
+
+    def test_family8(self):
+        params = {
+            "qpoints": 0.0,
+            "nrot": 6,
+            "order": [[0]],
+            "family": 8,
+            "a": 3.0,
+        }
+        chars, vals, syms = get_character_num(params)
+        assert len(chars) > 0
+
+    def test_family13(self):
+        params = {
+            "qpoints": 0.0,
+            "nrot": 6,
+            "order": [[0]],
+            "family": 13,
+            "a": 3.0,
+        }
+        chars, vals, syms = get_character_num(params)
+        assert len(chars) > 0
+
+    def test_nonzero_qpoint(self):
+        params = {
+            "qpoints": 0.5,
+            "nrot": 6,
+            "order": [[0]],
+            "family": 4,
+            "a": 3.0,
+        }
+        chars, vals, syms = get_character_num(params)
+        assert len(chars) > 0
+
+    def test_family6_withparities(self):
+        params = {
+            "qpoints": 0.0,
+            "nrot": 6,
+            "order": [[0]],
+            "family": 6,
+            "a": 3.0,
+        }
+        chars, vals, syms = get_character_withparities(params)
+        assert len(chars) > 0
+
+
+class TestGetSymConstrainsMatricesM:
+    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    def test_identity_returns_zero_constraint(self):
+        """Identity permutation should produce zero constraint."""
+        import scipy.sparse as ss_mod
+
+        op = np.eye(3)
+        perm = np.array([0, 1])
+        M = get_sym_constrains_matrices_M(np.array([op]), perm, diminsion=3)
+        assert M.shape[0] > 0
+        # Identity perm -> M should be all zeros
+        assert np.allclose(M.toarray(), 0.0)
+
+    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    def test_nontrivial_perm(self):
+        """Non-identity permutation generates nonzero constraints."""
+        import scipy.sparse as ss_mod
+
+        c4 = Cn(4)
+        perm = np.array([1, 0])  # swap atoms
+        M = get_sym_constrains_matrices_M(np.array([c4]), perm, diminsion=3)
+        assert M.shape[0] > 0
+        assert M.nnz > 0
+
+    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    def test_1d_perm_input(self):
+        """1D permutation array is handled correctly."""
+        import scipy.sparse as ss_mod
+
+        op = Cn(2)
+        perm = np.array([1, 0])
+        M = get_sym_constrains_matrices_M(np.array([op]), perm, diminsion=3)
+        assert M.shape[1] == (2 * 2 * 9)
+
+    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    def test_2d_perm_and_2d_ops(self):
+        """2D permutation + single 2D op (both get reshaped)."""
+        c4 = Cn(4)
+        # 2D permutations: two ops, swap atoms
+        perms = np.array([[1, 0], [0, 1]])
+        M = get_sym_constrains_matrices_M(
+            np.array([c4, np.eye(3)]), perms, diminsion=3
+        )
+        assert M.shape[0] > 0
+        assert M.shape[1] == (2 * 2 * 9)
+
+    @pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    def test_single_2d_op(self):
+        """Single 3x3 op matrix (2D) is wrapped to 3D."""
+        op = Cn(3)  # shape (3,3) not (1,3,3)
+        perm = np.array([1, 0])
+        M = get_sym_constrains_matrices_M(op, perm, diminsion=3)
+        assert M.shape[0] > 0
+
+
+# ================================================================
+#  get_continum_constrains_matrices_M_for_conpact_fc
+# ================================================================
+
+
+class TestGetContinumConstrainsMatrices:
+    @pytest.fixture
+    def phonon_obj(self):
+        import phonopy
+
+        return phonopy.load(
+            phonopy_yaml=f"{FCS_DATA}/phonopy.yaml",
+            force_constants_filename=f"{FCS_DATA}/FORCE_CONSTANTS",
+        )
+
+    def test_returns_sparse_matrix(self, phonon_obj):
+        M = get_continum_constrains_matrices_M_for_conpact_fc(phonon_obj)
+        assert M.shape[0] > 0
+        assert M.shape[1] == phonon_obj.force_constants.size
+
+    def test_constraint_shape_consistent(self, phonon_obj):
+        M = get_continum_constrains_matrices_M_for_conpact_fc(phonon_obj)
+        IFC = phonon_obj.force_constants
+        assert M.shape[1] == IFC.size
+
+    def test_constraints_near_satisfied(self, phonon_obj):
+        """Constraint violation should be bounded for raw IFC."""
+        M = get_continum_constrains_matrices_M_for_conpact_fc(phonon_obj)
+        IFC = phonon_obj.force_constants
+        residual = M.dot(IFC.ravel())
+        # Not necessarily zero, but should be finite
+        assert np.all(np.isfinite(residual))
 
 
 class TestGetIFCSYMFromCvxpyM:
