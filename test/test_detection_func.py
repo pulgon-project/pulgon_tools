@@ -38,7 +38,7 @@ class TestCyclicGroupAnalyzer:
         assert idx == True
         assert Q.numerator == 12
 
-    def test_find_axis_center_of_nanotubFe(self, shared_datadir):
+    def test_find_axis_center_of_nanotube(self, shared_datadir):
         st_name = shared_datadir / "12-12-AM"
         st = read_vasp(st_name)
         res = CyclicGroupAnalyzer(st)
@@ -276,7 +276,8 @@ class TestCyclicGroupAnalyzerMethods:
         assert ops is None
 
     def test_find_primitive_already_primitive(self, shared_datadir):
-        """When the structure is already primitive, _find_primitive returns it unchanged."""
+        """_find_primitive returns unchanged when
+        the structure is already primitive."""
         st = read_vasp(shared_datadir / "C4")
         cy = CyclicGroupAnalyzer(st, tolerance=1e-2)
         assert len(cy._primitive) == len(cy._atom)

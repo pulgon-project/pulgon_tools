@@ -6,11 +6,13 @@ import numpy as np
 
 def get_family_num_from_sym_symbol(trans_sym, rota_sym):
     """
-    Determine the family number based on translational and rotational symmetry symbols.
+    Determine the family number based on translational
+    and rotational symmetry symbols.
 
-    This function maps the translational symmetry (`trans_sym`) and rotational
-    symmetry (`rota_sym`) symbols to a family number using a predefined family table
-    (`family_map`).
+    This function maps the translational symmetry
+    (`trans_sym`) and rotational symmetry (`rota_sym`)
+    symbols to a family number using a predefined
+    family table (`family_map`).
 
     Args:
         trans_sym (str): The translational symmetry symbol.

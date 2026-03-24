@@ -31,15 +31,22 @@ from pulgon_tools.utils import (
 
 
 class LineGroupAnalyzer(PointGroupAnalyzer):
-    """A class to analyze the axial point group of a molecule (based on pymatgen:PointGroupAnalyzer)
+    """Analyze the axial point group of a molecule.
+
+    Based on pymatgen's PointGroupAnalyzer.
 
     The general outline of the algorithm is as follows:
 
-    1. Specify z axis as the rotation axis, detect the rotational symmetry.
-    2. If the rotational symmetry about z-axis exist, detect U (a two-fold horizontal axis).
-       - If U exist, it's a dihedral group (Dnh, Dnd).
-       - If U does not exist, the group is not dihedral, leaving Cnh, Cnv and S2n as candidates.
-    3. If the rotational symmetry about z-axis does not exist, only possible point groups are C1, Cs and Ci.
+    1. Specify z axis as the rotation axis, detect
+       the rotational symmetry.
+    2. If the rotational symmetry about z-axis exists,
+       detect U (a two-fold horizontal axis).
+       - If U exists, it's a dihedral group (Dnh, Dnd).
+       - If U does not exist, the group is not dihedral,
+         leaving Cnh, Cnv and S2n as candidates.
+    3. If the rotational symmetry about z-axis does not
+       exist, only possible point groups are C1, Cs
+       and Ci.
     """
 
     def __init__(
@@ -69,7 +76,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self._analyze()
 
     def _analyze(self):
-        """Rewrite the _analyze method, calculate the axial point group elements."""
+        """Calculate the axial point group elements."""
         inertia_tensor = self._inertia_tensor()
         _, eigvecs = np.linalg.eigh(inertia_tensor)
         self.principal_axes = eigvecs.T  # only be used in _proc_no_rot_sym
@@ -135,7 +142,8 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         return inertia_tensor
 
     def _get_center_of_mass_periodic(self, atom):
-        """Compute the center of mass in scaled coordinates with periodic wrapping.
+        """Compute the center of mass in scaled
+        coordinates with periodic wrapping.
 
         Args:
             atom: ASE Atoms object.

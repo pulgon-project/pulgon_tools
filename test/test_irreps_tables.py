@@ -110,7 +110,8 @@ class TestCharacterTable:
         assert characters.shape == (36, 18)
 
     def test_orthogonality_family8_q0(self, shared_datadir):
-        """Character orthogonality: sum_g chi_i(g)* chi_j(g) / |G| = delta_ij."""
+        """Character orthogonality:
+        sum_g chi_i(g)* chi_j(g) / |G| = delta_ij."""
         params = self._get_dict_params(shared_datadir, "10-0-ZZ", qz=0.0)
         characters, _, _ = get_character_num_withparities(params, symprec=1e-8)
         G = characters.shape[1]
@@ -129,7 +130,8 @@ class TestCharacterTable:
         assert np.allclose(off_diag, 0.0, atol=1e-10)
 
     def test_identity_character_equals_dimension(self, shared_datadir):
-        """The character of the identity operation equals the irrep dimension."""
+        """The character of the identity operation
+        equals the irrep dimension."""
         params = self._get_dict_params(shared_datadir, "10-0-ZZ")
         characters, _, _ = get_character_num_withparities(params, symprec=1e-8)
         rep_mat, _, _ = get_character_withparities(params, symprec=1e-8)

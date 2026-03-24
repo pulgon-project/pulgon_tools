@@ -26,7 +26,8 @@ from pulgon_tools.structure_chirality import (
 
 @pytest.fixture
 def hex_lattice():
-    """Standard MoS2 hexagonal lattice vectors from bond_length=2.43, delta_Z=1.57."""
+    """Standard MoS2 hexagonal lattice vectors
+    from bond_length=2.43, delta_Z=1.57."""
     bond_length = 2.43
     delta_Z = 1.57
     L1 = np.sqrt(bond_length**2 - delta_Z**2) * np.sqrt(
@@ -113,7 +114,8 @@ class TestBondConstraintsEquations:
     """Test the bond constraint equations for fsolve."""
 
     def test_equal_distances_give_zero_eq1(self):
-        """If distances to pos2 and pos3 are equal, eq1 (their difference) is zero."""
+        """If distances to pos2 and pos3 are equal,
+        eq1 (their difference) is zero."""
         r = 5.0
         pos1 = [0.0, r, 0.0]
         phi = 0.3

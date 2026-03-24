@@ -248,7 +248,8 @@ def build_constraint_matrix(phonon, recenter=False):
                     n_rows += 1
     print("now finish the (H01 = transpose(H10) constrains")
 
-    # Add extra constraints to make the force constants short-sighted for the cell
+    # Add extra constraints to make the force constants
+    # short-sighted for the cell
     # transmission calculations.
     for j in range(n_satoms):
         if supercell_indices[j] not in (0, 1, n_cells - 1):

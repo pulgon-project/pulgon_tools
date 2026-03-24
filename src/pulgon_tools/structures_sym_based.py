@@ -34,7 +34,8 @@ def T_Q(
         f: movement distance along z axis
         pos: monomer positions
 
-    Returns: atom positions after rotation by 2*pi/Q and translation by f along z
+    Returns: atom positions after rotation by 2*pi/Q
+        and translation by f along z
 
     """
     if pos.ndim == 2:
@@ -53,7 +54,8 @@ def T_v(f: Union[float, int], pos: np.ndarray) -> np.ndarray:
         f: movement distance along z axis
         pos: monomer positions
 
-    Returns: atom positions after mirror reflection (sigmaV) and translation by f along z
+    Returns: atom positions after mirror reflection
+        (sigmaV) and translation by f along z
 
     """
     if pos.ndim == 2:

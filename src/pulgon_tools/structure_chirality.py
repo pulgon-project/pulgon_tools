@@ -337,7 +337,8 @@ def get_nanotube_from_n1n2(n1, n2, symbol1, symbol2, bond_length, delta_Z):
 
 
 def main():
-    """CLI entry point for generating a chiral nanotube and saving as POSCAR."""
+    """CLI entry point for generating a chiral nanotube
+    and saving as POSCAR."""
     parser = argparse.ArgumentParser(
         description="generating chiral nanotube structure from (n1, n2) indices"
     )
