@@ -53,11 +53,13 @@ def get_family_num_from_sym_symbol(
         },
     }
 
-    def log_error():
+    def log_error() -> None:
         logging.error("Can't identify this symbol %s %s", trans_sym, rota_sym)
         return None
 
-    def resolve_value(sym_map, key, suffix=None):
+    def resolve_value(
+        sym_map: dict, key: str, suffix: Optional[str] = None
+    ) -> Optional[int]:
         """Helper to resolve the value from the symbol map."""
         result = sym_map.get(key)
         if isinstance(result, dict) and suffix:

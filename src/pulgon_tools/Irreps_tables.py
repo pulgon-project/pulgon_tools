@@ -234,16 +234,12 @@ def line_group_sympy(
             sympy.Matrix(
                 [
                     [
-                        # sympy.exp(1j * (m1 * sympy.pi / n + k1 * a / 2)),
-                        # sympy.exp(1j * (k1 * a / 2 + m1 * sympy.pi / n)),
-                        sympy.exp(1j * (m1 * sympy.pi / n)),
+                        sympy.exp(1j * (m1 * sympy.pi / n + k1 * a / 2)),
                         0,
                     ],
                     [
                         0,
-                        # sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2)),
-                        # sympy.exp(1j * (k1 * a / 2 - m1 * sympy.pi / n)),
-                        sympy.exp(1j * (m1 * sympy.pi / n)),
+                        sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2)),
                     ],
                 ]
             ),
@@ -267,8 +263,6 @@ def line_group_sympy(
         n_value = [nrot]
 
         m1_value = list(range(-nrot + 1, nrot + 1))
-
-        piH_value = [-1, 1]
         if np.isclose(qpoint, 0, atol=symprec):
             idx_fc = 0
             fc = func[idx_fc]
@@ -391,7 +385,6 @@ def line_group_sympy(
             [
                 1,
                 sympy.exp(1j * (k1 * a / 2 + m1 * sympy.pi / n)),
-                # sympy.exp(1j * (m1 * sympy.pi / n)),
                 1,
                 piV,
             ]
@@ -403,13 +396,11 @@ def line_group_sympy(
                 [
                     [
                         sympy.exp(1j * (k1 * a / 2 + m1 * sympy.pi / n)),
-                        # sympy.exp(1j * (m1 * sympy.pi / n)),
                         0,
                     ],
                     [
                         0,
                         sympy.exp(1j * (k1 * a / 2 - m1 * sympy.pi / n)),
-                        # sympy.exp(1j * (-m1 * sympy.pi / n)),
                     ],
                 ]
             ),

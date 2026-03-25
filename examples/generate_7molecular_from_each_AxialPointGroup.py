@@ -12,6 +12,8 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
+from typing import Tuple
+
 import numpy as np
 from ase.io.vasp import write_vasp
 
@@ -19,7 +21,7 @@ from pulgon_tools.structures_sym_based import generate_line_group_structure
 from pulgon_tools.utils import Cn, S2n, U, U_d, dimino, sigmaH, sigmaV
 
 
-def input1():
+def input1() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """Cn"""
     motif = np.array([3, 0, 1.5])
     generators = np.array([Cn(6)])
@@ -28,7 +30,7 @@ def input1():
     return motif, generators, cyclic, st_name
 
 
-def input2():
+def input2() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """S2n"""
     motif = np.array([3, 0, 1.5])
     generators = np.array([S2n(6)])
@@ -37,7 +39,7 @@ def input2():
     return motif, generators, cyclic, st_name
 
 
-def input3():
+def input3() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """Cnh"""
     motif = np.array([3, 0, 1.5])
     generators = np.array([Cn(6), sigmaH()])
@@ -46,7 +48,7 @@ def input3():
     return motif, generators, cyclic, st_name
 
 
-def input4():
+def input4() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """Dn"""
     motif = np.array([3, np.pi / 24, 1.5])
     generators = np.array([Cn(6), U()])
@@ -55,7 +57,7 @@ def input4():
     return motif, generators, cyclic, st_name
 
 
-def input5():
+def input5() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """Cnv"""
     motif = np.array([3, np.pi / 24, 1.5])
     generators = np.array([Cn(6), sigmaV()])
@@ -64,7 +66,7 @@ def input5():
     return motif, generators, cyclic, st_name
 
 
-def input6():
+def input6() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """Dnd"""
     motif = np.array([3, np.pi / 24, 1.5])
     generators = np.array([S2n(6), U_d(np.pi / 12)])
@@ -73,7 +75,7 @@ def input6():
     return motif, generators, cyclic, st_name
 
 
-def input7():
+def input7() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """Dnh"""
     motif = np.array([3, np.pi / 24, 1.5])
     generators = np.array([Cn(6), U(), sigmaV()])
@@ -82,7 +84,7 @@ def input7():
     return motif, generators, cyclic, st_name
 
 
-def main():
+def main() -> None:
     pos_cylin, generators, cg, st_name = input7()
 
     if pos_cylin.ndim == 1:

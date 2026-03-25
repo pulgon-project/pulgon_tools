@@ -13,6 +13,8 @@
 # permissions and limitations under the License.
 
 
+from typing import Tuple
+
 import numpy as np
 from ase.io.vasp import write_vasp
 
@@ -20,7 +22,7 @@ from pulgon_tools.structures_sym_based import generate_line_group_structure
 from pulgon_tools.utils import Cn, S2n, U, U_d, dimino, sigmaH, sigmaV
 
 
-def input1():
+def input1() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """(Cq|f),Cn"""
     motif = np.array([2, 0, 0])
     generators = np.array([Cn(4)])
@@ -29,7 +31,7 @@ def input1():
     return motif, generators, cyclic, st_name
 
 
-def input2():
+def input2() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """(I|q),S2n"""
     motif = np.array([3, 0, 1])
     generators = np.array([S2n(6)])
@@ -38,7 +40,7 @@ def input2():
     return motif, generators, cyclic, st_name
 
 
-def input3():
+def input3() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """(I|q),Cn,sigmaH"""
     motif = np.array([2.5, 0, 1])
     generators = np.array([Cn(6), sigmaH()])
@@ -47,7 +49,7 @@ def input3():
     return motif, generators, cyclic, st_name
 
 
-def input4():
+def input4() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """(C2n|f/2),Cn,sigmaH"""
     motif = np.array([3, 0, 0.6])
     generators = np.array([Cn(6), sigmaH()])
@@ -56,7 +58,7 @@ def input4():
     return motif, generators, cyclic, st_name
 
 
-def input5():
+def input5() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """(Cq|f),Cn,U"""
     motif = np.array([3, np.pi / 9, 0.5])
     generators = np.array([Cn(6), U()])
@@ -65,7 +67,7 @@ def input5():
     return motif, generators, cyclic, st_name
 
 
-def input6():
+def input6() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """(I|a),Cn,sigmaV"""
     motif = np.array([3, np.pi / 24, 1])
     generators = np.array([Cn(6), sigmaV()])
@@ -74,7 +76,7 @@ def input6():
     return motif, generators, cyclic, st_name
 
 
-def input7():
+def input7() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """(sigmaV|a/2),Cn"""
     motif = np.array([3, np.pi / 24, 1])
     generators = np.array([Cn(6)])
@@ -83,7 +85,7 @@ def input7():
     return motif, generators, cyclic, st_name
 
 
-def input8():
+def input8() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """(C2n|a/2),Cn,sigmaV"""
     motif = np.array([3, np.pi / 24, 0])
     generators = np.array([Cn(6), sigmaV()])
@@ -92,7 +94,7 @@ def input8():
     return motif, generators, cyclic, st_name
 
 
-def input9():
+def input9() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """(I|a),Cn,Ud,sigmaV"""
     motif = np.array([3, np.pi / 24, 0.6])
     generators = np.array([Cn(6), U_d(np.pi / 12), sigmaV()])
@@ -101,7 +103,7 @@ def input9():
     return motif, generators, cyclic, st_name
 
 
-def input10():
+def input10() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """(sigmaV|a/2),S2n"""
     motif = np.array([3, np.pi / 18, 0.4])
     generators = np.array([S2n(6)])
@@ -110,7 +112,7 @@ def input10():
     return motif, generators, cyclic, st_name
 
 
-def input11():
+def input11() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """(I|a),Cn,sigmaV"""
     motif = np.array([3, np.pi / 18, 0.6])
     generators = np.array([Cn(6), U(), sigmaV()])
@@ -119,7 +121,7 @@ def input11():
     return motif, generators, cyclic, st_name
 
 
-def input12():
+def input12() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """(sigmaV|a),Cn,U,sigmaV"""
     motif = np.array([3, np.pi / 24, 0.5])
     generators = np.array([Cn(6), sigmaH()])
@@ -128,7 +130,7 @@ def input12():
     return motif, generators, cyclic, st_name
 
 
-def input13():
+def input13() -> Tuple[np.ndarray, np.ndarray, dict, str]:
     """(C2n|a/2),Cn,U,sigmaV"""
     motif = np.array([3, np.pi / 16, 0.6])
     generators = np.array([Cn(6), U(), sigmaV()])
@@ -137,7 +139,7 @@ def input13():
     return motif, generators, cyclic, st_name
 
 
-def main():
+def main() -> None:
     pos_cylin, generators, cg, st_name = input12()
 
     if pos_cylin.ndim == 1:

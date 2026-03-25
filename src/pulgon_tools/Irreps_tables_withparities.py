@@ -15,7 +15,7 @@
 
 import itertools
 import logging
-from typing import Tuple
+from typing import List, Tuple
 
 import numpy as np
 import sympy
@@ -78,7 +78,14 @@ def line_group_sympy_withparities(
         qps_value = [qpoint]
         m1_value = list(range(-int(nrot / 2) + 1, int(nrot / 2) + 1))
 
-        def value_fc(fc, tmp_k1, tmp_m1, tmp_piH, nrot, order):
+        def value_fc(
+            fc: list,
+            tmp_k1: float,
+            tmp_m1: float,
+            tmp_piH: int,
+            nrot: int,
+            order: List[List[int]],
+        ) -> list:
             res = []
             for tmp_order in order:
                 for jj, tmp in enumerate(tmp_order):
@@ -160,7 +167,14 @@ def line_group_sympy_withparities(
         qps_value = [qpoint]
         m1_value = list(range(-int(nrot) + 1, int(nrot) + 1))
 
-        def value_fc(fc, tmp_k1, tmp_m1, tmp_piH, nrot, order):
+        def value_fc(
+            fc: list,
+            tmp_k1: float,
+            tmp_m1: float,
+            tmp_piH: int,
+            nrot: int,
+            order: List[List[int]],
+        ) -> list:
             res = []
             for tmp_order in order:
                 for jj, tmp in enumerate(tmp_order):
@@ -241,7 +255,14 @@ def line_group_sympy_withparities(
         qps_value = [qpoint]
         m1_value = list(range(0, int(nrot / 2) + 1))
 
-        def value_fc(fc, tmp_k1, tmp_m1, tmp_piV, nrot, order):
+        def value_fc(
+            fc: list,
+            tmp_k1: float,
+            tmp_m1: float,
+            tmp_piV: int,
+            nrot: int,
+            order: List[List[int]],
+        ) -> list:
             res = []
             for tmp_order in order:
                 for jj, tmp in enumerate(tmp_order):
@@ -326,7 +347,14 @@ def line_group_sympy_withparities(
         qps_value = [qpoint]
         m1_value = list(range(0, nrot + 1))
 
-        def value_fc(fc, tmp_k1, tmp_m1, tmp_piV, nrot, order):
+        def value_fc(
+            fc: list,
+            tmp_k1: float,
+            tmp_m1: float,
+            tmp_piV: int,
+            nrot: int,
+            order: List[List[int]],
+        ) -> list:
             res = []
             for tmp_order in order:
                 for jj, tmp in enumerate(tmp_order):
@@ -494,16 +522,16 @@ def line_group_sympy_withparities(
             m1_value = list(range(0, nrot + 1))
 
         def value_fc(
-            fc,
-            tmp_k1,
-            tmp_m1,
-            tmp_piU,
-            tmp_piV,
-            tmp_piH,
-            nrot,
-            a,
-            order,
-        ):
+            fc: list,
+            tmp_k1: float,
+            tmp_m1: float,
+            tmp_piU: int,
+            tmp_piV: int,
+            tmp_piH: int,
+            nrot: int,
+            a: float,
+            order: List[List[int]],
+        ) -> list:
             res = []
             for tmp_order in order:
                 for jj, tmp in enumerate(tmp_order):
