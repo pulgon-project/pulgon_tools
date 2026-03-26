@@ -29,5 +29,9 @@ jobs:
     - name: Install the project
       run: uv sync --extra dev
     - name: Run tests
-      run: uv run pytest
-  
+      run: uv run pytest --cov --cov-report json
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage.json

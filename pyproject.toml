@@ -49,15 +49,10 @@ filterwarnings = [
     "ignore::PendingDeprecationWarning:osqp",
 ]
 
-[dependency-groups]
-dev = [
-    "pytest-cov>=7.1.0",
-]
-
-
 [project.optional-dependencies]
 dev = [
     "pretty-errors>=1.2.25",
     "pytest>=8.4.2",
+    "pytest-cov>=7.1.0",
     "pytest-datadir>=1.8.0",
 ]
