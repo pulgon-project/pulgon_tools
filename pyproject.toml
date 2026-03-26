@@ -16,14 +16,14 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 dependencies = [
-    "numpy",
-    "ase",
-    "pymatgen",
+    "numpy>=2.0",
+    "ase>=3.25",
+    "pymatgen>=2024.8",
     "ipdb",
-    "cvxpy",
-    "phonopy",
-    "seekpath",
-    "pulp",
+    "cvxpy>=1.6",
+    "phonopy>=2.42",
+    "seekpath>=2.1",
+    "pulp>=3.3",
     "scikit-learn>=1.6.1",
 ]
 

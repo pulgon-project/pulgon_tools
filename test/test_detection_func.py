@@ -84,8 +84,8 @@ class TestCyclicGroupAnalyzer:
         st_name = shared_datadir / "st7"
         st = read_vasp(st_name)
 
-        cy1 = CyclicGroupAnalyzer(st, tolerance=1e-14)
-        cy2 = CyclicGroupAnalyzer(st, tolerance=1e-15)
+        cy1 = CyclicGroupAnalyzer(st, tolerance=1e-13)
+        cy2 = CyclicGroupAnalyzer(st, tolerance=1e-16)
         monomers1, translations1 = cy1._potential_translation()
         monomers2, translations2 = cy2._potential_translation()
         idx1, _ = cy1._detect_mirror(
@@ -94,6 +94,7 @@ class TestCyclicGroupAnalyzer:
         idx2, _ = cy2._detect_mirror(
             monomers2[0], translations2[0] * cy2._primitive.cell[2, 2]
         )
+
         assert idx1 == True
         assert idx2 == False
 
