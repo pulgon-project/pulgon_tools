@@ -26,9 +26,14 @@ jobs:
     - name: Install the project
       run: uv sync --extra dev
     - name: Run tests
-      run: uv run pytest --cov --cov-report json
+      run: uv run pytest --cov --cov-report lcov --cov-report json
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
       with:
         name: coverage-report
-        path: coverage.json
+        path: coverage.lcov
+    - name: Upload coverage to Coveralls
+      uses: coverallsapp/github-action@v2
+      with:
+        file: coverage.lcov
+        format: lcov
