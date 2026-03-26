@@ -2,6 +2,7 @@
 [![Build with uv and test](https://github.com/pulgon-project/pulgon_tools/actions/workflows/test-with-uv.yaml/badge.svg)](https://github.com/pulgon-project/pulgon_tools/actions/workflows/test-with-uv.yaml)
 [![Coverage Status](https://coveralls.io/repos/github/pulgon-project/pulgon_tools/badge.svg?branch=main)](https://coveralls.io/github/pulgon-project/pulgon_tools?branch=main)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # pulgon_tools
 
