@@ -1,3 +1,5 @@
+[![Build with uv and test](https://github.com/pulgon-project/pulgon_tools/actions/workflows/test-with-uv.yaml/badge.svg)](https://github.com/pulgon-project/pulgon_tools/actions/workflows/test-with-uv.yaml)
+
 # pulgon_tools
 
 This repository contains the software backbone of [project PULGON](https://pulgon-project.org/), focused on the study of quasi-1D nanostructures such as nanotubes and nanowires from the point of view of line groups, which describe their symmetries.
