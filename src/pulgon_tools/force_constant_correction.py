@@ -29,6 +29,7 @@ from ase import Atoms
 from ase.io import read
 from phonopy import Phonopy
 from phonopy.file_IO import parse_FORCE_CONSTANTS, read_force_constants_hdf5
+from phonopy.harmonic.force_constants import compact_fc_to_full_fc
 from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
 from phonopy.structure.atoms import PhonopyAtoms
 from sklearn.linear_model import Ridge
@@ -372,6 +373,12 @@ def main():
         default="convex_opt",
         help="The available methods are 'convex_opt', 'ridge_model'",
     )
+    parser.add_argument(
+        "-z",
+        "--full_fcs",
+        action="store_true",
+        help="Enable plotting if specified (default: False)",
+    )
 
     args = parser.parse_args()
 
@@ -382,6 +389,7 @@ def main():
     plot_phonon = args.plot_phonon
     recenter = args.recenter
     k_path = args.k_path
+    full_fcs = args.full_fcs
     fcs_savename = "FORCE_CONSTANTS_correction"
     phononfig_savename = "phonon_fix"
 
@@ -459,12 +467,22 @@ def main():
             # plt.ylim(bottom=0)
             plt.savefig(phononfig_savename, dpi=300)
 
-    phonopy.file_IO.write_FORCE_CONSTANTS(
-        IFC_sym, fcs_savename, phonon.primitive.p2s_map
-    )
-    phonopy.file_IO.write_force_constants_to_hdf5(
-        IFC_sym, filename=(fcs_savename + ".hdf5")
-    )
+    if full_fcs:
+        IFC_full = compact_fc_to_full_fc(phonon.primitive, IFC_sym)
+
+        phonopy.file_IO.write_FORCE_CONSTANTS(IFC_full, fcs_savename)
+        phonopy.file_IO.write_force_constants_to_hdf5(
+            IFC_full, filename=(fcs_savename + ".hdf5")
+        )
+    else:
+        phonopy.file_IO.write_FORCE_CONSTANTS(
+            IFC_sym, fcs_savename, p2s_map=phonon.primitive.p2s_map
+        )
+        phonopy.file_IO.write_force_constants_to_hdf5(
+            IFC_sym,
+            filename=(fcs_savename + ".hdf5"),
+            p2s_map=phonon.primitive.p2s_map,
+        )
 
 
 def parse_bool_list(value: str) -> List[bool]:
