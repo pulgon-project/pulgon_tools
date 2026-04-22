@@ -394,12 +394,14 @@ def line_group_sympy_withparities(
         nrot = DictParams["nrot"]
         a = DictParams["a"]
         order = DictParams["order"]
-        n, k1, m1, f, piU, piV, piH = symbols("n k1 m1 f piU piV piH")
+        n, k1, m1, f, piU, piV, piH, alphaU, betaS = symbols(
+            "n k1 m1 f piU piV piH alphaU betaS"
+        )
 
         func0 = sympy.Matrix(
             [
                 1,
-                sympy.exp(1j * m1 * sympy.pi / n),
+                sympy.exp(1j * 2 * m1 * sympy.pi / n),
                 1,
                 piU,
                 piV,
@@ -414,19 +416,19 @@ def line_group_sympy_withparities(
             ),
             sympy.Matrix(
                 [
-                    [sympy.exp(1j * m1 * sympy.pi / n), 0],
-                    [0, sympy.exp(-1j * m1 * sympy.pi / n)],
+                    [sympy.exp(1j * 2 * m1 * sympy.pi / n), 0],
+                    [0, sympy.exp(-1j * 2 * m1 * sympy.pi / n)],
                 ]
             ),
             sympy.Matrix(
                 [
                     [
-                        sympy.exp(1j * 2 * m1 * sympy.pi / n),
+                        sympy.exp(1j * 4 * m1 * sympy.pi / n),
                         0,
                     ],
                     [
                         0,
-                        sympy.exp(-1j * 2 * m1 * sympy.pi / n),
+                        sympy.exp(-1j * 4 * m1 * sympy.pi / n),
                     ],
                 ]
             ),
@@ -434,27 +436,39 @@ def line_group_sympy_withparities(
                 [
                     [
                         0,
-                        piH,
+                        piH * sympy.exp(-1j * 2 * m1 * alphaU),
                     ],
                     [
-                        piH,
+                        piH * sympy.exp(1j * 2 * m1 * alphaU),
                         0,
                     ],
                 ]
             ),
-            sympy.Matrix([[0, 1], [1, 0]]),
+            sympy.Matrix(
+                [
+                    [0, sympy.exp(-1j * 2 * m1 * betaS)],
+                    [sympy.exp(1j * 2 * m1 * betaS), 0],
+                ]
+            ),
         ]
         func2 = [
             sympy.Matrix([[1, 0], [0, 1]]),
             sympy.Matrix(
                 [
-                    [sympy.exp(1j * (m1 * sympy.pi / n + k1 * a / 2)), 0],
-                    [0, sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2))],
+                    [
+                        sympy.exp(1j * (2 * m1 * sympy.pi / n + k1 * a / 2)),
+                        0,
+                    ],
+                    [
+                        0,
+                        sympy.exp(1j * (2 * m1 * sympy.pi / n - k1 * a / 2)),
+                    ],
                 ]
             ),
-            sympy.Matrix(
-                [[0, 1], [1, 0]]
-            ),  # Suspecting it's an error in the book of line group
+            # sympy.Matrix(
+            #     [[0, 1], [1, 0]]
+            # ),  # Suspecting it's an error in the book of line group
+            sympy.Matrix([[1, 0], [0, 1]]),
             sympy.Matrix([[0, piV], [piV, 0]]),
             sympy.Matrix([[piV, 0], [0, piV]]),
         ]
@@ -472,54 +486,69 @@ def line_group_sympy_withparities(
             sympy.Matrix(
                 [
                     [
-                        sympy.exp(1j * (m1 * sympy.pi / n + k1 * a / 2)),
+                        sympy.exp(1j * (2 * m1 * sympy.pi / n + k1 * a / 2)),
                         0,
                         0,
                         0,
                     ],
                     [
                         0,
-                        sympy.exp(1j * (-m1 * sympy.pi / n + k1 * a / 2)),
+                        sympy.exp(1j * (-2 * m1 * sympy.pi / n + k1 * a / 2)),
                         0,
                         0,
                     ],
                     [
                         0,
                         0,
-                        sympy.exp(1j * (m1 * sympy.pi / n - k1 * a / 2)),
+                        sympy.exp(1j * (2 * m1 * sympy.pi / n - k1 * a / 2)),
                         0,
                     ],
                     [
                         0,
                         0,
                         0,
-                        sympy.exp(-1j * (m1 * sympy.pi / n + k1 * a / 2)),
+                        sympy.exp(-1j * (2 * m1 * sympy.pi / n + k1 * a / 2)),
                     ],
                 ]
             ),
             sympy.Matrix(
                 [
-                    [sympy.exp(1j * 2 * sympy.pi * m1 / n), 0, 0, 0],
-                    [0, sympy.exp(-1j * 2 * sympy.pi * m1 / n), 0, 0],
-                    [0, 0, sympy.exp(1j * 2 * sympy.pi * m1 / n), 0],
-                    [0, 0, 0, sympy.exp(-1j * 2 * sympy.pi * m1 / n)],
+                    [sympy.exp(1j * 4 * sympy.pi * m1 / n), 0, 0, 0],
+                    [0, sympy.exp(-1j * 4 * sympy.pi * m1 / n), 0, 0],
+                    [0, 0, sympy.exp(1j * 4 * sympy.pi * m1 / n), 0],
+                    [
+                        0,
+                        0,
+                        0,
+                        sympy.exp(-1j * 4 * sympy.pi * m1 / n),
+                    ],
                 ]
             ),
             sympy.Matrix(
-                [[0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0]]
+                [
+                    [0, 0, 0, sympy.exp(-1j * 2 * m1 * alphaU)],
+                    [0, 0, sympy.exp(1j * 2 * m1 * alphaU), 0],
+                    [0, sympy.exp(-1j * 2 * m1 * alphaU), 0, 0],
+                    [sympy.exp(1j * 2 * m1 * alphaU), 0, 0, 0],
+                ]
             ),
             sympy.Matrix(
-                [[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
+                [
+                    [0, sympy.exp(-1j * 2 * m1 * betaS), 0, 0],
+                    [sympy.exp(1j * 2 * m1 * betaS), 0, 0, 0],
+                    [0, 0, 0, sympy.exp(-1j * 2 * m1 * betaS)],
+                    [0, 0, sympy.exp(1j * 2 * m1 * betaS), 0],
+                ]
             ),
         ]
 
         func = [func0, func1, func2, func3, func4]
         qps_value = [qpoint]
 
-        if np.isclose(np.abs(qpoint), np.pi / a, atol=symprec):
-            m1_value = list(range(0, np.floor(nrot / 2 + 1).astype(np.int32)))
-        else:
-            m1_value = list(range(0, nrot + 1))
+        m1_value = list(range(0, np.floor(nrot / 2 + 1).astype(np.int32)))
+
+        tmp_alphaU = DictParams.get("alphaU", 0.0)
+        tmp_betaS = DictParams.get("betaS", 0.0)
 
         def value_fc(
             fc: list,
@@ -548,6 +577,8 @@ def line_group_sympy_withparities(
                         piU: tmp_piU,
                         piV: tmp_piV,
                         piH: tmp_piH,
+                        alphaU: tmp_alphaU,
+                        betaS: tmp_betaS,
                     }
                 )
                 res.append(tmp1)
@@ -559,8 +590,10 @@ def line_group_sympy_withparities(
         for ii, paras_value in enumerate(paras_km):
             tmp_k1, tmp_m1 = paras_value
             if np.isclose(tmp_k1, 0, atol=symprec):
-                if np.isclose(np.abs(tmp_m1), 0) or np.isclose(
-                    np.abs(tmp_m1), nrot
+                if (
+                    np.isclose(np.abs(tmp_m1), 0)
+                    or np.isclose(np.abs(tmp_m1), nrot)
+                    or np.isclose(np.abs(tmp_m1), nrot / 2, atol=symprec)
                 ):
                     idx_fc = 0
                     fc = func[idx_fc]
@@ -605,10 +638,13 @@ def line_group_sympy_withparities(
                         )
             elif np.isclose(np.abs(tmp_k1), np.pi / a, atol=symprec):
                 if np.isclose(np.abs(tmp_m1), nrot / 2, atol=symprec):
-                    idx_fc = 3
+                    # Use func2 (k-phase-inclusive 2D rep) instead of
+                    # func3 which lacks Bloch phase factors needed for
+                    # correct projectors at the BZ boundary.
+                    idx_fc = 2
                     fc = func[idx_fc]
-                    tmp_piV, tmp_piH = 0, 0
-                    for tmp_piU in [-1, 1]:
+                    tmp_piU, tmp_piH = 0, 0
+                    for tmp_piV in [-1, 1]:
                         res = value_fc(
                             fc,
                             tmp_k1,
@@ -666,8 +702,10 @@ def line_group_sympy_withparities(
                     )
 
             elif 0 < np.abs(tmp_k1) < np.pi / a:
-                if np.isclose(np.abs(tmp_m1), 0, atol=symprec) or np.isclose(
-                    np.abs(tmp_m1), nrot, atol=symprec
+                if (
+                    np.isclose(np.abs(tmp_m1), 0, atol=symprec)
+                    or np.isclose(np.abs(tmp_m1), nrot, atol=symprec)
+                    or np.isclose(np.abs(tmp_m1), nrot / 2, atol=symprec)
                 ):
                     idx_fc = 2
                     fc = func[idx_fc]

@@ -26,6 +26,7 @@ from pulgon_tools.detect_generalized_translational_group import (
 )
 from pulgon_tools.detect_point_group import LineGroupAnalyzer
 from pulgon_tools.line_group_table import get_family_num_from_sym_symbol
+from pulgon_tools.symmetry_projector import _extract_generator_angles
 from pulgon_tools.utils import (
     brute_force_generate_group_subsequent,
     find_axis_center_of_nanotube,
@@ -72,6 +73,8 @@ def get_linegroup_symmetry_dataset(
         mats = trans_op.copy()
     ops, order_ops = brute_force_generate_group_subsequent(mats, symec=1e-2)
 
+    gen_angles = _extract_generator_angles(mats)
+
     ops_car_sym = []
     for op in ops:
         tmp_sym = SymmOp.from_rotation_and_translation(
@@ -79,7 +82,7 @@ def get_linegroup_symmetry_dataset(
         )
         ops_car_sym.append(tmp_sym)
     family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
-    return atom_center, family, nrot, aL, ops_car_sym, order_ops
+    return atom_center, family, nrot, aL, ops_car_sym, order_ops, gen_angles
 
 
 def main():
@@ -133,6 +136,7 @@ def main():
         aL,
         ops_car_sym,
         order_ops,
+        gen_angles,
     ) = get_linegroup_symmetry_dataset(atom)
     qp_normalized = qpoint_z / aL * 2 * np.pi
     DictParams = {
@@ -141,6 +145,7 @@ def main():
         "order": order_ops,
         "family": family,
         "a": aL,
+        **gen_angles,
     }
 
     if enable_rep_matrix:

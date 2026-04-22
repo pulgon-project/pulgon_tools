@@ -1,0 +1,323 @@
+import logging
+
+import numpy as np
+import scipy
+from ase import Atom, Atoms
+from ase.io.vasp import read_vasp
+from phonopy.units import VaspToTHz
+from pymatgen.core.operations import SymmOp
+
+from pulgon_tools.detect_generalized_translational_group import (
+    CyclicGroupAnalyzer,
+)
+from pulgon_tools.detect_point_group import LineGroupAnalyzer
+from pulgon_tools.line_group_table import get_family_num_from_sym_symbol
+from pulgon_tools.utils import (
+    brute_force_generate_group_subsequent,
+    find_axis_center_of_nanotube,
+    get_character_withparities,
+    get_matrices_withPhase,
+)
+
+
+def get_adapted_matrix_withparities(DictParams, num_atom, matrices):
+    """
+    Calculate the symmetry projection basis matrix for irreducible representation
+
+    Parameters
+    ----------
+    DictParams : dict
+        Dictionary of parameters:
+           {"qpoints": q/k point | float,
+            "nrot": The rotational quantum number of the structure "Cn" | int,
+            "order": The multiplication order from generators to symmetry operations | list,
+            "family": The line group family index | int,
+            "a": The period length in z direction | float}
+    num_atom : int
+        The number of atoms
+    matrices : list of numpy arrays
+        The matrices used to calculate the symmetry projection basis matrix
+
+    Returns
+    -------
+    adapted : numpy array
+        The symmetry projection basis matrix for irreducible representation
+    dimension : list of int
+        The dimensions of the irreducible representations
+    """
+    (
+        representation_mat,
+        paras_values,
+        paras_symbols,
+    ) = get_character_withparities(DictParams)
+    ndof = 3 * num_atom
+
+    # At any non-zero q, screw translations accumulate Bloch phases
+    # (winding numbers) that break representation closure.  Use the
+    # little group (k-preserving operations only) with k-sector
+    # characters for the projector.
+    qpoint = DictParams.get("qpoints", 0.0)
+    is_nonzero_q = not np.isclose(qpoint, 0)
+
+    adapted = []
+    dimension = []
+    for ii, rep_mat in enumerate(representation_mat):  # loop IR
+        if rep_mat.ndim == 1:
+            IR_ndim = 1
+        else:
+            IR_ndim = rep_mat.shape[-1]
+
+        projector = np.zeros((ndof, ndof), dtype=np.complex128)
+
+        if is_nonzero_q and IR_ndim > 1:
+            # Little group approach: use only k-preserving operations
+            # with k-sector characters extracted from block-diagonal
+            # representation matrices.
+            k_chars = []
+            k_indices = []
+            for kk in range(len(rep_mat)):
+                mat = rep_mat[kk]
+                if IR_ndim == 4:
+                    off = np.linalg.norm(mat[:2, 2:]) + np.linalg.norm(
+                        mat[2:, :2]
+                    )
+                    if off < 1e-6:
+                        k_chars.append(np.trace(mat[:2, :2]))
+                        k_indices.append(kk)
+                elif IR_ndim == 2:
+                    off = abs(mat[0, 1]) + abs(mat[1, 0])
+                    if off < 1e-6:
+                        k_chars.append(mat[0, 0])
+                        k_indices.append(kk)
+
+            k_IR_ndim = IR_ndim // 2
+            n_H = len(k_indices)
+            for jj, kk in enumerate(k_indices):
+                chara_conj = np.conj(k_chars[jj])
+                projector += chara_conj * matrices[kk]
+            projector = k_IR_ndim * projector / n_H
+        else:
+            # Standard approach for Gamma, BZ boundary, or 1D reps
+            for kk in range(len(rep_mat)):
+                if rep_mat.ndim == 1:
+                    chara_conj = rep_mat[kk].conj()
+                else:
+                    chara_conj = rep_mat[kk].trace().conj()
+                projector += chara_conj * matrices[kk]
+            projector = IR_ndim * projector / len(rep_mat)
+
+        num_modes = projector.trace().real
+
+        if np.isclose(num_modes, np.round(num_modes)):
+            num_modes = np.round(num_modes).astype(np.int32)
+        else:
+            print("num_modes=", num_modes)
+            logging.ERROR("num_modes is not an integer")
+        if num_modes == 0:
+            continue
+        u, s, vh = scipy.linalg.svd(projector)
+        basis = u[:, :num_modes]
+        if num_modes < ndof:
+            error = 1 - np.abs(s[num_modes - 1] - s[num_modes]) / np.abs(
+                s[num_modes - 1]
+            )
+        else:
+            error = 0
+
+        if error > 0.05:
+            print("ii=", ii, "error=", error)
+
+        dimension.append(basis.shape[1])
+        adapted.append(basis)
+    adapted = np.concatenate(adapted, axis=1)
+    if adapted.shape[0] != adapted.shape[1] or adapted.shape[0] != ndof:
+        print("adapted.shape=", adapted.shape)
+    return adapted, dimension, paras_values, paras_symbols
+
+
+def _compute_unreduced_z_translations(generators, order_ops):
+    """Compute unreduced fractional z-translations for each group element.
+
+    When the group is generated by brute_force_generate_group_subsequent,
+    the z-component of translations is reduced mod 1 (via np.remainder).
+    This loses information needed for correct Bloch phase factors at
+    non-zero q-points. This function recomputes the true (unreduced)
+    fractional z-translation by composing the generators without
+    modular reduction.
+
+    Parameters
+    ----------
+    generators : ndarray, shape (n_gen, 4, 4)
+        Generator affine matrices.
+    order_ops : list of list of int
+        Generator index sequences for each group element.
+        Index 0 = identity, indices 1..n_gen = generators (1-indexed).
+
+    Returns
+    -------
+    list of float
+        Unreduced fractional z-translation for each group element.
+    """
+    gen_Rzz = [g[2, 2] for g in generators]
+    gen_tz = [g[2, 3] for g in generators]
+
+    result = []
+    for seq in order_ops:
+        tz = 0.0
+        for idx in seq:
+            if idx == 0:
+                continue
+            g = idx - 1
+            tz = gen_tz[g] + gen_Rzz[g] * tz
+        result.append(tz)
+    return result
+
+
+def _extract_generator_angles(mats):
+    """Extract geometric angles from C2' and sigma_d generators.
+
+    For each generator in mats, detect C2' (det=+1, R[2,2]=-1) and
+    sigma_d (det=-1, R[2,2]=+1) and extract their orientation angles
+    in the xy-plane.
+
+    Returns dict with keys 'alphaU' (C2' angle) and 'betaS' (sigma_d angle).
+    """
+    angles = {}
+    for mat in mats:
+        R = mat[:3, :3]
+        det = np.linalg.det(R)
+        if np.isclose(R[2, 2], -1, atol=1e-2) and det > 0:
+            # C2' perpendicular rotation
+            angles["alphaU"] = np.arctan2(R[0, 1], R[0, 0]) / 2
+        elif np.isclose(R[2, 2], 1, atol=1e-2) and det < 0:
+            # sigma_d mirror plane
+            angles["betaS"] = np.arctan2(R[0, 1], R[0, 0]) / 2
+    return angles
+
+
+def get_linegroup_symmetry_dataset(poscar):
+    if type(poscar) == str:
+        atom = read_vasp(poscar)
+    elif type(poscar) == Atom or type(poscar) == Atoms:
+        atom = poscar
+    else:
+        print("Unknown input")
+
+    atom_center = find_axis_center_of_nanotube(atom)
+
+    obj = LineGroupAnalyzer(atom_center, tolerance=1e-2)
+    cyclic = CyclicGroupAnalyzer(atom_center, tolerance=1e-2)
+
+    nrot = obj.get_rotational_symmetry_number()
+    aL = atom_center.cell[2, 2]
+    trans_sym = cyclic.cyclic_group[0]
+    rota_sym = obj.sch_symbol
+
+    trans_op = np.round(cyclic.get_generators(), 6)
+    rots_op = np.round(obj.get_generators(), 6)
+    mats = np.vstack(([trans_op], rots_op))
+    ops, order_ops = brute_force_generate_group_subsequent(mats, symec=1e-2)
+
+    gen_angles = _extract_generator_angles(mats)
+
+    unreduced_tz = _compute_unreduced_z_translations(mats, order_ops)
+
+    ops_car_sym = []
+    for idx, op in enumerate(ops):
+        cart_trans = op[:3, 3].copy() * aL
+        cart_trans[2] = unreduced_tz[idx] * aL
+        tmp_sym = SymmOp.from_rotation_and_translation(op[:3, :3], cart_trans)
+        ops_car_sym.append(tmp_sym)
+    family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
+    return atom_center, family, nrot, aL, ops_car_sym, order_ops, gen_angles
+
+
+def get_adapted_eigenmodes(D, adapted, dimensions):
+    """
+    Calculate the frequencies and eigenvectors at a given qpoint
+    using the symmetry-adapted basis.
+
+    Parameters
+    ----------
+    D : array_like
+        The dynamical matrix at the given qpoint.
+    adapted : numpy array
+        The symmetry projection basis matrix for irreducible representation.
+    dimensions : list of int
+        The dimensions of the irreducible representations.
+
+    Returns
+    -------
+    freq : numpy array
+        The frequencies at the given qpoint.
+    eigenvecs : numpy array
+        The eigenvectors at the given qpoint.
+    """
+
+    D = adapted.conj().T @ D @ adapted
+    start = 0
+    tmp_eigvec, tmp_eigval, freqs = [], [], []
+    for ir in range(len(dimensions)):
+        end = start + dimensions[ir]
+        block = D[start:end, start:end]
+        eigval, eigvecs = np.linalg.eigh(block)
+        tmp_vec = adapted[:, start:end] @ eigvecs
+        tmp_eigvec.append(tmp_vec)
+        tmp_eigval.append(eigval)
+        start = end
+    eigvals = np.concatenate(tmp_eigval)
+    eigenvecs = np.concatenate(tmp_eigvec, axis=1)
+    freqs = np.sqrt(np.abs(eigvals)) * np.sign(eigvals) * VaspToTHz
+    return freqs, eigvals, eigenvecs
+
+
+def get_eigenmodes_from_phonon(phonon, q_vector, adapted=True):
+    if adapted:
+        num_atom = len(phonon.primitive.get_atomic_numbers())
+        atom = Atoms(
+            cell=phonon.primitive.cell,
+            numbers=phonon.primitive.numbers,
+            positions=phonon.primitive.positions,
+        )
+        (
+            atom_center,
+            family,
+            nrot,
+            aL,
+            ops_car_sym,
+            order_ops,
+            gen_angles,
+        ) = get_linegroup_symmetry_dataset(atom)
+
+        qp_1dim = np.array(q_vector[2]) * 2 * np.pi
+        qp_1dim = qp_1dim / aL
+        DictParams = {
+            "qpoints": qp_1dim,
+            "nrot": nrot,
+            "order": order_ops,
+            "family": family,
+            "a": aL,
+            **gen_angles,
+        }
+
+        matrices = get_matrices_withPhase(
+            atom_center, ops_car_sym, qp_1dim, symprec=1e-3
+        )
+
+        (
+            adapted,
+            dimensions,
+            paras_values,
+            paras_symbols,
+        ) = get_adapted_matrix_withparities(DictParams, num_atom, matrices)
+        dmat = phonon.get_dynamical_matrix_at_q(q_vector)
+
+        freqs, eigvals, eigvecs = get_adapted_eigenmodes(
+            dmat, adapted, dimensions
+        )
+        return freqs, eigvals, eigvecs, dimensions, paras_values, paras_symbols
+    else:
+        dmat = phonon.get_dynamical_matrix_at_q(q_vector)
+        eigvals, eigvecs = np.linalg.eigh(dmat)
+        freqs = np.sqrt(np.abs(eigvals)) * np.sign(eigvals) * VaspToTHz
+        return freqs, eigvals, eigvecs

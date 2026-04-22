@@ -37,7 +37,7 @@ class TestLineGroupSymmetryDataset:
 
     def test_dataset_family4_9_9_AM(self, shared_datadir):
         atom = read_vasp(shared_datadir / "9-9-AM")
-        _, family, nrot, aL, ops, _ = get_linegroup_symmetry_dataset(atom)
+        _, family, nrot, aL, ops, _, _ = get_linegroup_symmetry_dataset(atom)
         assert family == 4
         assert nrot == 9
         assert np.isclose(aL, 3.2125, atol=1e-3)
@@ -45,7 +45,7 @@ class TestLineGroupSymmetryDataset:
 
     def test_dataset_family4_12_12_AM(self, shared_datadir):
         atom = read_vasp(shared_datadir / "12-12-AM")
-        _, family, nrot, aL, ops, _ = get_linegroup_symmetry_dataset(atom)
+        _, family, nrot, aL, ops, _, _ = get_linegroup_symmetry_dataset(atom)
         assert family == 4
         assert nrot == 12
         assert np.isclose(aL, 3.192, atol=1e-3)
@@ -53,7 +53,7 @@ class TestLineGroupSymmetryDataset:
 
     def test_dataset_family8_10_0_ZZ(self, shared_datadir):
         atom = read_vasp(shared_datadir / "10-0-ZZ")
-        _, family, nrot, aL, ops, _ = get_linegroup_symmetry_dataset(atom)
+        _, family, nrot, aL, ops, _, _ = get_linegroup_symmetry_dataset(atom)
         assert family == 8
         assert nrot == 10
         assert np.isclose(aL, 5.5642, atol=1e-3)
@@ -61,7 +61,7 @@ class TestLineGroupSymmetryDataset:
 
     def test_dataset_family8_24_0_ZZ(self, shared_datadir):
         atom = read_vasp(shared_datadir / "24-0-ZZ")
-        _, family, nrot, aL, ops, _ = get_linegroup_symmetry_dataset(atom)
+        _, family, nrot, aL, ops, _, _ = get_linegroup_symmetry_dataset(atom)
         assert family == 8
         assert nrot == 24
         assert np.isclose(aL, 5.48, atol=1e-2)
@@ -69,7 +69,7 @@ class TestLineGroupSymmetryDataset:
 
     def test_dataset_family5_st1(self, shared_datadir):
         atom = read_vasp(shared_datadir / "st1")
-        _, family, nrot, aL, ops, _ = get_linegroup_symmetry_dataset(atom)
+        _, family, nrot, aL, ops, _, _ = get_linegroup_symmetry_dataset(atom)
         assert family == 5
         assert nrot == 8
         assert np.isclose(aL, 4.5, atol=1e-2)
@@ -77,7 +77,7 @@ class TestLineGroupSymmetryDataset:
 
     def test_dataset_accepts_atoms_object(self, shared_datadir):
         atom = read_vasp(shared_datadir / "10-0-ZZ")
-        _, family, nrot, _, _, _ = get_linegroup_symmetry_dataset(atom)
+        _, family, nrot, _, _, _, _ = get_linegroup_symmetry_dataset(atom)
         assert family == 8
         assert nrot == 10
 
@@ -87,7 +87,7 @@ class TestCharacterTable:
 
     def _get_dict_params(self, shared_datadir, name, qz=0.0):
         atom = read_vasp(shared_datadir / name)
-        _, family, nrot, aL, _, order_ops = get_linegroup_symmetry_dataset(
+        _, family, nrot, aL, _, order_ops, _ = get_linegroup_symmetry_dataset(
             atom
         )
         qp_normalized = qz / aL * 2 * np.pi
@@ -153,7 +153,7 @@ class TestRepresentationMatrices:
 
     def _get_dict_params(self, shared_datadir, name, qz=0.0):
         atom = read_vasp(shared_datadir / name)
-        _, family, nrot, aL, _, order_ops = get_linegroup_symmetry_dataset(
+        _, family, nrot, aL, _, order_ops, _ = get_linegroup_symmetry_dataset(
             atom
         )
         qp_normalized = qz / aL * 2 * np.pi
@@ -208,7 +208,7 @@ class TestRepresentationMatrices:
 def _make_params(shared_datadir, name, qz=0.0):
     """Helper to build DictParams from a structure name."""
     atom = read_vasp(shared_datadir / name)
-    _, family, nrot, aL, _, order_ops = get_linegroup_symmetry_dataset(atom)
+    _, family, nrot, aL, _, order_ops, _ = get_linegroup_symmetry_dataset(atom)
     qp_normalized = qz / aL * 2 * np.pi
     return {
         "qpoints": qp_normalized,
@@ -571,7 +571,7 @@ class TestWithParitiesFamily13:
         reps, vals, syms = line_group_sympy_withparities(
             self._params(0.0), symprec=1e-6
         )
-        assert len(reps) == 10
+        assert len(reps) == 8
 
     def test_boundary_q_rep_count(self):
         a = 3.0
@@ -584,7 +584,7 @@ class TestWithParitiesFamily13:
         reps, vals, _ = line_group_sympy_withparities(
             self._params(0.5), symprec=1e-6
         )
-        assert len(reps) == 5
+        assert len(reps) == 4
 
 
 class TestWithParitiesFamily6Boundary:
@@ -599,7 +599,7 @@ class TestWithParitiesFamily6Boundary:
     def test_boundary_q_orthogonality(self, shared_datadir):
         """Character orthogonality at q=pi/a for family 6."""
         atom = read_vasp(shared_datadir / "C4v")
-        _, family, nrot, aL, _, order_ops = get_linegroup_symmetry_dataset(
+        _, family, nrot, aL, _, order_ops, _ = get_linegroup_symmetry_dataset(
             atom
         )
         params = {
@@ -626,7 +626,9 @@ class TestGetLinegroupSymmetryDatasetExtra:
         src = shared_datadir / "10-0-ZZ"
         dst = tmp_path / "POSCAR"
         shutil.copy(src, dst)
-        _, family, nrot, _, ops, _ = get_linegroup_symmetry_dataset(str(dst))
+        _, family, nrot, _, ops, _, _ = get_linegroup_symmetry_dataset(
+            str(dst)
+        )
         assert family == 8
         assert nrot == 10
 
