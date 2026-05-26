@@ -1,4 +1,6 @@
 import logging
+import re
+from fractions import Fraction
 
 import numpy as np
 import scipy
@@ -195,6 +197,20 @@ def _extract_generator_angles(mats):
     return angles
 
 
+def _extract_screw_parameters(trans_sym):
+    """Extract screw parameters from a translational symbol like (C12|T3(1.5))."""
+    match = re.match(r"\(C([^|]+)\|T\d+\(([^)]+)\)\)", trans_sym)
+    if match is None:
+        return {}
+
+    q_frac = Fraction(match.group(1))
+    return {
+        "Q_screw": float(q_frac),
+        "Q_num": q_frac.numerator,
+        "f_screw": float(match.group(2)),
+    }
+
+
 def get_linegroup_symmetry_dataset(poscar):
     if type(poscar) == str:
         atom = read_vasp(poscar)
@@ -219,6 +235,7 @@ def get_linegroup_symmetry_dataset(poscar):
     ops, order_ops = brute_force_generate_group_subsequent(mats, symec=1e-2)
 
     gen_angles = _extract_generator_angles(mats)
+    gen_angles.update(_extract_screw_parameters(trans_sym))
 
     unreduced_tz = _compute_unreduced_z_translations(mats, order_ops)
 

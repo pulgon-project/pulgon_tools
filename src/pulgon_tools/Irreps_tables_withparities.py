@@ -15,6 +15,7 @@
 
 import itertools
 import logging
+from fractions import Fraction
 from typing import List, Tuple
 
 import numpy as np
@@ -29,12 +30,113 @@ def sym_inverse_eye(n: int) -> sympy.Matrix:
     return A
 
 
+def _value_fc(
+    fc: list,
+    subs: dict,
+    order: List[List[int]],
+    *,
+    left_multiply: bool = True,
+) -> list:
+    res = []
+    for tmp_order in order:
+        for jj, tmp in enumerate(tmp_order):
+            if jj == 0:
+                tmp0 = fc[tmp]
+            elif left_multiply:
+                tmp0 = fc[tmp] * tmp0
+            else:
+                tmp0 = tmp0 * fc[tmp]
+        res.append(tmp0.evalf(subs=subs))
+    return res
+
+
+def _as_complex_array(values: list) -> np.ndarray:
+    return np.array(values).astype(np.complex128)
+
+
+def _m_values_signed(nrot: int) -> list:
+    return list(range(-int(nrot / 2) + 1, int(nrot / 2) + 1))
+
+
+def _m_values_full(nrot: int) -> list:
+    return list(range(-int(nrot) + 1, int(nrot) + 1))
+
+
+def _m_values_nonnegative(nrot: int) -> list:
+    return list(range(0, int(np.floor(nrot / 2)) + 1))
+
+
+def _m_values_screw(q_num: int) -> list:
+    start = int(np.floor(-q_num / 2.0)) + 1
+    stop = int(np.floor(q_num / 2.0)) + 1
+    return list(range(start, stop))
+
+
+def _is_boundary_m(m_value: float, nrot: int, symprec: float) -> bool:
+    return np.isclose(m_value, 0, atol=symprec) or np.isclose(
+        m_value, nrot / 2, atol=symprec
+    )
+
+
+def _phase2(m1, n):
+    return sympy.exp(1j * m1 * 2 * sympy.pi / n)
+
+
+def _swap_with_angle(m1, angle):
+    return sympy.Matrix(
+        [
+            [0, sympy.exp(-1j * 2 * m1 * angle)],
+            [sympy.exp(1j * 2 * m1 * angle), 0],
+        ]
+    )
+
+
+def _swap() -> sympy.Matrix:
+    return sympy.Matrix([[0, 1], [1, 0]])
+
+
 def line_group_sympy_withparities(
     DictParams: dict, symprec: float = 1e-6
 ) -> Tuple[list, list, list]:
     family = DictParams["family"]
 
-    if family == 2:
+    if family == 1:
+        qpoint = DictParams["qpoints"]
+        nrot = DictParams["nrot"]
+        order = DictParams["order"]
+        q_screw = DictParams.get("Q_screw")
+        f_screw = DictParams.get("f_screw")
+        if q_screw is None or f_screw is None:
+            raise KeyError(
+                "Family 1 requires 'Q_screw' and 'f_screw' in DictParams."
+            )
+
+        q_frac = Fraction(str(q_screw)).limit_denominator(1000)
+        q_num = DictParams.get("Q_num", q_frac.numerator)
+
+        k1, m1, n, Q, f = symbols("k1 m1 n Q f")
+        func0 = sympy.Matrix(
+            [
+                1,
+                sympy.exp(1j * (k1 * f + m1 * 2 * sympy.pi / Q)),
+                sympy.exp(1j * m1 * 2 * sympy.pi / n),
+            ]
+        )
+
+        m1_value = _m_values_screw(q_num)
+
+        paras_symbol = [k1, m1]
+        characters, paras_values = [], []
+        for tmp_k1, tmp_m1 in itertools.product([qpoint], m1_value):
+            res = _value_fc(
+                func0,
+                {k1: tmp_k1, m1: tmp_m1, n: nrot, Q: q_screw, f: f_screw},
+                order,
+            )
+            characters.append(_as_complex_array(res))
+            paras_values.append([tmp_k1, tmp_m1])
+
+    elif family == 2:
         qpoint = DictParams["qpoints"]
         nrot = DictParams["nrot"]
         a = DictParams["a"]
@@ -74,52 +176,82 @@ def line_group_sympy_withparities(
                 ]
             ),
         ]
-        func = [func0, func1]
-        qps_value = [qpoint]
-        m1_value = list(range(-int(nrot / 2) + 1, int(nrot / 2) + 1))
-
-        def value_fc(
-            fc: list,
-            tmp_k1: float,
-            tmp_m1: float,
-            tmp_piH: int,
-            nrot: int,
-            order: List[List[int]],
-        ) -> list:
-            res = []
-            for tmp_order in order:
-                for jj, tmp in enumerate(tmp_order):
-                    if jj == 0:
-                        tmp0 = fc[tmp]
-                    else:
-                        tmp0 = fc[tmp] * tmp0
-                tmp1 = tmp0.evalf(
-                    subs={k1: tmp_k1, m1: tmp_m1, n: nrot, piH: tmp_piH}
-                )
-                res.append(tmp1)
-            return res
-
-        paras_km = list(itertools.product(*[qps_value, m1_value]))
         paras_symbol = [k1, m1, piH]
         characters, paras_values = [], []
-        for ii, paras_value in enumerate(paras_km):
-            tmp_k1, tmp_m1 = paras_value
+        for tmp_k1, tmp_m1 in itertools.product(
+            [qpoint], _m_values_signed(nrot)
+        ):
             if np.isclose(tmp_k1, 0, atol=symprec) or np.isclose(
                 tmp_k1, np.pi / a, atol=symprec
             ):
-                idx_fc = 0
-                fc = func[idx_fc]
                 for tmp_piH in [-1, 1]:
-                    res = value_fc(fc, tmp_k1, tmp_m1, tmp_piH, nrot, order)
-                    characters.append(np.array(res).astype(np.complex128))
+                    res = _value_fc(
+                        func0,
+                        {k1: tmp_k1, m1: tmp_m1, n: nrot, piH: tmp_piH},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
                     paras_values.append([tmp_k1, tmp_m1, tmp_piH])
             else:
-                idx_fc = 1
-                fc = func[idx_fc]
                 tmp_piH = 0
-                res = value_fc(fc, tmp_k1, tmp_m1, tmp_piH, nrot, order)
-                characters.append(np.array(res).astype(np.complex128))
+                res = _value_fc(
+                    func1,
+                    {k1: tmp_k1, m1: tmp_m1, n: nrot, piH: tmp_piH},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
                 paras_values.append([tmp_k1, tmp_m1, tmp_piH])
+
+    elif family == 3:
+        qpoint = DictParams["qpoints"]
+        nrot = DictParams["nrot"]
+        a = DictParams["a"]
+        order = DictParams["order"]
+        k1, m1, n, piH = symbols("k1 m1 n piH")
+        func0 = sympy.Matrix(
+            [
+                1,
+                sympy.exp(1j * k1 * a),
+                _phase2(m1, n),
+                piH,
+            ]
+        )
+        func1 = [
+            sympy.eye(2),
+            sympy.Matrix(
+                [
+                    [sympy.exp(1j * k1 * a), 0],
+                    [0, sympy.exp(-1j * k1 * a)],
+                ]
+            ),
+            sympy.exp(1j * m1 * 2 * sympy.pi / n) * sympy.eye(2),
+            _swap(),
+        ]
+
+        paras_symbol = [k1, m1, piH]
+        characters, paras_values = [], []
+        for tmp_k1, tmp_m1 in itertools.product(
+            [qpoint], _m_values_signed(nrot)
+        ):
+            if np.isclose(tmp_k1, 0, atol=symprec) or np.isclose(
+                tmp_k1, np.pi / a, atol=symprec
+            ):
+                for tmp_piH in [-1, 1]:
+                    res = _value_fc(
+                        func0,
+                        {k1: tmp_k1, m1: tmp_m1, n: nrot, piH: tmp_piH},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append([tmp_k1, tmp_m1, tmp_piH])
+            else:
+                res = _value_fc(
+                    func1,
+                    {k1: tmp_k1, m1: tmp_m1, n: nrot, piH: 0},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
+                paras_values.append([tmp_k1, tmp_m1, 0])
 
     elif family == 4:
         qpoint = DictParams["qpoints"]
@@ -163,50 +295,93 @@ def line_group_sympy_withparities(
             ),
             sympy.Matrix([[0, 1], [1, 0]]),
         ]
-        func = [func0, func1]
-        qps_value = [qpoint]
-        m1_value = list(range(-int(nrot) + 1, int(nrot) + 1))
-
-        def value_fc(
-            fc: list,
-            tmp_k1: float,
-            tmp_m1: float,
-            tmp_piH: int,
-            nrot: int,
-            order: List[List[int]],
-        ) -> list:
-            res = []
-            for tmp_order in order:
-                for jj, tmp in enumerate(tmp_order):
-                    if jj == 0:
-                        tmp0 = fc[tmp]
-                    else:
-                        tmp0 = fc[tmp] * tmp0
-                tmp1 = tmp0.evalf(
-                    subs={k1: tmp_k1, m1: tmp_m1, n: nrot, piH: tmp_piH}
-                )
-                res.append(tmp1)
-            return res
-
-        paras_km = list(itertools.product(*[qps_value, m1_value]))
         paras_symbol = [k1, m1, piH]
         characters, paras_values = [], []
-        for ii, paras_value in enumerate(paras_km):
-            tmp_k1, tmp_m1 = paras_value
+        for tmp_k1, tmp_m1 in itertools.product(
+            [qpoint], _m_values_full(nrot)
+        ):
             if np.isclose(tmp_k1, 0, atol=symprec):
-                idx_fc = 0
-                fc = func[idx_fc]
                 for tmp_piH in [-1, 1]:
-                    res = value_fc(fc, tmp_k1, tmp_m1, tmp_piH, nrot, order)
-                    characters.append(np.array(res).astype(np.complex128))
+                    res = _value_fc(
+                        func0,
+                        {k1: tmp_k1, m1: tmp_m1, n: nrot, piH: tmp_piH},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
                     paras_values.append([tmp_k1, tmp_m1, tmp_piH])
             else:
-                idx_fc = 1
-                fc = func[idx_fc]
                 tmp_piH = 0
-                res = value_fc(fc, tmp_k1, tmp_m1, tmp_piH, nrot, order)
-                characters.append(np.array(res).astype(np.complex128))
+                res = _value_fc(
+                    func1,
+                    {k1: tmp_k1, m1: tmp_m1, n: nrot, piH: tmp_piH},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
                 paras_values.append([tmp_k1, tmp_m1, tmp_piH])
+
+    elif family == 5:
+        qpoint = DictParams["qpoints"]
+        nrot = DictParams["nrot"]
+        order = DictParams["order"]
+        q_screw = DictParams.get("Q_screw")
+        f_screw = DictParams.get("f_screw")
+        if q_screw is None or f_screw is None:
+            raise KeyError(
+                "Family 5 requires 'Q_screw' and 'f_screw' in DictParams."
+            )
+        q_frac = Fraction(str(q_screw)).limit_denominator(1000)
+        q_num = DictParams.get("Q_num", q_frac.numerator)
+
+        k1, m1, n, Q, f, piU = symbols("k1 m1 n Q f piU")
+        screw_phase = sympy.exp(1j * (k1 * f + m1 * 2 * sympy.pi / Q))
+        rot_phase = _phase2(m1, n)
+        func0 = sympy.Matrix([1, screw_phase, rot_phase, piU])
+        func1 = [
+            sympy.eye(2),
+            sympy.Matrix([[screw_phase, 0], [0, 1 / screw_phase]]),
+            sympy.Matrix([[rot_phase, 0], [0, 1 / rot_phase]]),
+            _swap(),
+        ]
+
+        m1_value = _m_values_screw(q_num)
+        paras_symbol = [k1, m1, piU]
+        characters, paras_values = [], []
+        for tmp_k1, tmp_m1 in itertools.product([qpoint], m1_value):
+            is_special_m = np.isclose(tmp_m1, 0, atol=symprec) or (
+                q_num % 2 == 0
+                and np.isclose(abs(tmp_m1), q_num / 2, atol=symprec)
+            )
+            if np.isclose(tmp_k1, 0, atol=symprec) and is_special_m:
+                for tmp_piU in [-1, 1]:
+                    res = _value_fc(
+                        func0,
+                        {
+                            k1: tmp_k1,
+                            m1: tmp_m1,
+                            n: nrot,
+                            Q: q_screw,
+                            f: f_screw,
+                            piU: tmp_piU,
+                        },
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append([tmp_k1, tmp_m1, tmp_piU])
+            else:
+                res = _value_fc(
+                    func1,
+                    {
+                        k1: tmp_k1,
+                        m1: tmp_m1,
+                        n: nrot,
+                        Q: q_screw,
+                        f: f_screw,
+                        piU: 0,
+                    },
+                    order,
+                )
+                characters.append(_as_complex_array(res))
+                paras_values.append([tmp_k1, tmp_m1, 0])
 
     elif family == 6:
         qpoint = DictParams["qpoints"]
@@ -251,52 +426,67 @@ def line_group_sympy_withparities(
             ),
             sympy.Matrix([[0, 1], [1, 0]]),
         ]
-        func = [func0, func1]
-        qps_value = [qpoint]
-        m1_value = list(range(0, int(nrot / 2) + 1))
-
-        def value_fc(
-            fc: list,
-            tmp_k1: float,
-            tmp_m1: float,
-            tmp_piV: int,
-            nrot: int,
-            order: List[List[int]],
-        ) -> list:
-            res = []
-            for tmp_order in order:
-                for jj, tmp in enumerate(tmp_order):
-                    if jj == 0:
-                        tmp0 = fc[tmp]
-                    else:
-                        tmp0 = fc[tmp] * tmp0
-                tmp1 = tmp0.evalf(
-                    subs={k1: tmp_k1, m1: tmp_m1, n: nrot, piV: tmp_piV}
-                )
-                res.append(tmp1)
-            return res
-
-        paras_km = list(itertools.product(*[qps_value, m1_value]))
         paras_symbol = [k1, m1, piV]
         characters, paras_values = [], []
-        for ii, paras_value in enumerate(paras_km):
-            tmp_k1, tmp_m1 = paras_value
-            if np.isclose(tmp_m1, 0, atol=symprec) or np.isclose(
-                tmp_m1, nrot / 2, atol=symprec
-            ):
-                idx_fc = 0
-                fc = func[idx_fc]
+        for tmp_k1, tmp_m1 in itertools.product(
+            [qpoint], _m_values_nonnegative(nrot)
+        ):
+            if _is_boundary_m(tmp_m1, nrot, symprec):
                 for tmp_piV in [-1, 1]:
-                    res = value_fc(fc, tmp_k1, tmp_m1, tmp_piV, nrot, order)
-                    characters.append(np.array(res).astype(np.complex128))
+                    res = _value_fc(
+                        func0,
+                        {k1: tmp_k1, m1: tmp_m1, n: nrot, piV: tmp_piV},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
                     paras_values.append([tmp_k1, tmp_m1, tmp_piV])
             else:
-                idx_fc = 1
-                fc = func[idx_fc]
                 tmp_piV = 0
-                res = value_fc(fc, tmp_k1, tmp_m1, tmp_piV, nrot, order)
-                characters.append(np.array(res).astype(np.complex128))
+                res = _value_fc(
+                    func1,
+                    {k1: tmp_k1, m1: tmp_m1, n: nrot, piV: tmp_piV},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
                 paras_values.append([tmp_k1, tmp_m1, tmp_piV])
+
+    elif family == 7:
+        qpoint = DictParams["qpoints"]
+        nrot = DictParams["nrot"]
+        a = DictParams["a"]
+        order = DictParams["order"]
+        k1, m1, n, piV = symbols("k1 m1 n piV")
+        glide_phase = sympy.exp(1j * k1 * a / 2)
+        rot_phase = _phase2(m1, n)
+        func0 = sympy.Matrix([1, piV * glide_phase, rot_phase])
+        func1 = [
+            sympy.eye(2),
+            sympy.Matrix([[0, glide_phase], [glide_phase, 0]]),
+            sympy.Matrix([[rot_phase, 0], [0, 1 / rot_phase]]),
+        ]
+
+        paras_symbol = [k1, m1, piV]
+        characters, paras_values = [], []
+        for tmp_k1, tmp_m1 in itertools.product(
+            [qpoint], _m_values_nonnegative(nrot)
+        ):
+            if _is_boundary_m(tmp_m1, nrot, symprec):
+                for tmp_piV in [-1, 1]:
+                    res = _value_fc(
+                        func0,
+                        {k1: tmp_k1, m1: tmp_m1, n: nrot, piV: tmp_piV},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append([tmp_k1, tmp_m1, tmp_piV])
+            else:
+                res = _value_fc(
+                    func1,
+                    {k1: tmp_k1, m1: tmp_m1, n: nrot, piV: 0},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
+                paras_values.append([tmp_k1, tmp_m1, 0])
 
     elif family == 8:
         qpoint = DictParams["qpoints"]
@@ -343,52 +533,435 @@ def line_group_sympy_withparities(
             sympy.Matrix([[0, 1], [1, 0]]),
         ]
 
-        func = [func0, func1]
-        qps_value = [qpoint]
-        m1_value = list(range(0, nrot + 1))
-
-        def value_fc(
-            fc: list,
-            tmp_k1: float,
-            tmp_m1: float,
-            tmp_piV: int,
-            nrot: int,
-            order: List[List[int]],
-        ) -> list:
-            res = []
-            for tmp_order in order:
-                for jj, tmp in enumerate(tmp_order):
-                    if jj == 0:
-                        tmp0 = fc[tmp]
-                    else:
-                        tmp0 = fc[tmp] * tmp0
-                tmp1 = tmp0.evalf(
-                    subs={k1: tmp_k1, m1: tmp_m1, n: nrot, piV: tmp_piV}
-                )
-                res.append(tmp1)
-            return res
-
-        paras_km = list(itertools.product(*[qps_value, m1_value]))
         paras_symbol = [k1, m1, piV]
         characters, paras_values = [], []
-        for ii, paras_value in enumerate(paras_km):
-            tmp_k1, tmp_m1 = paras_value
+        for tmp_k1, tmp_m1 in itertools.product([qpoint], range(0, nrot + 1)):
             if np.isclose(tmp_m1, 0, atol=symprec) or np.isclose(
                 tmp_m1, nrot, atol=symprec
             ):
-                idx_fc = 0
-                fc = func[idx_fc]
                 for tmp_piV in [-1, 1]:
-                    res = value_fc(fc, tmp_k1, tmp_m1, tmp_piV, nrot, order)
-                    characters.append(np.array(res).astype(np.complex128))
+                    res = _value_fc(
+                        func0,
+                        {k1: tmp_k1, m1: tmp_m1, n: nrot, piV: tmp_piV},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
                     paras_values.append([tmp_k1, tmp_m1, tmp_piV])
             else:
-                idx_fc = 1
-                fc = func[idx_fc]
                 tmp_piV = 0
-                res = value_fc(fc, tmp_k1, tmp_m1, tmp_piV, nrot, order)
-                characters.append(np.array(res).astype(np.complex128))
+                res = _value_fc(
+                    func1,
+                    {k1: tmp_k1, m1: tmp_m1, n: nrot, piV: tmp_piV},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
                 paras_values.append([tmp_k1, tmp_m1, tmp_piV])
+
+    elif family == 9:
+        qpoint = DictParams["qpoints"]
+        nrot = DictParams["nrot"]
+        a = DictParams["a"]
+        order = DictParams["order"]
+        n, k1, m1, piU, piV, piH, alphaU, betaS = symbols(
+            "n k1 m1 piU piV piH alphaU betaS"
+        )
+        trans_k = sympy.exp(1j * k1 * a)
+        rot_m = _phase2(m1, n)
+        tmp_alphaU = DictParams.get("alphaU", 0.0)
+        tmp_betaS = DictParams.get("betaS", 0.0)
+
+        func0 = sympy.Matrix([1, trans_k, rot_m, piU, piV])
+        func1 = [
+            sympy.eye(2),
+            trans_k * sympy.eye(2),
+            sympy.Matrix([[rot_m, 0], [0, 1 / rot_m]]),
+            piH * _swap_with_angle(m1, alphaU),
+            _swap_with_angle(m1, betaS),
+        ]
+        func2 = [
+            sympy.eye(2),
+            sympy.Matrix([[trans_k, 0], [0, 1 / trans_k]]),
+            rot_m * sympy.eye(2),
+            _swap(),
+            piV * sympy.eye(2),
+        ]
+        func4 = [
+            sympy.eye(4),
+            sympy.diag(trans_k, trans_k, 1 / trans_k, 1 / trans_k),
+            sympy.diag(rot_m, 1 / rot_m, 1 / rot_m, rot_m),
+            sympy.Matrix(
+                [[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]]
+            ),
+            sympy.Matrix(
+                [[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
+            ),
+        ]
+        paras_symbol = [k1, m1, piU, piV, piH]
+
+        characters, paras_values = [], []
+        for tmp_k1, tmp_m1 in itertools.product(
+            [qpoint], _m_values_nonnegative(nrot)
+        ):
+            base_subs = {
+                k1: tmp_k1,
+                m1: tmp_m1,
+                n: nrot,
+                alphaU: tmp_alphaU,
+                betaS: tmp_betaS,
+            }
+            is_k_edge = np.isclose(tmp_k1, 0, atol=symprec) or np.isclose(
+                tmp_k1, np.pi / a, atol=symprec
+            )
+            is_m_edge = _is_boundary_m(tmp_m1, nrot, symprec)
+            if is_k_edge and is_m_edge:
+                for tmp_piU, tmp_piV, tmp_piH in itertools.product(
+                    [-1, 1], [-1, 1], [-1, 1]
+                ):
+                    res = _value_fc(
+                        func0,
+                        {
+                            **base_subs,
+                            piU: tmp_piU,
+                            piV: tmp_piV,
+                            piH: tmp_piH,
+                        },
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append(
+                        [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
+                    )
+            elif is_k_edge:
+                for tmp_piH in [-1, 1]:
+                    res = _value_fc(
+                        func1,
+                        {**base_subs, piU: 0, piV: 0, piH: tmp_piH},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append([tmp_k1, tmp_m1, 0, 0, tmp_piH])
+            elif is_m_edge:
+                for tmp_piV in [-1, 1]:
+                    res = _value_fc(
+                        func2,
+                        {**base_subs, piU: 0, piV: tmp_piV, piH: 0},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append([tmp_k1, tmp_m1, 0, tmp_piV, 0])
+            else:
+                res = _value_fc(
+                    func4,
+                    {**base_subs, piU: 0, piV: 0, piH: 0},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
+                paras_values.append([tmp_k1, tmp_m1, 0, 0, 0])
+
+    elif family == 11:
+        qpoint = DictParams["qpoints"]
+        nrot = DictParams["nrot"]
+        a = DictParams["a"]
+        order = DictParams["order"]
+        n, k1, m1, piU, piV, piH, alphaU, betaS = symbols(
+            "n k1 m1 piU piV piH alphaU betaS"
+        )
+        trans_k = sympy.exp(1j * k1 * a)
+        rot_m = _phase2(m1, n)
+        tmp_alphaU = DictParams.get("alphaU", 0.0)
+        tmp_betaS = DictParams.get("betaS", 0.0)
+
+        func0 = sympy.Matrix([1, trans_k, rot_m, piV, piH])
+        func1 = [
+            sympy.eye(2),
+            trans_k * sympy.eye(2),
+            sympy.Matrix([[rot_m, 0], [0, 1 / rot_m]]),
+            _swap_with_angle(m1, betaS),
+            piH * sympy.eye(2),
+        ]
+        func2 = [
+            sympy.eye(2),
+            sympy.Matrix([[trans_k, 0], [0, 1 / trans_k]]),
+            rot_m * sympy.eye(2),
+            piV * sympy.eye(2),
+            _swap(),
+        ]
+        func4 = [
+            sympy.eye(4),
+            sympy.diag(trans_k, trans_k, 1 / trans_k, 1 / trans_k),
+            sympy.diag(rot_m, 1 / rot_m, rot_m, 1 / rot_m),
+            sympy.Matrix(
+                [[0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]]
+            ),
+            sympy.Matrix(
+                [[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]]
+            ),
+        ]
+        paras_symbol = [k1, m1, piU, piV, piH]
+
+        characters, paras_values = [], []
+        for tmp_k1, tmp_m1 in itertools.product(
+            [qpoint], _m_values_nonnegative(nrot)
+        ):
+            base_subs = {
+                k1: tmp_k1,
+                m1: tmp_m1,
+                n: nrot,
+                alphaU: tmp_alphaU,
+                betaS: tmp_betaS,
+            }
+            is_k_edge = np.isclose(tmp_k1, 0, atol=symprec) or np.isclose(
+                tmp_k1, np.pi / a, atol=symprec
+            )
+            is_m_edge = _is_boundary_m(tmp_m1, nrot, symprec)
+            if is_k_edge and is_m_edge:
+                for tmp_piU, tmp_piV, tmp_piH in itertools.product(
+                    [-1, 1], [-1, 1], [-1, 1]
+                ):
+                    res = _value_fc(
+                        func0,
+                        {
+                            **base_subs,
+                            piU: tmp_piU,
+                            piV: tmp_piV,
+                            piH: tmp_piH,
+                        },
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append(
+                        [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
+                    )
+            elif is_k_edge:
+                for tmp_piH in [-1, 1]:
+                    res = _value_fc(
+                        func1,
+                        {**base_subs, piU: 0, piV: 0, piH: tmp_piH},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append([tmp_k1, tmp_m1, 0, 0, tmp_piH])
+            elif is_m_edge:
+                for tmp_piV in [-1, 1]:
+                    res = _value_fc(
+                        func2,
+                        {**base_subs, piU: 0, piV: tmp_piV, piH: 0},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append([tmp_k1, tmp_m1, 0, tmp_piV, 0])
+            else:
+                res = _value_fc(
+                    func4,
+                    {**base_subs, piU: 0, piV: 0, piH: 0},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
+                paras_values.append([tmp_k1, tmp_m1, 0, 0, 0])
+
+    elif family == 10:
+        qpoint = DictParams["qpoints"]
+        nrot = DictParams["nrot"]
+        a = DictParams["a"]
+        order = DictParams["order"]
+        n, k1, m1, piU, piV, piH = symbols("n k1 m1 piU piV piH")
+        glide_k = sympy.exp(1j * k1 * a / 2)
+        s_phase = sympy.exp(1j * m1 * sympy.pi / n)
+        rot_m = _phase2(m1, n)
+        func0 = sympy.Matrix([1, piV * glide_k, piU * piV * s_phase])
+        func1 = [
+            sympy.eye(2),
+            glide_k * _swap(),
+            piH * sympy.Matrix([[s_phase, 0], [0, 1 / s_phase]]),
+        ]
+        func2 = [
+            sympy.eye(2),
+            piV * sympy.Matrix([[glide_k, 0], [0, 1 / glide_k]]),
+            sympy.Matrix([[0, s_phase], [1 / s_phase, 0]]),
+        ]
+        func3 = [
+            sympy.eye(2),
+            sympy.Matrix([[glide_k, 0], [0, -glide_k]]),
+            sympy.Matrix([[0, -sympy.exp(1j * k1 * a)], [1, 0]]),
+        ]
+        func4 = [
+            sympy.eye(4),
+            sympy.Matrix(
+                [
+                    [0, glide_k, 0, 0],
+                    [glide_k, 0, 0, 0],
+                    [0, 0, 0, 1 / glide_k],
+                    [0, 0, 1 / glide_k, 0],
+                ]
+            ),
+            sympy.Matrix(
+                [
+                    [0, 0, s_phase, 0],
+                    [0, 0, 0, 1 / s_phase],
+                    [s_phase, 0, 0, 0],
+                    [0, 1 / s_phase, 0, 0],
+                ]
+            ),
+        ]
+
+        paras_symbol = [k1, m1, piU, piV, piH]
+        characters, paras_values = [], []
+        for tmp_k1, tmp_m1 in itertools.product(
+            [qpoint], _m_values_nonnegative(nrot)
+        ):
+            base_subs = {k1: tmp_k1, m1: tmp_m1, n: nrot}
+            is_gamma = np.isclose(tmp_k1, 0, atol=symprec)
+            is_pi = np.isclose(tmp_k1, np.pi / a, atol=symprec)
+            is_m_edge = _is_boundary_m(tmp_m1, nrot, symprec)
+            if (is_gamma and np.isclose(tmp_m1, 0, atol=symprec)) or (
+                is_pi and np.isclose(tmp_m1, nrot / 2, atol=symprec)
+            ):
+                for tmp_piU, tmp_piV in itertools.product([-1, 1], [-1, 1]):
+                    res = _value_fc(
+                        func0,
+                        {
+                            **base_subs,
+                            piU: tmp_piU,
+                            piV: tmp_piV,
+                            piH: 0,
+                        },
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append([tmp_k1, tmp_m1, tmp_piU, tmp_piV, 0])
+            elif (is_gamma or is_pi) and not is_m_edge:
+                for tmp_piH in [-1, 1]:
+                    res = _value_fc(
+                        func1,
+                        {**base_subs, piU: 0, piV: 0, piH: tmp_piH},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append([tmp_k1, tmp_m1, 0, 0, tmp_piH])
+            elif is_m_edge and not (is_gamma or is_pi):
+                for tmp_piV in [-1, 1]:
+                    res = _value_fc(
+                        func2,
+                        {**base_subs, piU: 0, piV: tmp_piV, piH: 0},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append([tmp_k1, tmp_m1, 0, tmp_piV, 0])
+            elif (is_gamma and np.isclose(tmp_m1, nrot / 2, atol=symprec)) or (
+                is_pi and np.isclose(tmp_m1, 0, atol=symprec)
+            ):
+                res = _value_fc(
+                    func3,
+                    {**base_subs, piU: 0, piV: 0, piH: 0},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
+                paras_values.append([tmp_k1, tmp_m1, 0, 0, 0])
+            else:
+                res = _value_fc(
+                    func4,
+                    {**base_subs, piU: 0, piV: 0, piH: 0},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
+                paras_values.append([tmp_k1, tmp_m1, 0, 0, 0])
+
+    elif family == 12:
+        qpoint = DictParams["qpoints"]
+        nrot = DictParams["nrot"]
+        a = DictParams["a"]
+        order = DictParams["order"]
+        n, k1, m1, piV, piH = symbols("n k1 m1 piV piH")
+        glide_k = sympy.exp(1j * k1 * a / 2)
+        rot_m = _phase2(m1, n)
+        func0 = sympy.Matrix([1, piV * glide_k, rot_m, piH])
+        func1 = [
+            sympy.eye(2),
+            glide_k * _swap(),
+            sympy.Matrix([[rot_m, 0], [0, 1 / rot_m]]),
+            piH * sympy.eye(2),
+        ]
+        func2 = [
+            sympy.eye(2),
+            piV * sympy.Matrix([[glide_k, 0], [0, 1 / glide_k]]),
+            rot_m * sympy.eye(2),
+            _swap(),
+        ]
+        func3 = [
+            sympy.eye(2),
+            sympy.Matrix([[sympy.I, 0], [0, -sympy.I]]),
+            rot_m * sympy.eye(2),
+            _swap(),
+        ]
+        func4 = [
+            sympy.eye(4),
+            sympy.Matrix(
+                [
+                    [0, glide_k, 0, 0],
+                    [glide_k, 0, 0, 0],
+                    [0, 0, 0, 1 / glide_k],
+                    [0, 0, 1 / glide_k, 0],
+                ]
+            ),
+            sympy.diag(rot_m, 1 / rot_m, rot_m, 1 / rot_m),
+            sympy.Matrix(
+                [[0, 0, 1, 0], [0, 0, 0, 1], [1, 0, 0, 0], [0, 1, 0, 0]]
+            ),
+        ]
+
+        paras_symbol = [k1, m1, piV, piH]
+        characters, paras_values = [], []
+        for tmp_k1, tmp_m1 in itertools.product(
+            [qpoint], _m_values_nonnegative(nrot)
+        ):
+            base_subs = {k1: tmp_k1, m1: tmp_m1, n: nrot}
+            is_gamma = np.isclose(tmp_k1, 0, atol=symprec)
+            is_pi = np.isclose(tmp_k1, np.pi / a, atol=symprec)
+            is_m_edge = _is_boundary_m(tmp_m1, nrot, symprec)
+            if is_gamma and is_m_edge:
+                for tmp_piV, tmp_piH in itertools.product([-1, 1], [-1, 1]):
+                    res = _value_fc(
+                        func0,
+                        {**base_subs, piV: tmp_piV, piH: tmp_piH},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append([tmp_k1, tmp_m1, tmp_piV, tmp_piH])
+            elif (is_gamma or is_pi) and not is_m_edge:
+                for tmp_piH in [-1, 1]:
+                    res = _value_fc(
+                        func1,
+                        {**base_subs, piV: 0, piH: tmp_piH},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append([tmp_k1, tmp_m1, 0, tmp_piH])
+            elif is_pi and is_m_edge:
+                res = _value_fc(
+                    func3,
+                    {**base_subs, piV: 0, piH: 0},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
+                paras_values.append([tmp_k1, tmp_m1, 0, 0])
+            elif is_m_edge:
+                for tmp_piV in [-1, 1]:
+                    res = _value_fc(
+                        func2,
+                        {**base_subs, piV: tmp_piV, piH: 0},
+                        order,
+                    )
+                    characters.append(_as_complex_array(res))
+                    paras_values.append([tmp_k1, tmp_m1, tmp_piV, 0])
+            else:
+                res = _value_fc(
+                    func4,
+                    {**base_subs, piV: 0, piH: 0},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
+                paras_values.append([tmp_k1, tmp_m1, 0, 0])
+
     elif family == 13:
         qpoint = DictParams["qpoints"]
         nrot = DictParams["nrot"]
@@ -542,97 +1115,56 @@ def line_group_sympy_withparities(
             ),
         ]
 
-        func = [func0, func1, func2, func3, func4]
-        qps_value = [qpoint]
-
-        m1_value = list(range(0, np.floor(nrot / 2 + 1).astype(np.int32)))
-
         tmp_alphaU = DictParams.get("alphaU", 0.0)
         tmp_betaS = DictParams.get("betaS", 0.0)
 
-        def value_fc(
-            fc: list,
-            tmp_k1: float,
-            tmp_m1: float,
-            tmp_piU: int,
-            tmp_piV: int,
-            tmp_piH: int,
-            nrot: int,
-            a: float,
-            order: List[List[int]],
-        ) -> list:
-            res = []
-            for tmp_order in order:
-                for jj, tmp in enumerate(tmp_order):
-                    if jj == 0:
-                        tmp0 = fc[tmp]
-                    else:
-                        tmp0 = tmp0 * fc[tmp]
-                tmp1 = tmp0.xreplace(
+        paras_symbol = [k1, m1, piU, piV, piH]
+        characters, paras_values = [], []
+        for tmp_k1, tmp_m1 in itertools.product(
+            [qpoint], _m_values_nonnegative(nrot)
+        ):
+            base_subs = {
+                k1: tmp_k1,
+                m1: tmp_m1,
+                n: nrot,
+                f: a / 2,
+                alphaU: tmp_alphaU,
+                betaS: tmp_betaS,
+            }
+
+            def eval_fc(fc, tmp_piU=0, tmp_piV=0, tmp_piH=0):
+                return _value_fc(
+                    fc,
                     {
-                        k1: tmp_k1,
-                        m1: tmp_m1,
-                        n: nrot,
-                        f: a / 2,
+                        **base_subs,
                         piU: tmp_piU,
                         piV: tmp_piV,
                         piH: tmp_piH,
-                        alphaU: tmp_alphaU,
-                        betaS: tmp_betaS,
-                    }
+                    },
+                    order,
+                    left_multiply=False,
                 )
-                res.append(tmp1)
-            return res
 
-        paras_km = list(itertools.product(*[qps_value, m1_value]))
-        paras_symbol = [k1, m1, piU, piV, piH]
-        characters, paras_values = [], []
-        for ii, paras_value in enumerate(paras_km):
-            tmp_k1, tmp_m1 = paras_value
             if np.isclose(tmp_k1, 0, atol=symprec):
                 if (
                     np.isclose(np.abs(tmp_m1), 0)
                     or np.isclose(np.abs(tmp_m1), nrot)
                     or np.isclose(np.abs(tmp_m1), nrot / 2, atol=symprec)
                 ):
-                    idx_fc = 0
-                    fc = func[idx_fc]
                     tmp_piH = 0
                     for tmp_piU, tmp_piV in itertools.product(
                         [-1, 1], [-1, 1]
                     ):
-                        res = value_fc(
-                            fc,
-                            tmp_k1,
-                            tmp_m1,
-                            tmp_piU,
-                            tmp_piV,
-                            tmp_piH,
-                            nrot,
-                            a,
-                            order,
-                        )
-                        characters.append(np.array(res).astype(np.complex128))
+                        res = eval_fc(func0, tmp_piU, tmp_piV, tmp_piH)
+                        characters.append(_as_complex_array(res))
                         paras_values.append(
                             [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                         )
                 else:
-                    idx_fc = 1
-                    fc = func[idx_fc]
                     tmp_piU, tmp_piV = 0, 0
                     for tmp_piH in [-1, 1]:
-                        res = value_fc(
-                            fc,
-                            tmp_k1,
-                            tmp_m1,
-                            tmp_piU,
-                            tmp_piV,
-                            tmp_piH,
-                            nrot,
-                            a,
-                            order,
-                        )
-                        characters.append(np.array(res).astype(np.complex128))
+                        res = eval_fc(func1, tmp_piU, tmp_piV, tmp_piH)
+                        characters.append(_as_complex_array(res))
                         paras_values.append(
                             [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                         )
@@ -641,62 +1173,26 @@ def line_group_sympy_withparities(
                     # Use func2 (k-phase-inclusive 2D rep) instead of
                     # func3 which lacks Bloch phase factors needed for
                     # correct projectors at the BZ boundary.
-                    idx_fc = 2
-                    fc = func[idx_fc]
                     tmp_piU, tmp_piH = 0, 0
                     for tmp_piV in [-1, 1]:
-                        res = value_fc(
-                            fc,
-                            tmp_k1,
-                            tmp_m1,
-                            tmp_piU,
-                            tmp_piV,
-                            tmp_piH,
-                            nrot,
-                            a,
-                            order,
-                        )
-                        characters.append(np.array(res).astype(np.complex128))
+                        res = eval_fc(func2, tmp_piU, tmp_piV, tmp_piH)
+                        characters.append(_as_complex_array(res))
                         paras_values.append(
                             [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                         )
 
                 elif np.isclose(np.abs(tmp_m1), 0, atol=symprec):
-                    idx_fc = 2
-                    fc = func[idx_fc]
                     tmp_piU, tmp_piH = 0, 0
                     for tmp_piV in [-1, 1]:
-                        res = value_fc(
-                            fc,
-                            tmp_k1,
-                            tmp_m1,
-                            tmp_piU,
-                            tmp_piV,
-                            tmp_piH,
-                            nrot,
-                            a,
-                            order,
-                        )
-                        characters.append(np.array(res).astype(np.complex128))
+                        res = eval_fc(func2, tmp_piU, tmp_piV, tmp_piH)
+                        characters.append(_as_complex_array(res))
                         paras_values.append(
                             [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                         )
                 else:
-                    idx_fc = 4
-                    fc = func[idx_fc]
                     tmp_piU, tmp_piV, tmp_piH = 0, 0, 0
-                    res = value_fc(
-                        fc,
-                        tmp_k1,
-                        tmp_m1,
-                        tmp_piU,
-                        tmp_piV,
-                        tmp_piH,
-                        nrot,
-                        a,
-                        order,
-                    )
-                    characters.append(np.array(res).astype(np.complex128))
+                    res = eval_fc(func4, tmp_piU, tmp_piV, tmp_piH)
+                    characters.append(_as_complex_array(res))
                     paras_values.append(
                         [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                     )
@@ -707,42 +1203,18 @@ def line_group_sympy_withparities(
                     or np.isclose(np.abs(tmp_m1), nrot, atol=symprec)
                     or np.isclose(np.abs(tmp_m1), nrot / 2, atol=symprec)
                 ):
-                    idx_fc = 2
-                    fc = func[idx_fc]
                     tmp_piU, tmp_piH = 0, 0
                     for tmp_piV in [-1, 1]:
-                        res = value_fc(
-                            fc,
-                            tmp_k1,
-                            tmp_m1,
-                            tmp_piU,
-                            tmp_piV,
-                            tmp_piH,
-                            nrot,
-                            a,
-                            order,
-                        )
-                        characters.append(np.array(res).astype(np.complex128))
+                        res = eval_fc(func2, tmp_piU, tmp_piV, tmp_piH)
+                        characters.append(_as_complex_array(res))
                         paras_values.append(
                             [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                         )
 
                 else:
-                    idx_fc = 4
-                    fc = func[idx_fc]
                     tmp_piU, tmp_piV, tmp_piH = 0, 0, 0
-                    res = value_fc(
-                        fc,
-                        tmp_k1,
-                        tmp_m1,
-                        tmp_piU,
-                        tmp_piV,
-                        tmp_piH,
-                        nrot,
-                        a,
-                        order,
-                    )
-                    characters.append(np.array(res).astype(np.complex128))
+                    res = eval_fc(func4, tmp_piU, tmp_piV, tmp_piH)
+                    characters.append(_as_complex_array(res))
                     paras_values.append(
                         [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
                     )

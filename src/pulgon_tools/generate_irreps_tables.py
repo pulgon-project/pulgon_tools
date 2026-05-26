@@ -14,7 +14,7 @@
 
 
 import argparse
-from typing import List, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from ase import Atom, Atoms
@@ -26,7 +26,10 @@ from pulgon_tools.detect_generalized_translational_group import (
 )
 from pulgon_tools.detect_point_group import LineGroupAnalyzer
 from pulgon_tools.line_group_table import get_family_num_from_sym_symbol
-from pulgon_tools.symmetry_projector import _extract_generator_angles
+from pulgon_tools.symmetry_projector import (
+    _extract_generator_angles,
+    _extract_screw_parameters,
+)
 from pulgon_tools.utils import (
     brute_force_generate_group_subsequent,
     find_axis_center_of_nanotube,
@@ -34,10 +37,20 @@ from pulgon_tools.utils import (
     get_character_withparities,
 )
 
+LineGroupDataset = Tuple[
+    Atoms,
+    int,
+    int,
+    float,
+    List[SymmOp],
+    List[List[int]],
+    Dict[str, Union[float, int]],
+]
+
 
 def get_linegroup_symmetry_dataset(
     poscar: Union[str, Atom, Atoms],
-) -> Tuple[Atoms, int, int, float, List[SymmOp], List[List[int]]]:
+) -> LineGroupDataset:
     """Extract the full line group symmetry dataset from a structure.
 
     Detects the axial point group and cyclic group, then generates all
@@ -47,14 +60,15 @@ def get_linegroup_symmetry_dataset(
         poscar: path to a POSCAR file, or an ASE Atom/Atoms object.
 
     Returns:
-        tuple of (atom_center, family, nrot, aL, ops_car_sym, order_ops).
+        tuple of (atom_center, family, nrot, aL, ops_car_sym,
+        order_ops, gen_angles).
     """
-    if type(poscar) == str:
+    if isinstance(poscar, str):
         atom = read(poscar)
-    elif type(poscar) == Atom or type(poscar) == Atoms:
+    elif isinstance(poscar, (Atom, Atoms)):
         atom = poscar
     else:
-        print("Unknown input")
+        raise TypeError("poscar must be a path string, ASE Atom, or ASE Atoms")
 
     atom_center = find_axis_center_of_nanotube(atom)
     obj = LineGroupAnalyzer(atom_center, tolerance=1e-2)
@@ -73,9 +87,10 @@ def get_linegroup_symmetry_dataset(
         mats = trans_op.copy()
     ops, order_ops = brute_force_generate_group_subsequent(mats, symec=1e-2)
 
-    gen_angles = _extract_generator_angles(mats)
+    gen_angles: Dict[str, Union[float, int]] = _extract_generator_angles(mats)
+    gen_angles.update(_extract_screw_parameters(trans_sym))
 
-    ops_car_sym = []
+    ops_car_sym: List[SymmOp] = []
     for op in ops:
         tmp_sym = SymmOp.from_rotation_and_translation(
             op[:3, :3], op[:3, 3] * aL
@@ -85,7 +100,7 @@ def get_linegroup_symmetry_dataset(
     return atom_center, family, nrot, aL, ops_car_sym, order_ops, gen_angles
 
 
-def main():
+def main() -> None:
     """CLI entry point for computing irreps tables and character tables."""
     parser = argparse.ArgumentParser(
         description="Return the representation matrices or character table from a structure"
@@ -139,7 +154,7 @@ def main():
         gen_angles,
     ) = get_linegroup_symmetry_dataset(atom)
     qp_normalized = qpoint_z / aL * 2 * np.pi
-    DictParams = {
+    DictParams: Dict[str, object] = {
         "qpoints": qp_normalized,
         "nrot": nrot,
         "order": order_ops,
@@ -157,7 +172,7 @@ def main():
         representation_mat, _, _ = get_character_withparities(
             DictParams, symprec=symprec
         )
-        representation_mat_dict = {}
+        representation_mat_dict: Dict[str, np.ndarray] = {}
         for i, rep in enumerate(representation_mat):
             representation_mat_dict[f"D_irrep_{i}"] = rep
 

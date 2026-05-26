@@ -87,9 +87,15 @@ class TestCharacterTable:
 
     def _get_dict_params(self, shared_datadir, name, qz=0.0):
         atom = read_vasp(shared_datadir / name)
-        _, family, nrot, aL, _, order_ops, _ = get_linegroup_symmetry_dataset(
-            atom
-        )
+        (
+            _,
+            family,
+            nrot,
+            aL,
+            _,
+            order_ops,
+            gen_angles,
+        ) = get_linegroup_symmetry_dataset(atom)
         qp_normalized = qz / aL * 2 * np.pi
         return {
             "qpoints": qp_normalized,
@@ -97,6 +103,7 @@ class TestCharacterTable:
             "order": order_ops,
             "family": family,
             "a": aL,
+            **gen_angles,
         }
 
     def test_character_shape_family8(self, shared_datadir):
@@ -142,10 +149,13 @@ class TestCharacterTable:
                 dim = rep.shape[1]
                 assert np.isclose(characters[i, 0].real, dim)
 
-    def test_unsupported_family_raises(self, shared_datadir):
+    def test_family5_st1_supported(self, shared_datadir):
         params = self._get_dict_params(shared_datadir, "st1")
-        with pytest.raises(NotImplementedError):
-            get_character_num_withparities(params, symprec=1e-8)
+        characters, vals, syms = get_character_num_withparities(
+            params, symprec=1e-8
+        )
+        assert characters.shape[1] == len(params["order"])
+        assert len(vals) == characters.shape[0]
 
 
 class TestRepresentationMatrices:
@@ -153,9 +163,15 @@ class TestRepresentationMatrices:
 
     def _get_dict_params(self, shared_datadir, name, qz=0.0):
         atom = read_vasp(shared_datadir / name)
-        _, family, nrot, aL, _, order_ops, _ = get_linegroup_symmetry_dataset(
-            atom
-        )
+        (
+            _,
+            family,
+            nrot,
+            aL,
+            _,
+            order_ops,
+            gen_angles,
+        ) = get_linegroup_symmetry_dataset(atom)
         qp_normalized = qz / aL * 2 * np.pi
         return {
             "qpoints": qp_normalized,
@@ -163,6 +179,7 @@ class TestRepresentationMatrices:
             "order": order_ops,
             "family": family,
             "a": aL,
+            **gen_angles,
         }
 
     def test_rep_matrix_count(self, shared_datadir):
@@ -208,7 +225,15 @@ class TestRepresentationMatrices:
 def _make_params(shared_datadir, name, qz=0.0):
     """Helper to build DictParams from a structure name."""
     atom = read_vasp(shared_datadir / name)
-    _, family, nrot, aL, _, order_ops, _ = get_linegroup_symmetry_dataset(atom)
+    (
+        _,
+        family,
+        nrot,
+        aL,
+        _,
+        order_ops,
+        gen_angles,
+    ) = get_linegroup_symmetry_dataset(atom)
     qp_normalized = qz / aL * 2 * np.pi
     return {
         "qpoints": qp_normalized,
@@ -216,6 +241,7 @@ def _make_params(shared_datadir, name, qz=0.0):
         "order": order_ops,
         "family": family,
         "a": aL,
+        **gen_angles,
     }
 
 
@@ -385,6 +411,12 @@ _FAMILY2_ORDER = [
     [0, 1, 1, 2],
 ]
 
+_FAMILY1_ORDER = [
+    [0],
+    [1],
+    [1, 1],
+]
+
 _FAMILY3_ORDER = [
     [0],
     [0, 1],
@@ -394,6 +426,68 @@ _FAMILY3_ORDER = [
     [0, 2],
     [0, 1, 2],
     [0, 1, 1, 2],
+]
+
+_FAMILY5_ORDER = [
+    [0],
+    [1],
+    [1, 1],
+    [1, 1, 1],
+    [2],
+    [1, 2],
+    [3],
+    [1, 3],
+]
+
+_FAMILY7_ORDER = [
+    [0],
+    [1],
+    [1, 1],
+    [2],
+    [2, 2],
+    [1, 2],
+]
+
+_FAMILY9_ORDER = [
+    [0],
+    [1],
+    [2],
+    [2, 2],
+    [3],
+    [4],
+    [2, 3],
+    [2, 4],
+]
+
+_FAMILY10_ORDER = [
+    [0],
+    [1],
+    [1, 1],
+    [2],
+    [2, 2],
+    [1, 2],
+]
+
+_FAMILY11_ORDER = [
+    [0],
+    [1],
+    [2],
+    [2, 2],
+    [3],
+    [4],
+    [2, 3],
+    [2, 4],
+]
+
+_FAMILY12_ORDER = [
+    [0],
+    [1],
+    [1, 1],
+    [2],
+    [2, 2],
+    [3],
+    [1, 3],
+    [2, 3],
 ]
 
 _FAMILY13_ORDER = [
@@ -414,6 +508,12 @@ _FAMILY13_ORDER = [
     [1, 2, 3],
     [1, 2, 4],
 ]
+
+
+def _assert_all_reps_have_nops(reps, nops):
+    for rep in reps:
+        arr = np.array(rep)
+        assert arr.shape[0] == nops
 
 
 class TestLineGroupSympyFamily2:
@@ -494,6 +594,41 @@ class TestWithParitiesFamily2:
         assert piH_values.count(1) == 4
 
 
+class TestWithParitiesFamily1:
+    """Test line_group_sympy_withparities for family 1 (T_Q(f) C_n groups)."""
+
+    def _params(self, qpoints=0.0):
+        return {
+            "family": 1,
+            "nrot": 1,
+            "qpoints": qpoints,
+            "a": 3.0,
+            "order": _FAMILY1_ORDER,
+            "Q_screw": 3.0,
+            "Q_num": 3,
+            "f_screw": 1.0,
+        }
+
+    def test_returns_only_1d_reps(self):
+        reps, vals, syms = line_group_sympy_withparities(
+            self._params(0.0), symprec=1e-8
+        )
+        assert len(reps) == 3
+        for rep in reps:
+            assert np.array(rep).shape == (3,)
+
+    def test_character_orthogonality(self):
+        reps, _, _ = line_group_sympy_withparities(
+            self._params(0.0), symprec=1e-8
+        )
+        chars = np.array(reps).astype(np.complex128)
+        G = chars.shape[1]
+        orth = chars @ chars.conj().T / G
+        assert np.allclose(np.diag(orth).real, 1.0, atol=1e-10)
+        off_diag = orth - np.diag(np.diag(orth))
+        assert np.allclose(off_diag, 0.0, atol=1e-10)
+
+
 class TestLineGroupSympyFamily3:
     """Test line_group_sympy for family 3 (Cnh groups)."""
 
@@ -520,6 +655,132 @@ class TestLineGroupSympyFamily3:
         assert len(chars) == 4
         for c in chars:
             assert np.array(c).shape == (8, 2, 2)
+
+
+class TestWithParitiesFamily3:
+    """Test line_group_sympy_withparities for Table 4.3 / family 3."""
+
+    def _params(self, qpoints=0.0):
+        return {
+            "family": 3,
+            "nrot": 4,
+            "qpoints": qpoints,
+            "a": 3.0,
+            "order": _FAMILY3_ORDER,
+        }
+
+    def test_q0_rep_count(self):
+        reps, vals, syms = line_group_sympy_withparities(
+            self._params(0.0), symprec=1e-6
+        )
+        assert len(reps) == 8
+        _assert_all_reps_have_nops(reps, len(_FAMILY3_ORDER))
+
+    def test_nonzero_q_returns_2d_matrices(self):
+        reps, vals, _ = line_group_sympy_withparities(
+            self._params(0.5), symprec=1e-6
+        )
+        assert len(reps) == 4
+        for rep in reps:
+            assert np.array(rep).shape == (len(_FAMILY3_ORDER), 2, 2)
+
+
+class TestWithParitiesFamily5:
+    """Test line_group_sympy_withparities for Table 4.5 / family 5."""
+
+    def _params(self, qpoints=0.0):
+        return {
+            "family": 5,
+            "nrot": 4,
+            "qpoints": qpoints,
+            "a": 4.0,
+            "order": _FAMILY5_ORDER,
+            "Q_screw": 4.0,
+            "Q_num": 4,
+            "f_screw": 1.0,
+        }
+
+    def test_q0_mixed_dimensions(self):
+        reps, vals, syms = line_group_sympy_withparities(
+            self._params(0.0), symprec=1e-6
+        )
+        assert len(reps) == 6
+        assert {np.array(rep).ndim for rep in reps} == {1, 3}
+
+    def test_nonzero_q_returns_2d_matrices(self):
+        reps, vals, _ = line_group_sympy_withparities(
+            self._params(0.5), symprec=1e-6
+        )
+        assert len(reps) == 4
+        for rep in reps:
+            assert np.array(rep).shape == (len(_FAMILY5_ORDER), 2, 2)
+
+
+class TestWithParitiesFamily7:
+    """Test line_group_sympy_withparities for Table 4.7 / family 7."""
+
+    def _params(self, qpoints=0.0):
+        return {
+            "family": 7,
+            "nrot": 4,
+            "qpoints": qpoints,
+            "a": 3.0,
+            "order": _FAMILY7_ORDER,
+        }
+
+    def test_rep_count_and_shapes(self):
+        reps, vals, syms = line_group_sympy_withparities(
+            self._params(0.0), symprec=1e-6
+        )
+        assert len(reps) == 5
+        _assert_all_reps_have_nops(reps, len(_FAMILY7_ORDER))
+        assert any(
+            np.array(rep).shape[-1] == 2 for rep in reps if rep.ndim > 1
+        )
+
+
+class TestWithParitiesFamilies9To12:
+    """Test Tables 4.9-4.12 / families 9-12."""
+
+    def _params(self, family, qpoints=0.0):
+        orders = {
+            9: _FAMILY9_ORDER,
+            10: _FAMILY10_ORDER,
+            11: _FAMILY11_ORDER,
+            12: _FAMILY12_ORDER,
+        }
+        return {
+            "family": family,
+            "nrot": 4,
+            "qpoints": qpoints,
+            "a": 3.0,
+            "order": orders[family],
+        }
+
+    @pytest.mark.parametrize("family", [9, 10, 11, 12])
+    def test_gamma_cases_return_reps(self, family):
+        reps, vals, syms = line_group_sympy_withparities(
+            self._params(family, 0.0), symprec=1e-6
+        )
+        assert len(reps) > 0
+        _assert_all_reps_have_nops(reps, len(self._params(family)["order"]))
+
+    @pytest.mark.parametrize("family", [9, 10, 11, 12])
+    def test_interior_q_has_higher_dimensional_reps(self, family):
+        reps, vals, _ = line_group_sympy_withparities(
+            self._params(family, 0.5), symprec=1e-6
+        )
+        shapes = [np.array(rep).shape for rep in reps]
+        assert any(len(shape) == 3 and shape[-1] in (2, 4) for shape in shapes)
+
+    @pytest.mark.parametrize("family", [10, 12])
+    def test_boundary_q_cases(self, family):
+        a = 3.0
+        reps, vals, _ = line_group_sympy_withparities(
+            self._params(family, np.pi / a), symprec=1e-6
+        )
+        assert len(reps) > 0
+        _assert_all_reps_have_nops(reps, len(self._params(family)["order"]))
 
 
 class TestLineGroupSympyFamily13:
