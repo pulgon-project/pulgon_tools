@@ -50,6 +50,7 @@ LineGroupDataset = Tuple[
 
 def get_linegroup_symmetry_dataset(
     poscar: Union[str, Atom, Atoms],
+    tolerance: float = 1e-2,
 ) -> LineGroupDataset:
     """Extract the full line group symmetry dataset from a structure.
 
@@ -58,6 +59,7 @@ def get_linegroup_symmetry_dataset(
 
     Args:
         poscar: path to a POSCAR file, or an ASE Atom/Atoms object.
+        tolerance: tolerance used for line-group symmetry detection.
 
     Returns:
         tuple of (atom_center, family, nrot, aL, ops_car_sym,
@@ -71,8 +73,8 @@ def get_linegroup_symmetry_dataset(
         raise TypeError("poscar must be a path string, ASE Atom, or ASE Atoms")
 
     atom_center = find_axis_center_of_nanotube(atom)
-    obj = LineGroupAnalyzer(atom_center, tolerance=1e-2)
-    cyclic = CyclicGroupAnalyzer(atom_center, tolerance=1e-2)
+    obj = LineGroupAnalyzer(atom_center, tolerance=tolerance)
+    cyclic = CyclicGroupAnalyzer(atom_center, tolerance=tolerance)
     nrot = obj.get_rotational_symmetry_number()
     aL = atom_center.cell[2, 2]
     trans_sym = cyclic.cyclic_group[0]
@@ -119,8 +121,12 @@ def main() -> None:
         "-t",
         "--tolerance",
         type=float,
-        default=1e-8,
-        help="Tolerance for atomic positions",
+        default=None,
+        help=(
+            "Tolerance for atomic positions and character calculations. "
+            "When omitted, symmetry detection uses 1e-2 and character "
+            "calculations use 1e-8."
+        ),
     )
     parser.add_argument(
         "-s",
@@ -138,11 +144,12 @@ def main() -> None:
     args = parser.parse_args()
     st_name = args.POSCAR
     qpoint_z = args.qpoint_z
-    symprec = args.tolerance
+    symprec = 1e-8 if args.tolerance is None else args.tolerance
     chara_filename = args.savename_chara
     enable_rep_matrix = args.enable_rep_matrix
 
     atom = read(st_name)
+    symmetry_tolerance = 1e-2 if args.tolerance is None else args.tolerance
 
     (
         atom_center,
@@ -152,7 +159,7 @@ def main() -> None:
         ops_car_sym,
         order_ops,
         gen_angles,
-    ) = get_linegroup_symmetry_dataset(atom)
+    ) = get_linegroup_symmetry_dataset(atom, tolerance=symmetry_tolerance)
     qp_normalized = qpoint_z / aL * 2 * np.pi
     DictParams: Dict[str, object] = {
         "qpoints": qp_normalized,

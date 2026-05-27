@@ -27,6 +27,8 @@ share/python-wheels/
 *.egg
 MANIFEST
 *.vasp
+!test/data/structs/
+!test/data/structs/*.vasp
 *.npy
 *.npz
 htmlcov

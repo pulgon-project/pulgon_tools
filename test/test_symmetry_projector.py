@@ -21,12 +21,160 @@ from pulgon_tools.symmetry_projector import (
     get_adapted_matrix_withparities,
     get_linegroup_symmetry_dataset,
 )
-from pulgon_tools.utils import get_matrices_withPhase
+from pulgon_tools.utils import (
+    get_character_withparities,
+    get_matrices_withPhase,
+)
 
 pytest_plugins = ["pytest-datadir"]
 
 SP_DATA = "test/data/symmetry_projector"
 SP_DATA_SC10 = "test/data/symmetry_projector_C_nanotube-sp10"
+
+
+def _word_order(num_generators, max_len=3):
+    order = [[0]]
+    for length in range(1, max_len + 1):
+        for word in np.ndindex(*(num_generators for _ in range(length))):
+            order.append([idx + 1 for idx in word])
+    return order
+
+
+_FAMILY_BASE_PARAMS = {
+    1: {
+        "nrot": 1,
+        "order": _word_order(2),
+        "Q_screw": 3.0,
+        "Q_num": 3,
+        "f_screw": 1.0,
+    },
+    2: {"nrot": 2, "order": _word_order(2)},
+    3: {"nrot": 2, "order": _word_order(3)},
+    4: {"nrot": 1, "order": _word_order(3)},
+    5: {
+        "nrot": 1,
+        "order": _word_order(3),
+        "Q_screw": 4.0,
+        "Q_num": 4,
+        "f_screw": 1.0,
+    },
+    6: {"nrot": 2, "order": _word_order(3)},
+    7: {"nrot": 2, "order": _word_order(2)},
+    8: {"nrot": 2, "order": _word_order(3)},
+    9: {"nrot": 3, "order": _word_order(4)},
+    10: {"nrot": 1, "order": _word_order(2)},
+    11: {"nrot": 3, "order": _word_order(4)},
+    12: {"nrot": 1, "order": _word_order(3)},
+    13: {"nrot": 1, "order": _word_order(4)},
+}
+
+_QPOINTS = {
+    "gamma": 0.0,
+    "nonzero_q": 0.5,
+    "bz_boundary": np.pi / 3.0,
+}
+
+
+def _family_params(family, qpoint):
+    return {
+        "family": family,
+        "qpoints": qpoint,
+        "a": 3.0,
+        **_FAMILY_BASE_PARAMS[family],
+    }
+
+
+def _block_diag(blocks):
+    size = sum(block.shape[0] for block in blocks)
+    result = np.zeros((size, size), dtype=np.complex128)
+    start = 0
+    for block in blocks:
+        end = start + block.shape[0]
+        result[start:end, start:end] = block
+        start = end
+    return result
+
+
+def _projection_coefficients(params, reps):
+    qpoint = params.get("qpoints", 0.0)
+    is_nonzero_q = not np.isclose(qpoint, 0)
+    group_order = len(reps[0])
+    coeffs = []
+    for rep in reps:
+        ir_dim = 1 if rep.ndim == 1 else rep.shape[-1]
+        coeff = np.zeros(group_order, dtype=np.complex128)
+        if is_nonzero_q and ir_dim > 1:
+            k_chars = []
+            k_indices = []
+            for idx, mat in enumerate(rep):
+                if ir_dim == 4:
+                    off = np.linalg.norm(mat[:2, 2:]) + np.linalg.norm(
+                        mat[2:, :2]
+                    )
+                    if off < 1e-6:
+                        k_chars.append(np.trace(mat[:2, :2]))
+                        k_indices.append(idx)
+                elif ir_dim == 2:
+                    off = abs(mat[0, 1]) + abs(mat[1, 0])
+                    if off < 1e-6:
+                        k_chars.append(mat[0, 0])
+                        k_indices.append(idx)
+            assert k_indices
+            coeff[k_indices] = (
+                (ir_dim // 2) * np.conj(k_chars) / len(k_indices)
+            )
+        else:
+            for idx, mat in enumerate(rep):
+                char = mat.conj() if rep.ndim == 1 else np.trace(mat).conj()
+                coeff[idx] = ir_dim * char / group_order
+        coeffs.append(coeff)
+    return np.array(coeffs)
+
+
+def _projector_targets(coeffs):
+    row_keys = [tuple(np.round(row, 10)) for row in coeffs]
+    row_counts = {key: row_keys.count(key) for key in set(row_keys)}
+    nonzero_rows = [
+        idx for idx, key in enumerate(row_keys) if row_counts[key] == 1
+    ]
+    if len(nonzero_rows) == len(coeffs):
+        return np.eye(len(coeffs), dtype=np.complex128)
+
+    targets = np.zeros((len(coeffs), len(nonzero_rows)), dtype=np.complex128)
+    for col, row in enumerate(nonzero_rows):
+        targets[row, col] = 1.0
+    return targets
+
+
+def _projector_test_matrices(params, reps):
+    coeffs = _projection_coefficients(params, reps)
+    targets = _projector_targets(coeffs)
+    solution = np.linalg.pinv(coeffs) @ targets
+    np.testing.assert_allclose(
+        coeffs @ solution,
+        targets,
+        atol=1e-8,
+    )
+
+    matrices = []
+    for idx in range(len(reps[0])):
+        blocks = [
+            solution[idx, target_idx] * np.eye(3, dtype=np.complex128)
+            for target_idx in range(targets.shape[1])
+        ]
+        matrices.append(_block_diag(blocks))
+    return matrices
+
+
+def _expected_projectors(params, matrices, reps):
+    coeffs = _projection_coefficients(params, reps)
+    projectors = []
+    for coeff in coeffs:
+        projector = np.zeros_like(matrices[0], dtype=np.complex128)
+        for idx, value in enumerate(coeff):
+            projector += value * matrices[idx]
+        projectors.append(projector)
+    return projectors
 
 
 @pytest.fixture
@@ -139,6 +287,72 @@ def adapted_result_bz_boundary(symmetry_dataset):
         paras_symbols,
     ) = get_adapted_matrix_withparities(DictParams, ds["num_atom"], matrices)
     return adapted, dimensions, paras_values, paras_symbols, ds
+
+
+class TestAllFamilyProjectionEigenvalues:
+    """Fast projector checks for all line-group families and q-regions."""
+
+    @pytest.mark.parametrize("family", range(1, 14))
+    @pytest.mark.parametrize("q_label", ["gamma", "nonzero_q", "bz_boundary"])
+    def test_projector_eigenvalues_are_zero_or_one(
+        self, family, q_label, capsys
+    ):
+        params = _family_params(family, _QPOINTS[q_label])
+        reps, expected_values, expected_symbols = get_character_withparities(
+            params
+        )
+        matrices = _projector_test_matrices(params, reps)
+        ndof = matrices[0].shape[0]
+        num_atom = ndof // 3
+
+        (
+            adapted,
+            dimensions,
+            paras_values,
+            paras_symbols,
+        ) = get_adapted_matrix_withparities(params, num_atom, matrices)
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert captured.err == ""
+
+        assert adapted.shape == (ndof, ndof)
+        assert np.isfinite(adapted).all()
+        assert len(paras_values) == len(expected_values)
+        assert paras_values == expected_values
+        assert paras_symbols == expected_symbols
+        assert all(isinstance(dim, (int, np.integer)) for dim in dimensions)
+        assert all(dim > 0 for dim in dimensions)
+        assert sum(dimensions) == ndof
+
+        overlap = adapted.conj().T @ adapted
+        np.testing.assert_allclose(overlap, np.eye(ndof), atol=1e-8)
+
+        projector_ranks = []
+        for projector in _expected_projectors(params, matrices, reps):
+            np.testing.assert_allclose(
+                projector,
+                projector.conj().T,
+                atol=1e-8,
+                err_msg=f"family={family}, q={q_label}",
+            )
+            np.testing.assert_allclose(
+                projector @ projector,
+                projector,
+                atol=1e-8,
+                err_msg=f"family={family}, q={q_label}",
+            )
+            eigvals = np.linalg.eigvalsh(projector)
+            np.testing.assert_allclose(
+                eigvals,
+                np.round(eigvals),
+                atol=1e-8,
+                err_msg=f"family={family}, q={q_label}",
+            )
+            assert set(np.round(eigvals).astype(int)).issubset({0, 1})
+            rank = int(np.round(np.trace(projector).real))
+            if rank > 0:
+                projector_ranks.append(rank)
+        assert dimensions == projector_ranks
 
 
 class TestGetAdaptedMatrixWithParities:
