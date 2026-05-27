@@ -44,7 +44,8 @@ def detect_linegroup(
     atom_center = find_axis_center_of_nanotube(cyclic._primitive)
 
     point_group = LineGroupAnalyzer(atom_center, tolerance=tolerance)
-    trans_sym = cyclic.cyclic_group[0]
+    cyclic_groups, _ = cyclic.get_cyclic_group()
+    trans_sym = cyclic_groups[0]
     rota_sym = point_group.sch_symbol
     family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
 

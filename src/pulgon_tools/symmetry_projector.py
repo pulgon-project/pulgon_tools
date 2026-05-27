@@ -226,7 +226,8 @@ def get_linegroup_symmetry_dataset(poscar):
 
     nrot = obj.get_rotational_symmetry_number()
     aL = atom_center.cell[2, 2]
-    trans_sym = cyclic.cyclic_group[0]
+    cyclic_groups, _ = cyclic.get_cyclic_group()
+    trans_sym = cyclic_groups[0]
     rota_sym = obj.sch_symbol
 
     trans_op = np.round(cyclic.get_generators(), 6)

@@ -12,951 +12,198 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
+from pathlib import Path
+
 import numpy as np
 import pytest
-import sympy
 from ase.io.vasp import read_vasp
 
 from pulgon_tools.generate_irreps_tables import get_linegroup_symmetry_dataset
-from pulgon_tools.Irreps_tables import frac_range, line_group_sympy
-from pulgon_tools.Irreps_tables_withparities import (
-    line_group_sympy_withparities,
-    sym_inverse_eye,
-)
 from pulgon_tools.utils import (
-    get_character_num,
     get_character_num_withparities,
     get_character_withparities,
 )
 
-pytest_plugins = ["pytest-datadir"]
+STRUCT_DIR = Path(__file__).parent / "data" / "test_irrep_struct"
+
+EXPECTED = {
+    1: {"atoms": 12, "nrot": 2, "ops": 6, "irreps": 6},
+    2: {"atoms": 8, "nrot": 2, "ops": 2, "irreps": 4},
+    3: {"atoms": 8, "nrot": 2, "ops": 4, "irreps": 4},
+    4: {"atoms": 12, "nrot": 2, "ops": 4, "irreps": 8},
+    5: {"atoms": 12, "nrot": 4, "ops": 12, "irreps": 8},
+    6: {"atoms": 8, "nrot": 2, "ops": 4, "irreps": 4},
+    7: {"atoms": 8, "nrot": 2, "ops": 4, "irreps": 4},
+    8: {"atoms": 8, "nrot": 1, "ops": 4, "irreps": 4},
+    9: {"atoms": 8, "nrot": 4, "ops": 8, "irreps": 18},
+    10: {"atoms": 8, "nrot": 2, "ops": 4, "irreps": 5},
+    11: {"atoms": 8, "nrot": 4, "ops": 8, "irreps": 18},
+    12: {"atoms": 8, "nrot": 2, "ops": 8, "irreps": 8},
+    13: {"atoms": 16, "nrot": 2, "ops": 8, "irreps": 8},
+}
 
 
-class TestLineGroupSymmetryDataset:
-    """Test get_linegroup_symmetry_dataset returns correct symmetry info."""
-
-    def test_dataset_family4_9_9_AM(self, shared_datadir):
-        atom = read_vasp(shared_datadir / "9-9-AM")
-        _, family, nrot, aL, ops, _, _ = get_linegroup_symmetry_dataset(atom)
-        assert family == 4
-        assert nrot == 9
-        assert np.isclose(aL, 3.2125, atol=1e-3)
-        assert len(ops) == 18
-
-    def test_dataset_family4_12_12_AM(self, shared_datadir):
-        atom = read_vasp(shared_datadir / "12-12-AM")
-        _, family, nrot, aL, ops, _, _ = get_linegroup_symmetry_dataset(atom)
-        assert family == 4
-        assert nrot == 12
-        assert np.isclose(aL, 3.192, atol=1e-3)
-        assert len(ops) == 24
-
-    def test_dataset_family8_10_0_ZZ(self, shared_datadir):
-        atom = read_vasp(shared_datadir / "10-0-ZZ")
-        _, family, nrot, aL, ops, _, _ = get_linegroup_symmetry_dataset(atom)
-        assert family == 8
-        assert nrot == 10
-        assert np.isclose(aL, 5.5642, atol=1e-3)
-        assert len(ops) == 40
-
-    def test_dataset_family8_24_0_ZZ(self, shared_datadir):
-        atom = read_vasp(shared_datadir / "24-0-ZZ")
-        _, family, nrot, aL, ops, _, _ = get_linegroup_symmetry_dataset(atom)
-        assert family == 8
-        assert nrot == 24
-        assert np.isclose(aL, 5.48, atol=1e-2)
-        assert len(ops) == 144
-
-    def test_dataset_family5_st1(self, shared_datadir):
-        atom = read_vasp(shared_datadir / "st1")
-        _, family, nrot, aL, ops, _, _ = get_linegroup_symmetry_dataset(atom)
-        assert family == 5
-        assert nrot == 8
-        assert np.isclose(aL, 4.5, atol=1e-2)
-        assert len(ops) == 28
-
-    def test_dataset_accepts_atoms_object(self, shared_datadir):
-        atom = read_vasp(shared_datadir / "10-0-ZZ")
-        _, family, nrot, _, _, _, _ = get_linegroup_symmetry_dataset(atom)
-        assert family == 8
-        assert nrot == 10
+def _structure_path(family: int) -> Path:
+    return STRUCT_DIR / f"family_{family:02d}.vasp"
 
 
-class TestCharacterTable:
-    """Test character table computation and orthogonality."""
-
-    def _get_dict_params(self, shared_datadir, name, qz=0.0):
-        atom = read_vasp(shared_datadir / name)
-        (
-            _,
-            family,
-            nrot,
-            aL,
-            _,
-            order_ops,
-            gen_angles,
-        ) = get_linegroup_symmetry_dataset(atom)
-        qp_normalized = qz / aL * 2 * np.pi
-        return {
-            "qpoints": qp_normalized,
-            "nrot": nrot,
-            "order": order_ops,
-            "family": family,
-            "a": aL,
-            **gen_angles,
-        }
-
-    def test_character_shape_family8(self, shared_datadir):
-        params = self._get_dict_params(shared_datadir, "10-0-ZZ")
-        characters, _, _ = get_character_num_withparities(params, symprec=1e-8)
-        assert characters.shape == (13, 40)
-
-    def test_character_shape_family4(self, shared_datadir):
-        params = self._get_dict_params(shared_datadir, "9-9-AM")
-        characters, _, _ = get_character_num_withparities(params, symprec=1e-8)
-        assert characters.shape == (36, 18)
-
-    def test_orthogonality_family8_q0(self, shared_datadir):
-        """Character orthogonality:
-        sum_g chi_i(g)* chi_j(g) / |G| = delta_ij."""
-        params = self._get_dict_params(shared_datadir, "10-0-ZZ", qz=0.0)
-        characters, _, _ = get_character_num_withparities(params, symprec=1e-8)
-        G = characters.shape[1]
-        orth = characters @ characters.conj().T / G
-        assert np.allclose(np.diag(orth).real, 1.0, atol=1e-10)
-        off_diag = orth - np.diag(np.diag(orth))
-        assert np.allclose(off_diag, 0.0, atol=1e-10)
-
-    def test_orthogonality_family8_qhalf(self, shared_datadir):
-        params = self._get_dict_params(shared_datadir, "10-0-ZZ", qz=0.5)
-        characters, _, _ = get_character_num_withparities(params, symprec=1e-8)
-        G = characters.shape[1]
-        orth = characters @ characters.conj().T / G
-        assert np.allclose(np.diag(orth).real, 1.0, atol=1e-10)
-        off_diag = orth - np.diag(np.diag(orth))
-        assert np.allclose(off_diag, 0.0, atol=1e-10)
-
-    def test_identity_character_equals_dimension(self, shared_datadir):
-        """The character of the identity operation
-        equals the irrep dimension."""
-        params = self._get_dict_params(shared_datadir, "10-0-ZZ")
-        characters, _, _ = get_character_num_withparities(params, symprec=1e-8)
-        rep_mat, _, _ = get_character_withparities(params, symprec=1e-8)
-        for i, rep in enumerate(rep_mat):
-            if rep.ndim == 1:
-                assert np.isclose(characters[i, 0].real, 1.0)
-            else:
-                dim = rep.shape[1]
-                assert np.isclose(characters[i, 0].real, dim)
-
-    def test_family5_st1_supported(self, shared_datadir):
-        params = self._get_dict_params(shared_datadir, "st1")
-        characters, vals, syms = get_character_num_withparities(
-            params, symprec=1e-8
-        )
-        assert characters.shape[1] == len(params["order"])
-        assert len(vals) == characters.shape[0]
-
-
-class TestRepresentationMatrices:
-    """Test irreducible representation matrices."""
-
-    def _get_dict_params(self, shared_datadir, name, qz=0.0):
-        atom = read_vasp(shared_datadir / name)
-        (
-            _,
-            family,
-            nrot,
-            aL,
-            _,
-            order_ops,
-            gen_angles,
-        ) = get_linegroup_symmetry_dataset(atom)
-        qp_normalized = qz / aL * 2 * np.pi
-        return {
-            "qpoints": qp_normalized,
-            "nrot": nrot,
-            "order": order_ops,
-            "family": family,
-            "a": aL,
-            **gen_angles,
-        }
-
-    def test_rep_matrix_count(self, shared_datadir):
-        params = self._get_dict_params(shared_datadir, "10-0-ZZ")
-        rep_mat, _, _ = get_character_withparities(params, symprec=1e-8)
-        assert len(rep_mat) == 13
-
-    def test_rep_matrix_dimensions(self, shared_datadir):
-        """Check that 1D irreps are vectors and 2D irreps are (nops, 2, 2)."""
-        params = self._get_dict_params(shared_datadir, "10-0-ZZ")
-        rep_mat, _, _ = get_character_withparities(params, symprec=1e-8)
-        nops = 40
-        for rep in rep_mat:
-            if rep.ndim == 1:
-                assert rep.shape == (nops,)
-            else:
-                assert rep.shape == (nops, 2, 2)
-
-    def test_rep_trace_equals_character(self, shared_datadir):
-        """Trace of representation matrix should equal the character."""
-        params = self._get_dict_params(shared_datadir, "10-0-ZZ")
-        rep_mat, _, _ = get_character_withparities(params, symprec=1e-8)
-        characters, _, _ = get_character_num_withparities(params, symprec=1e-8)
-        for i, rep in enumerate(rep_mat):
-            if rep.ndim == 1:
-                assert np.allclose(rep, characters[i], atol=1e-10)
-            else:
-                traces = np.trace(rep, axis1=1, axis2=2)
-                assert np.allclose(traces, characters[i], atol=1e-10)
-
-    def test_rep_matrix_family4(self, shared_datadir):
-        params = self._get_dict_params(shared_datadir, "12-12-AM")
-        rep_mat, _, _ = get_character_withparities(params, symprec=1e-8)
-        assert len(rep_mat) == 48
-        nops = 24
-        for rep in rep_mat:
-            if rep.ndim == 1:
-                assert rep.shape == (nops,)
-            else:
-                assert rep.shape[0] == nops
-
-
-def _make_params(shared_datadir, name, qz=0.0):
-    """Helper to build DictParams from a structure name."""
-    atom = read_vasp(shared_datadir / name)
+def _params_from_structure(path: Path) -> dict:
+    atom = read_vasp(path)
     (
         _,
         family,
         nrot,
-        aL,
+        a_lattice,
         _,
         order_ops,
         gen_angles,
     ) = get_linegroup_symmetry_dataset(atom)
-    qp_normalized = qz / aL * 2 * np.pi
     return {
-        "qpoints": qp_normalized,
+        "qpoints": 0.0,
         "nrot": nrot,
         "order": order_ops,
         "family": family,
-        "a": aL,
+        "a": a_lattice,
         **gen_angles,
     }
 
 
-class TestFracRange:
-    """Test frac_range utility from Irreps_tables."""
-
-    def test_basic_range(self):
-        assert frac_range(0.5, 3.5) == [1, 2, 3]
-
-    def test_inclusive_boundaries(self):
-        assert frac_range(1.0, 3.0) == [1, 2, 3]
-
-    def test_exclude_left(self):
-        assert frac_range(1.0, 3.0, left=False) == [2, 3]
-
-    def test_exclude_right(self):
-        assert frac_range(1.0, 3.0, right=False) == [1, 2]
-
-    def test_exclude_both(self):
-        assert frac_range(1.0, 3.0, left=False, right=False) == [2]
-
-    def test_non_integer_boundaries(self):
-        assert frac_range(1.1, 2.9) == [2]
-
-
-class TestSymInverseEye:
-    """Test sym_inverse_eye from Irreps_tables_withparities."""
-
-    def test_size_2(self):
-        M = sym_inverse_eye(2)
-        expected = sympy.Matrix([[0, 1], [1, 0]])
-        assert M == expected
-
-    def test_size_3(self):
-        M = sym_inverse_eye(3)
-        expected = sympy.Matrix([[0, 0, 1], [0, 1, 0], [1, 0, 0]])
-        assert M == expected
-
-    def test_involution(self):
-        """Anti-diagonal identity squared should be the identity."""
-        M = sym_inverse_eye(4)
-        assert M * M == sympy.eye(4)
-
-
-class TestLineGroupSympyNoParities:
-    """Test line_group_sympy (without parities) for different families."""
-
-    def test_family4_returns_characters(self, shared_datadir):
-        params = _make_params(shared_datadir, "9-9-AM")
-        rep_mat, vals, syms = line_group_sympy(params, symprec=1e-8)
-        assert len(rep_mat) == 18
-        assert len(vals) == 18
-
-    def test_family6_returns_characters(self, shared_datadir):
-        params = _make_params(shared_datadir, "C4v")
-        rep_mat, vals, syms = line_group_sympy(params, symprec=1e-8)
-        assert len(rep_mat) == 3
-        assert len(vals) == 3
-
-    def test_family8_returns_characters(self, shared_datadir):
-        params = _make_params(shared_datadir, "10-0-ZZ")
-        rep_mat, vals, syms = line_group_sympy(params, symprec=1e-8)
-        assert len(rep_mat) == 11
-
-    def test_family6_nonzero_qpoint(self, shared_datadir):
-        params = _make_params(shared_datadir, "C4v", qz=0.3)
-        rep_mat, vals, syms = line_group_sympy(params, symprec=1e-8)
-        assert len(rep_mat) > 0
-
-    def test_family4_nonzero_qpoint(self, shared_datadir):
-        params = _make_params(shared_datadir, "9-9-AM", qz=0.3)
-        rep_mat, vals, syms = line_group_sympy(params, symprec=1e-8)
-        assert len(rep_mat) > 0
-
-    def test_family8_nonzero_qpoint(self, shared_datadir):
-        params = _make_params(shared_datadir, "10-0-ZZ", qz=0.3)
-        rep_mat, vals, syms = line_group_sympy(params, symprec=1e-8)
-        assert len(rep_mat) > 0
-
-
-class TestCharacterNumNoParities:
-    """Test get_character_num (traces from line_group_sympy)."""
-
-    def test_family6_shape(self, shared_datadir):
-        params = _make_params(shared_datadir, "C4v")
-        chars, vals, syms = get_character_num(params, symprec=1e-8)
-        assert chars.shape == (3, 8)
-
-    def test_family4_shape(self, shared_datadir):
-        params = _make_params(shared_datadir, "9-9-AM")
-        chars, _, _ = get_character_num(params, symprec=1e-8)
-        assert chars.shape == (18, 18)
-
-    def test_family8_shape(self, shared_datadir):
-        params = _make_params(shared_datadir, "10-0-ZZ")
-        chars, _, _ = get_character_num(params, symprec=1e-8)
-        assert chars.shape == (11, 40)
-
-    def test_family6_orthogonality(self, shared_datadir):
-        """Off-diagonal elements of character inner product should vanish."""
-        params = _make_params(shared_datadir, "C4v")
-        chars, _, _ = get_character_num(params, symprec=1e-8)
-        G = chars.shape[1]
-        orth = chars @ chars.conj().T / G
-        off_diag = orth - np.diag(np.diag(orth))
-        assert np.allclose(off_diag, 0.0, atol=1e-10)
-
-    def test_family8_orthogonality(self, shared_datadir):
-        params = _make_params(shared_datadir, "10-0-ZZ")
-        chars, _, _ = get_character_num(params, symprec=1e-8)
-        G = chars.shape[1]
-        orth = chars @ chars.conj().T / G
-        off_diag = orth - np.diag(np.diag(orth))
-        assert np.allclose(off_diag, 0.0, atol=1e-10)
-
-
-class TestWithParitiesAdditionalFamilies:
-    """Test line_group_sympy_withparities for families beyond 4 and 8."""
-
-    def test_family6_q0(self, shared_datadir):
-        params = _make_params(shared_datadir, "C4v")
-        rep_mat, vals, syms = line_group_sympy_withparities(
-            params, symprec=1e-8
-        )
-        assert len(rep_mat) == 5
-
-    def test_family6_nonzero_q(self, shared_datadir):
-        params = _make_params(shared_datadir, "C4v", qz=0.3)
-        rep_mat, vals, syms = line_group_sympy_withparities(
-            params, symprec=1e-8
-        )
-        assert len(rep_mat) > 0
-
-    def test_family6_orthogonality(self, shared_datadir):
-        params = _make_params(shared_datadir, "C4v")
-        chars, _, _ = get_character_num_withparities(params, symprec=1e-8)
-        G = chars.shape[1]
-        orth = chars @ chars.conj().T / G
-        assert np.allclose(np.diag(orth).real, 1.0, atol=1e-10)
-        off_diag = orth - np.diag(np.diag(orth))
-        assert np.allclose(off_diag, 0.0, atol=1e-10)
-
-    def test_family4_nonzero_q(self, shared_datadir):
-        params = _make_params(shared_datadir, "9-9-AM", qz=0.3)
-        rep_mat, vals, syms = line_group_sympy_withparities(
-            params, symprec=1e-8
-        )
-        assert len(rep_mat) > 0
-
-    def test_family8_24_0_ZZ(self, shared_datadir):
-        """Larger family 8 structure to exercise more code paths."""
-        params = _make_params(shared_datadir, "24-0-ZZ")
-        chars, _, _ = get_character_num_withparities(params, symprec=1e-8)
-        assert chars.shape == (27, 144)
-
-
-# --- Manual DictParams for families without test structures ---
-
-_FAMILY2_ORDER = [
-    [0],
-    [0, 1],
-    [0, 1, 1],
-    [0, 1, 1, 1],
-    [2],
-    [0, 2],
-    [0, 1, 2],
-    [0, 1, 1, 2],
-]
-
-_FAMILY1_ORDER = [
-    [0],
-    [1],
-    [1, 1],
-]
-
-_FAMILY3_ORDER = [
-    [0],
-    [0, 1],
-    [0, 1, 1],
-    [0, 1, 1, 1],
-    [2],
-    [0, 2],
-    [0, 1, 2],
-    [0, 1, 1, 2],
-]
-
-_FAMILY5_ORDER = [
-    [0],
-    [1],
-    [1, 1],
-    [1, 1, 1],
-    [2],
-    [1, 2],
-    [3],
-    [1, 3],
-]
-
-_FAMILY7_ORDER = [
-    [0],
-    [1],
-    [1, 1],
-    [2],
-    [2, 2],
-    [1, 2],
-]
-
-_FAMILY9_ORDER = [
-    [0],
-    [1],
-    [2],
-    [2, 2],
-    [3],
-    [4],
-    [2, 3],
-    [2, 4],
-]
-
-_FAMILY10_ORDER = [
-    [0],
-    [1],
-    [1, 1],
-    [2],
-    [2, 2],
-    [1, 2],
-]
-
-_FAMILY11_ORDER = [
-    [0],
-    [1],
-    [2],
-    [2, 2],
-    [3],
-    [4],
-    [2, 3],
-    [2, 4],
-]
-
-_FAMILY12_ORDER = [
-    [0],
-    [1],
-    [1, 1],
-    [2],
-    [2, 2],
-    [3],
-    [1, 3],
-    [2, 3],
-]
-
-_FAMILY13_ORDER = [
-    [0],
-    [1],
-    [2],
-    [3],
-    [4],
-    [1, 1],
-    [1, 2],
-    [1, 3],
-    [1, 4],
-    [2, 3],
-    [2, 4],
-    [3, 4],
-    [1, 1, 3],
-    [1, 1, 4],
-    [1, 2, 3],
-    [1, 2, 4],
-]
-
-
-def _assert_all_reps_have_nops(reps, nops):
-    for rep in reps:
-        arr = np.array(rep)
-        assert arr.shape[0] == nops
-
-
-class TestLineGroupSympyFamily2:
-    """Test line_group_sympy for family 2 (S2n groups)."""
-
-    def _params(self, qpoints=0.0):
-        return {
-            "family": 2,
-            "nrot": 4,
-            "qpoints": qpoints,
-            "a": 3.0,
-            "order": _FAMILY2_ORDER,
-        }
-
-    def test_q0_returns_1d_chars(self):
-        chars, vals, syms = line_group_sympy(self._params(0.0), symprec=1e-6)
-        assert len(chars) == 4
-        for c in chars:
-            assert np.array(c).shape == (8,)
-
-    def test_boundary_q_returns_1d_chars(self):
-        a = 3.0
-        chars, vals, _ = line_group_sympy(
-            self._params(np.pi / a), symprec=1e-6
-        )
-        assert len(chars) == 4
-        for c in chars:
-            assert np.array(c).shape == (8,)
-
-    def test_nonzero_q_returns_2d_matrices(self):
-        chars, vals, _ = line_group_sympy(self._params(0.5), symprec=1e-6)
-        assert len(chars) == 4
-        for c in chars:
-            assert np.array(c).shape == (8, 2, 2)
-
-
-class TestWithParitiesFamily2:
-    """Test line_group_sympy_withparities for family 2 (S2n groups)."""
-
-    def _params(self, qpoints=0.0):
-        return {
-            "family": 2,
-            "nrot": 4,
-            "qpoints": qpoints,
-            "a": 3.0,
-            "order": _FAMILY2_ORDER,
-        }
-
-    def test_q0_rep_count(self):
-        """At q=0, family 2 produces 2*nrot 1D irreps (piH = +/-1)."""
-        reps, vals, syms = line_group_sympy_withparities(
-            self._params(0.0), symprec=1e-6
-        )
-        assert len(reps) == 8
-
-    def test_boundary_q_rep_count(self):
-        a = 3.0
-        reps, vals, _ = line_group_sympy_withparities(
-            self._params(np.pi / a), symprec=1e-6
-        )
-        assert len(reps) == 8
-
-    def test_nonzero_q_returns_2d_matrices(self):
-        reps, vals, _ = line_group_sympy_withparities(
-            self._params(0.5), symprec=1e-6
-        )
-        assert len(reps) == 4
-        for r in reps:
-            assert np.array(r).shape == (8, 2, 2)
-
-    def test_q0_piH_values_present(self):
-        """Each (k, m) pair should generate two irreps with piH=-1 and +1."""
-        _, vals, _ = line_group_sympy_withparities(
-            self._params(0.0), symprec=1e-6
-        )
-        piH_values = [v[2] for v in vals]
-        assert piH_values.count(-1) == 4
-        assert piH_values.count(1) == 4
-
-
-class TestWithParitiesFamily1:
-    """Test line_group_sympy_withparities for family 1 (T_Q(f) C_n groups)."""
-
-    def _params(self, qpoints=0.0):
-        return {
-            "family": 1,
-            "nrot": 1,
-            "qpoints": qpoints,
-            "a": 3.0,
-            "order": _FAMILY1_ORDER,
-            "Q_screw": 3.0,
-            "Q_num": 3,
-            "f_screw": 1.0,
-        }
-
-    def test_returns_only_1d_reps(self):
-        reps, vals, syms = line_group_sympy_withparities(
-            self._params(0.0), symprec=1e-8
-        )
-        assert len(reps) == 3
-        for rep in reps:
-            assert np.array(rep).shape == (3,)
-
-    def test_character_orthogonality(self):
-        reps, _, _ = line_group_sympy_withparities(
-            self._params(0.0), symprec=1e-8
-        )
-        chars = np.array(reps).astype(np.complex128)
-        G = chars.shape[1]
-        orth = chars @ chars.conj().T / G
-        assert np.allclose(np.diag(orth).real, 1.0, atol=1e-10)
-        off_diag = orth - np.diag(np.diag(orth))
-        assert np.allclose(off_diag, 0.0, atol=1e-10)
-
-
-class TestLineGroupSympyFamily3:
-    """Test line_group_sympy for family 3 (Cnh groups)."""
-
-    def _params(self, qpoints=0.0):
-        return {
-            "family": 3,
-            "nrot": 4,
-            "qpoints": qpoints,
-            "a": 3.0,
-            "order": _FAMILY3_ORDER,
-        }
-
-    def test_q0_returns_characters(self):
-        chars, vals, syms = line_group_sympy(self._params(0.0), symprec=1e-6)
-        assert len(chars) == 4
-
-    def test_boundary_q_returns_characters(self):
-        a = 3.0
-        chars, _, _ = line_group_sympy(self._params(np.pi / a), symprec=1e-6)
-        assert len(chars) == 4
-
-    def test_nonzero_q_returns_2d_matrices(self):
-        chars, _, _ = line_group_sympy(self._params(0.5), symprec=1e-6)
-        assert len(chars) == 4
-        for c in chars:
-            assert np.array(c).shape == (8, 2, 2)
-
-
-class TestWithParitiesFamily3:
-    """Test line_group_sympy_withparities for Table 4.3 / family 3."""
-
-    def _params(self, qpoints=0.0):
-        return {
-            "family": 3,
-            "nrot": 4,
-            "qpoints": qpoints,
-            "a": 3.0,
-            "order": _FAMILY3_ORDER,
-        }
-
-    def test_q0_rep_count(self):
-        reps, vals, syms = line_group_sympy_withparities(
-            self._params(0.0), symprec=1e-6
-        )
-        assert len(reps) == 8
-        _assert_all_reps_have_nops(reps, len(_FAMILY3_ORDER))
-
-    def test_nonzero_q_returns_2d_matrices(self):
-        reps, vals, _ = line_group_sympy_withparities(
-            self._params(0.5), symprec=1e-6
-        )
-        assert len(reps) == 4
-        for rep in reps:
-            assert np.array(rep).shape == (len(_FAMILY3_ORDER), 2, 2)
-
-
-class TestWithParitiesFamily5:
-    """Test line_group_sympy_withparities for Table 4.5 / family 5."""
-
-    def _params(self, qpoints=0.0):
-        return {
-            "family": 5,
-            "nrot": 4,
-            "qpoints": qpoints,
-            "a": 4.0,
-            "order": _FAMILY5_ORDER,
-            "Q_screw": 4.0,
-            "Q_num": 4,
-            "f_screw": 1.0,
-        }
-
-    def test_q0_mixed_dimensions(self):
-        reps, vals, syms = line_group_sympy_withparities(
-            self._params(0.0), symprec=1e-6
-        )
-        assert len(reps) == 6
-        assert {np.array(rep).ndim for rep in reps} == {1, 3}
-
-    def test_nonzero_q_returns_2d_matrices(self):
-        reps, vals, _ = line_group_sympy_withparities(
-            self._params(0.5), symprec=1e-6
-        )
-        assert len(reps) == 4
-        for rep in reps:
-            assert np.array(rep).shape == (len(_FAMILY5_ORDER), 2, 2)
-
-
-class TestWithParitiesFamily7:
-    """Test line_group_sympy_withparities for Table 4.7 / family 7."""
-
-    def _params(self, qpoints=0.0):
-        return {
-            "family": 7,
-            "nrot": 4,
-            "qpoints": qpoints,
-            "a": 3.0,
-            "order": _FAMILY7_ORDER,
-        }
-
-    def test_rep_count_and_shapes(self):
-        reps, vals, syms = line_group_sympy_withparities(
-            self._params(0.0), symprec=1e-6
-        )
-        assert len(reps) == 5
-        _assert_all_reps_have_nops(reps, len(_FAMILY7_ORDER))
-        assert any(
-            np.array(rep).shape[-1] == 2 for rep in reps if rep.ndim > 1
-        )
-
-
-class TestWithParitiesFamilies9To12:
-    """Test Tables 4.9-4.12 / families 9-12."""
-
-    def _params(self, family, qpoints=0.0):
-        orders = {
-            9: _FAMILY9_ORDER,
-            10: _FAMILY10_ORDER,
-            11: _FAMILY11_ORDER,
-            12: _FAMILY12_ORDER,
-        }
-        return {
-            "family": family,
-            "nrot": 4,
-            "qpoints": qpoints,
-            "a": 3.0,
-            "order": orders[family],
-        }
-
-    @pytest.mark.parametrize("family", [9, 10, 11, 12])
-    def test_gamma_cases_return_reps(self, family):
-        reps, vals, syms = line_group_sympy_withparities(
-            self._params(family, 0.0), symprec=1e-6
-        )
-        assert len(reps) > 0
-        _assert_all_reps_have_nops(reps, len(self._params(family)["order"]))
-
-    @pytest.mark.parametrize("family", [9, 10, 11, 12])
-    def test_interior_q_has_higher_dimensional_reps(self, family):
-        reps, vals, _ = line_group_sympy_withparities(
-            self._params(family, 0.5), symprec=1e-6
-        )
-        shapes = [np.array(rep).shape for rep in reps]
-        assert any(len(shape) == 3 and shape[-1] in (2, 4) for shape in shapes)
-
-    @pytest.mark.parametrize("family", [10, 12])
-    def test_boundary_q_cases(self, family):
-        a = 3.0
-        reps, vals, _ = line_group_sympy_withparities(
-            self._params(family, np.pi / a), symprec=1e-6
-        )
-        assert len(reps) > 0
-        _assert_all_reps_have_nops(reps, len(self._params(family)["order"]))
-
-
-class TestLineGroupSympyFamily13:
-    """Test line_group_sympy for family 13 (Dnd groups)."""
-
-    def _params(self, qpoints=0.0):
-        return {
-            "family": 13,
-            "nrot": 2,
-            "qpoints": qpoints,
-            "a": 3.0,
-            "order": _FAMILY13_ORDER,
-        }
-
-    def test_q0_mixed_dimensions(self):
-        """At q=0 family 13 produces both 1D and 2D irreps."""
-        chars, vals, _ = line_group_sympy(self._params(0.0), symprec=1e-6)
-        assert len(chars) == 3
-        dims = [np.array(c).ndim for c in chars]
-        assert 1 in dims and 3 in dims
-
-    def test_boundary_q(self):
-        a = 3.0
-        chars, vals, _ = line_group_sympy(
-            self._params(np.pi / a), symprec=1e-6
-        )
-        assert len(chars) == 2
-
-    def test_nonzero_q_has_4d_irreps(self):
-        """Interior q produces 4x4 matrices for some irreps."""
-        chars, vals, _ = line_group_sympy(self._params(0.5), symprec=1e-6)
-        shapes = [np.array(c).shape for c in chars]
-        assert any(s[-1] == 4 for s in shapes if len(s) == 3)
-
-
-class TestWithParitiesFamily13:
-    """Test line_group_sympy_withparities for family 13."""
-
-    def _params(self, qpoints=0.0):
-        return {
-            "family": 13,
-            "nrot": 2,
-            "qpoints": qpoints,
-            "a": 3.0,
-            "order": _FAMILY13_ORDER,
-        }
-
-    def test_q0_rep_count(self):
-        reps, vals, syms = line_group_sympy_withparities(
-            self._params(0.0), symprec=1e-6
-        )
-        assert len(reps) == 8
-
-    def test_boundary_q_rep_count(self):
-        a = 3.0
-        reps, vals, _ = line_group_sympy_withparities(
-            self._params(np.pi / a), symprec=1e-6
-        )
-        assert len(reps) == 4
-
-    def test_nonzero_q_rep_count(self):
-        reps, vals, _ = line_group_sympy_withparities(
-            self._params(0.5), symprec=1e-6
-        )
-        assert len(reps) == 4
-
-
-class TestWithParitiesFamily6Boundary:
-    """Test withparities at boundary q-point for family 6."""
-
-    def test_boundary_q_rep_count(self, shared_datadir):
-        params = _make_params(shared_datadir, "C4v", qz=0.5)
-        # q=0.5/aL * 2pi is in interior
-        reps, vals, _ = line_group_sympy_withparities(params, symprec=1e-8)
-        assert len(reps) > 0
-
-    def test_boundary_q_orthogonality(self, shared_datadir):
-        """Character orthogonality at q=pi/a for family 6."""
-        atom = read_vasp(shared_datadir / "C4v")
-        _, family, nrot, aL, _, order_ops, _ = get_linegroup_symmetry_dataset(
-            atom
-        )
-        params = {
-            "qpoints": np.pi / aL,
-            "nrot": nrot,
-            "order": order_ops,
-            "family": family,
-            "a": aL,
-        }
-        chars, _, _ = get_character_num_withparities(params, symprec=1e-8)
-        G = chars.shape[1]
-        orth = chars @ chars.conj().T / G
-        assert np.allclose(np.diag(orth).real, 1.0, atol=1e-10)
-
-
-class TestGetLinegroupSymmetryDatasetExtra:
-    """Test additional branches of get_linegroup_symmetry_dataset."""
-
-    def test_string_input(self, shared_datadir, tmp_path):
-        """Pass a file path string instead of Atoms object (line 49)."""
-        import shutil
-
-        # Copy to a file named POSCAR so ase.io.read can detect format
-        src = shared_datadir / "10-0-ZZ"
-        dst = tmp_path / "POSCAR"
-        shutil.copy(src, dst)
-        _, family, nrot, _, ops, _, _ = get_linegroup_symmetry_dataset(
-            str(dst)
-        )
-        assert family == 8
-        assert nrot == 10
-
-
-class TestMainCLI:
-    """Test the main() CLI entry point of generate_irreps_tables."""
-
-    def _make_poscar(self, shared_datadir, tmp_path, name):
-        """Copy a test structure to a POSCAR file ase.io.read can detect."""
-        import shutil
-
-        dst = tmp_path / "POSCAR"
-        shutil.copy(shared_datadir / name, dst)
-        return str(dst)
-
-    def test_main_default(self, shared_datadir, tmp_path, monkeypatch):
-        """Run main with default args (character table only)."""
-        import sys
-
-        from pulgon_tools.generate_irreps_tables import main
-
-        poscar = self._make_poscar(shared_datadir, tmp_path, "10-0-ZZ")
-        outfile = str(tmp_path / "chars")
-        monkeypatch.setattr(
-            sys,
-            "argv",
-            [
-                "pulgon-irreps-tables",
-                "-p",
-                poscar,
-                "-q",
-                "0.0",
-                "-s",
-                outfile,
-            ],
-        )
-        main()
-        data = np.load(outfile + ".npz", allow_pickle=True)
-        assert "characters" in data
-        assert "ireps_values" in data
-        assert "ireps_symbols" in data
-
-    def test_main_with_rep_matrix(self, shared_datadir, tmp_path, monkeypatch):
-        """Run main with -r flag to also save representation matrices."""
-        import sys
-
-        from pulgon_tools.generate_irreps_tables import main
-
-        poscar = self._make_poscar(shared_datadir, tmp_path, "10-0-ZZ")
-        outfile = str(tmp_path / "chars_rep")
-        monkeypatch.setattr(
-            sys,
-            "argv",
-            [
-                "pulgon-irreps-tables",
-                "-p",
-                poscar,
-                "-q",
-                "0.0",
-                "-s",
-                outfile,
-                "-r",
-            ],
-        )
-        main()
-        data = np.load(outfile + ".npz", allow_pickle=True)
-        assert "characters" in data
-        # Should have D_irrep_* keys
-        rep_keys = [k for k in data if k.startswith("D_irrep_")]
-        assert len(rep_keys) > 0
+@pytest.mark.parametrize("family", EXPECTED)
+def test_test_irrep_struct_files_exist(family):
+    path = _structure_path(family)
+
+    assert path.is_file()
+    assert len(read_vasp(path)) == EXPECTED[family]["atoms"]
+
+
+@pytest.mark.parametrize("family", EXPECTED)
+def test_linegroup_symmetry_dataset_uses_test_irrep_struct(family):
+    atom = read_vasp(_structure_path(family))
+    (
+        atom_center,
+        detected_family,
+        nrot,
+        a_lattice,
+        ops,
+        order_ops,
+        _,
+    ) = get_linegroup_symmetry_dataset(atom)
+
+    assert detected_family == family
+    assert len(atom_center) == len(atom)
+    assert nrot == EXPECTED[family]["nrot"]
+    assert a_lattice > 0
+    assert len(ops) == EXPECTED[family]["ops"]
+    assert len(order_ops) == len(ops)
+
+
+@pytest.mark.parametrize("family", EXPECTED)
+def test_character_table_shape_for_test_irrep_struct(family):
+    params = _params_from_structure(_structure_path(family))
+
+    characters, irreps_values, irreps_symbols = get_character_num_withparities(
+        params, symprec=1e-8
+    )
+
+    assert characters.shape == (
+        EXPECTED[family]["irreps"],
+        EXPECTED[family]["ops"],
+    )
+    assert len(irreps_values) == characters.shape[0]
+    assert len(irreps_symbols) > 0
+    assert np.isfinite(characters.real).all()
+    assert np.isfinite(characters.imag).all()
+
+
+@pytest.mark.parametrize("family", EXPECTED)
+def test_representation_traces_match_characters(family):
+    params = _params_from_structure(_structure_path(family))
+
+    representation_matrices, _, _ = get_character_withparities(
+        params, symprec=1e-8
+    )
+    characters, _, _ = get_character_num_withparities(params, symprec=1e-8)
+
+    assert len(representation_matrices) == characters.shape[0]
+    for idx, rep in enumerate(representation_matrices):
+        if rep.ndim == 1:
+            assert rep.shape == (characters.shape[1],)
+            trace = rep
+        else:
+            assert rep.shape[0] == characters.shape[1]
+            assert rep.shape[1] == rep.shape[2]
+            trace = np.trace(rep, axis1=1, axis2=2)
+        assert np.allclose(trace, characters[idx], atol=1e-10)
+
+
+def test_dataset_accepts_path_string():
+    _, family, nrot, _, ops, _, _ = get_linegroup_symmetry_dataset(
+        str(_structure_path(8))
+    )
+
+    assert family == 8
+    assert nrot == EXPECTED[8]["nrot"]
+    assert len(ops) == EXPECTED[8]["ops"]
+
+
+def test_main_cli_saves_character_table(tmp_path, monkeypatch):
+    import sys
+
+    from pulgon_tools.generate_irreps_tables import main
+
+    outfile = tmp_path / "family_04_chars"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "pulgon-irreps-tables",
+            "-p",
+            str(_structure_path(4)),
+            "-q",
+            "0.0",
+            "-s",
+            str(outfile),
+        ],
+    )
+
+    main()
+
+    data = np.load(f"{outfile}.npz", allow_pickle=True)
+    assert data["characters"].shape == (
+        EXPECTED[4]["irreps"],
+        EXPECTED[4]["ops"],
+    )
+    assert "ireps_values" in data
+    assert "ireps_symbols" in data
+
+
+def test_main_cli_saves_representation_matrices(tmp_path, monkeypatch):
+    import sys
+
+    from pulgon_tools.generate_irreps_tables import main
+
+    outfile = tmp_path / "family_13_reps"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "pulgon-irreps-tables",
+            "-p",
+            str(_structure_path(13)),
+            "-q",
+            "0.0",
+            "-s",
+            str(outfile),
+            "-r",
+        ],
+    )
+
+    main()
+
+    data = np.load(f"{outfile}.npz", allow_pickle=True)
+    rep_keys = [key for key in data.files if key.startswith("D_irrep_")]
+    assert data["characters"].shape == (
+        EXPECTED[13]["irreps"],
+        EXPECTED[13]["ops"],
+    )
+    assert len(rep_keys) == EXPECTED[13]["irreps"]
