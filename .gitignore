@@ -177,3 +177,8 @@ uv.lock
 
 # Local reference material
 LineGroupsinPhysics.pdf
+
+# Local documents / generated artifacts
+*.html
+*.pdf
+*.md
