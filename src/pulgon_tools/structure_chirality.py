@@ -13,7 +13,8 @@
 # permissions and limitations under the License.
 
 import argparse
-from typing import List, Tuple, Union
+import ast
+from typing import List, Sequence, Tuple, Union
 
 import numpy as np
 import sympy
@@ -24,6 +25,44 @@ from pymatgen.core.operations import SymmOp
 from scipy.optimize import fsolve
 
 from pulgon_tools.utils import Cn, brute_force_generate_group
+
+
+def _parse_literal(value: object) -> object:
+    if isinstance(value, str):
+        return ast.literal_eval(value)
+    return value
+
+
+def _parse_sequence(value: object, name: str) -> Sequence:
+    parsed = _parse_literal(value)
+    if not isinstance(parsed, (list, tuple)):
+        raise ValueError(f"{name} must be a list or tuple.")
+    return parsed
+
+
+def _parse_chirality(value: object) -> Tuple[int, int]:
+    chirality = _parse_sequence(value, "--chirality")
+    if len(chirality) != 2 or not all(
+        isinstance(index, int) for index in chirality
+    ):
+        raise ValueError(
+            "--chirality must be a pair of integers, e.g. '(8, 4)'."
+        )
+    n1, n2 = chirality
+    if n1 < 0 or n2 < 0 or n1 + n2 <= 0:
+        raise ValueError(
+            "--chirality indices must be non-negative and non-zero."
+        )
+    return n1, n2
+
+
+def _parse_symbols(value: object) -> Tuple[str, str]:
+    symbols = _parse_sequence(value, "--symbol")
+    if len(symbols) != 2 or not all(
+        isinstance(symbol, str) for symbol in symbols
+    ):
+        raise ValueError("--symbol must be a pair of element symbols.")
+    return symbols[0], symbols[1]
 
 
 def cyl2car(
@@ -390,9 +429,12 @@ def main():
 
     args = parser.parse_args()
 
-    n1, n2 = eval(args.chirality)[0], eval(args.chirality)[1]
+    try:
+        n1, n2 = _parse_chirality(args.chirality)
+        symbol1, symbol2 = _parse_symbols(args.symbol)
+    except (SyntaxError, ValueError) as exc:
+        parser.error(str(exc))
 
-    symbol1, symbol2 = eval(args.symbol)[0], eval(args.symbol)[1]
     bond_length = args.bond_length
     delta_Z = args.delta_Z
     filename = args.st_name

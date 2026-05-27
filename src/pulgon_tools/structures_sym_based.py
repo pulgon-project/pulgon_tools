@@ -13,15 +13,114 @@
 # permissions and limitations under the License.
 
 import argparse
+import ast
 import copy
-from typing import Union
+import re
+from typing import Sequence, Union
 
 import ase
 import numpy as np
 from ase import Atoms
 from ase.io.vasp import write_vasp
 
-from pulgon_tools.utils import Cn, dimino, sigmaV, sortrows
+from pulgon_tools.utils import (
+    Cn,
+    S2n,
+    U,
+    U_d,
+    dimino,
+    sigmaH,
+    sigmaV,
+    sortrows,
+)
+
+_GENERATOR_PATTERNS = {
+    "Cn": Cn,
+    "S2n": S2n,
+    "U_d": U_d,
+}
+
+_GENERATOR_NOARG = {
+    "sigmaV()": sigmaV,
+    "sigmaH()": sigmaH,
+    "U()": U,
+}
+
+_SUPPORTED_GENERATORS = (
+    "Cn(number), S2n(number), U_d(angle), sigmaV(), sigmaH(), U()"
+)
+
+
+def _parse_literal(value: object) -> object:
+    if isinstance(value, str):
+        return ast.literal_eval(value)
+    return value
+
+
+def _parse_sequence(value: object, name: str) -> Sequence:
+    parsed = _parse_literal(value)
+    if not isinstance(parsed, (list, tuple)):
+        raise ValueError(f"{name} must be a list or tuple.")
+    return parsed
+
+
+def _parse_symbol_list(value: object) -> Sequence[str]:
+    symbols = _parse_sequence(value, "--symbol")
+    if not symbols or not all(isinstance(symbol, str) for symbol in symbols):
+        raise ValueError(
+            "--symbol must be a non-empty list or tuple of strings."
+        )
+    return symbols
+
+
+def _parse_cyclic_group(value: object) -> dict:
+    cyclic_group = _parse_literal(value)
+    if not isinstance(cyclic_group, dict) or len(cyclic_group) != 1:
+        raise ValueError("--cyclic must be a dict with exactly one key.")
+
+    key = next(iter(cyclic_group))
+    if key == "T_Q":
+        params = cyclic_group[key]
+        if not isinstance(params, (list, tuple)) or len(params) != 2:
+            raise ValueError("--cyclic T_Q value must be [Q, f].")
+        q, f = params
+        if not isinstance(q, (int, float)) or not isinstance(f, (int, float)):
+            raise ValueError(
+                "--cyclic T_Q parameters Q and f must be numeric."
+            )
+        if q <= 0 or f <= 0:
+            raise ValueError(
+                "--cyclic T_Q parameters Q and f must be positive."
+            )
+        return {"T_Q": [q, f]}
+
+    if key == "T_V":
+        f = cyclic_group[key]
+        if not isinstance(f, (int, float)):
+            raise ValueError("--cyclic T_V value f must be numeric.")
+        if f <= 0:
+            raise ValueError("--cyclic T_V value f must be positive.")
+        return {"T_V": f}
+
+    raise ValueError("--cyclic key must be 'T_Q' or 'T_V'.")
+
+
+def _parse_generator(generator: str) -> np.ndarray:
+    if generator in _GENERATOR_NOARG:
+        return _GENERATOR_NOARG[generator]()
+
+    match = re.fullmatch(r"(Cn|S2n|U_d)\(([-+]?\d+(?:\.\d+)?)\)", generator)
+    if match:
+        name, parameter = match.groups()
+        value = float(parameter)
+        if name in {"Cn", "S2n"} and value <= 0:
+            raise ValueError(f"{name} generator parameter must be positive.")
+        return _GENERATOR_PATTERNS[name](value)
+
+    raise ValueError(
+        f"Unsupported generator '{generator}'. Supported generators: "
+        f"{_SUPPORTED_GENERATORS}."
+    )
 
 
 def T_Q(
@@ -221,9 +320,21 @@ def main():
     )
 
     args = parser.parse_args()
-    symbols = eval(args.symbol)
+    try:
+        symbols = _parse_symbol_list(args.symbol)
+        pos_cylin = np.array(
+            _parse_sequence(args.motif, "--motif"), dtype=float
+        )
+        generators = np.array(
+            [
+                _parse_generator(tmp)
+                for tmp in _parse_sequence(args.generators, "--generators")
+            ]
+        )
+        cg = _parse_cyclic_group(args.cyclic)
+    except (SyntaxError, ValueError) as exc:
+        parser.error(str(exc))
 
-    pos_cylin = np.array(eval(args.motif))
     if pos_cylin.ndim == 1:
         pos = np.array(
             [
@@ -241,8 +352,6 @@ def main():
             ]
         )
         pos = pos.T
-    generators = np.array([eval(tmp) for tmp in eval(args.generators)])
-    cg = eval(args.cyclic)
     st_name = args.st_name
 
     rot_sym = dimino(generators, symec=3)

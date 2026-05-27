@@ -1,5 +1,6 @@
 import logging
 import re
+from fractions import Fraction
 from typing import Optional
 
 import numpy as np
@@ -75,7 +76,7 @@ def get_family_num_from_sym_symbol(
         trans_sym_T = trans_sym.split("|")[1]
         sym_map = family_map["TN"]
 
-        num_trans = float(eval(trans_sym_C.partition("(C")[2]))
+        num_trans = float(Fraction(trans_sym_C.partition("(C")[2]))
         num_rots = float(re.findall(r"\d+", rota_sym)[0])
         sym_map = (
             sym_map["T2n"]

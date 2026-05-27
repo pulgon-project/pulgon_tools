@@ -86,10 +86,10 @@ pulgon-generate-structures-sym_based \
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-m`, `--motif` | Cylindrical coordinates `[r, φ, z]` of the initial atomic motif (list of lists) | `[[3, π/24, 0.6], [2.2, π/24, 0.8]]` |
-| `-b`, `--symbol` | Atomic species symbols, e.g. `"('Mo', 'S')"` | `('Mo', 'S')` |
-| `-g`, `--generators` | Axial point group generators, e.g. `"['Cn(6)', 'sigmaV()']"` | `['Cn(6)', 'sigmaV()']` |
-| `-c`, `--cyclic` | Generalized translational group. `T_Q: [Q, f]` for screw (rotation order Q, translation f Å); `T_V: f` for glide (translation f Å) | `{'T_Q': [6, 1.5]}` |
+| `-m`, `--motif` | Cylindrical coordinates `[r, φ, z]` of the initial atomic motif as a Python literal list. Use numeric values only, not expressions such as `np.pi/24`. | `[[3, π/24, 0.6], [2.2, π/24, 0.8]]` |
+| `-b`, `--symbol` | Atomic species symbols as a Python literal tuple/list of strings, e.g. `"('Mo', 'S')"` | `('Mo', 'S')` |
+| `-g`, `--generators` | Axial point group generators as a Python literal list of whitelisted strings. Supported: `Cn(number)`, `S2n(number)`, `U_d(angle)`, `sigmaV()`, `sigmaH()`, `U()` | `['Cn(6)', 'sigmaV()']` |
+| `-c`, `--cyclic` | Generalized translational group as a Python literal dict. Supported keys: `T_Q: [Q, f]` for screw (positive rotation order Q and translation f Å); `T_V: f` for glide (positive translation f Å). | `{'T_Q': [6, 1.5]}` |
 | `-s`, `--st_name` | Output filename | `poscar.vasp` |
 
 **Example** — C/N nanotube with C₈ symmetry and screw translation T₃(1.6):
@@ -118,8 +118,8 @@ pulgon-generate-structures-chirality \
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-c`, `--chirality` | Chiral indices `(n, m)`, e.g. `"(8, 4)"` | — |
-| `-b`, `--symbol` | Atomic species, e.g. `"('Mo', 'S')"` | `('Mo', 'S')` |
+| `-c`, `--chirality` | Chiral indices as a Python literal pair of non-negative integers, e.g. `"(8, 4)"` | — |
+| `-b`, `--symbol` | Atomic species as a Python literal pair of strings, e.g. `"('Mo', 'S')"` | `('Mo', 'S')` |
 | `-l`, `--bond_length` | M–X bond length in Å | `2.43` |
 | `-d`, `--interlayer_spacing` | Out-of-plane spacing dz between M and X layers in Å | — |
 | `-s`, `--st_name` | Output filename | `poscar.vasp` |

@@ -231,6 +231,36 @@ def _s2n_affine_generator(nrot):
     return generator
 
 
+def _normalize_generators_for_irrep_table(
+    family,
+    nrot,
+    trans_op,
+    rots_op,
+):
+    """Return generators aligned with the irrep-table column order.
+
+    The detected generators are minimal geometric generators.  In low-order
+    cases, a standard table generator can collapse to identity and be omitted,
+    shifting all later generator indices in ``order_ops``.  Keep explicit
+    placeholders only for the affected families so generic cases are unchanged.
+    """
+    if family == 2:
+        # Family 2 is tabulated against S2n = sigma_h C_{2n}; the point-group
+        # detector may return the proper rotation subgroup instead.
+        rots_op = np.array([np.round(_s2n_affine_generator(nrot), 6)])
+    elif family == 8 and nrot == 1:
+        # Family 8 table columns are [screw, Cn, sigmaV].  When n=1, Cn is
+        # identity but its column must remain so sigmaV keeps index 3.
+        rots = np.asarray(rots_op)
+        if rots.size != 0:
+            rots_op = np.concatenate(([np.eye(4)], rots), axis=0)
+
+    rots_op = np.asarray(rots_op)
+    if rots_op.size != 0:
+        return np.vstack(([trans_op], rots_op))
+    return np.asarray([trans_op])
+
+
 def get_linegroup_symmetry_dataset(poscar):
     if type(poscar) == str:
         atom = read_vasp(poscar)
@@ -252,11 +282,10 @@ def get_linegroup_symmetry_dataset(poscar):
     family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
 
     trans_op = np.round(cyclic.get_generators(), 6)
-    if family == 2:
-        rots_op = np.array([np.round(_s2n_affine_generator(nrot), 6)])
-    else:
-        rots_op = np.round(obj.get_generators(), 6)
-    mats = np.vstack(([trans_op], rots_op))
+    rots_op = np.round(obj.get_generators(), 6)
+    mats = _normalize_generators_for_irrep_table(
+        family, nrot, trans_op, rots_op
+    )
     ops, order_ops = brute_force_generate_group_subsequent(mats, symec=1e-2)
 
     gen_angles = _extract_generator_angles(mats)
