@@ -29,7 +29,7 @@ from pulgon_tools.line_group_table import get_family_num_from_sym_symbol
 from pulgon_tools.symmetry_projector import (
     _extract_generator_angles,
     _extract_screw_parameters,
-    _s2n_affine_generator,
+    _normalize_generators_for_irrep_table,
 )
 from pulgon_tools.utils import (
     brute_force_generate_group_subsequent,
@@ -84,15 +84,10 @@ def get_linegroup_symmetry_dataset(
     family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
 
     trans_op = np.round(cyclic.get_generators(), 6)
-    if family == 2:
-        rots_op = np.array([np.round(_s2n_affine_generator(nrot), 6)])
-    else:
-        rots_op = np.round(obj.get_generators(), 6)
-
-    if rots_op.size != 0:
-        mats = np.vstack(([trans_op], rots_op))
-    else:
-        mats = trans_op.copy()
+    rots_op = np.round(obj.get_generators(), 6)
+    mats = _normalize_generators_for_irrep_table(
+        family, nrot, trans_op, rots_op
+    )
     ops, order_ops = brute_force_generate_group_subsequent(mats, symec=1e-2)
 
     gen_angles: Dict[str, Union[float, int]] = _extract_generator_angles(mats)

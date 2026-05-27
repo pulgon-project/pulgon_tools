@@ -51,21 +51,7 @@ KNOWN_ADAPTED_ERRORS = {}
 # accumulates that to ~2e-3.  Other families use the default 1e-3.
 FAMILY_SYMPREC = {5: 2e-3}
 
-KNOWN_INCOMPLETE_OR_NONORTHONORMAL = {
-    (8, "gamma"): "adapted matrix is square but not orthonormal",
-    (8, "nonzero_q"): "adapted matrix is square but not orthonormal",
-    (8, "bz_boundary"): "adapted matrix is square but not orthonormal",
-    (9, "gamma"): "adapted matrix is 24x72 and not orthonormal",
-    (9, "nonzero_q"): "adapted matrix is 24x48 and not orthonormal",
-    (9, "bz_boundary"): "adapted matrix is 24x60 and not orthonormal",
-    (10, "gamma"): "adapted matrix is 24x48 and not orthonormal",
-    (10, "nonzero_q"): "adapted matrix is 24x48 and not orthonormal",
-    (10, "bz_boundary"): "adapted matrix is 24x36 and not orthonormal",
-    (11, "gamma"): "adapted matrix is 24x72 and not orthonormal",
-    (11, "nonzero_q"): "adapted matrix is 24x48 and not orthonormal",
-    (11, "bz_boundary"): "adapted matrix is 24x60 and not orthonormal",
-    (12, "bz_boundary"): "adapted matrix is 24x12 at BZ boundary",
-}
+KNOWN_INCOMPLETE_OR_NONORTHONORMAL = {}
 
 
 def _structure_path(family: int) -> Path:

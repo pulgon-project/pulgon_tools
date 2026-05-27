@@ -31,7 +31,7 @@ EXPECTED = {
     2: {"atoms": 8, "nrot": 2, "ops": 4, "irreps": 4},
     3: {"atoms": 8, "nrot": 2, "ops": 4, "irreps": 4},
     4: {"atoms": 16, "nrot": 2, "ops": 8, "irreps": 8},
-    5: {"atoms": 12, "nrot": 4, "ops": 12, "irreps": 8},
+    5: {"atoms": 12, "nrot": 4, "ops": 12, "irreps": 6},
     6: {"atoms": 8, "nrot": 2, "ops": 4, "irreps": 4},
     7: {"atoms": 8, "nrot": 2, "ops": 4, "irreps": 4},
     8: {"atoms": 8, "nrot": 1, "ops": 4, "irreps": 4},

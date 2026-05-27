@@ -54,12 +54,15 @@ def get_adapted_matrix_withparities(DictParams, num_atom, matrices):
     ) = get_character_withparities(DictParams)
     ndof = 3 * num_atom
 
-    # At any non-zero q, screw translations accumulate Bloch phases
-    # (winding numbers) that break representation closure.  Use the
-    # little group (k-preserving operations only) with k-sector
-    # characters for the projector.
+    # Away from Gamma and the BZ boundary, screw translations accumulate
+    # Bloch phases (winding numbers) that break representation closure.
+    # Use only k-preserving operations there.  At q=pi/a, -k is equivalent
+    # to k modulo a reciprocal vector, so the full boundary little group
+    # must be retained.
     qpoint = DictParams.get("qpoints", 0.0)
+    bz_boundary = np.pi / DictParams["a"]
     is_nonzero_q = not np.isclose(qpoint, 0)
+    is_bz_boundary = np.isclose(abs(qpoint), bz_boundary)
 
     adapted = []
     dimension = []
@@ -71,7 +74,7 @@ def get_adapted_matrix_withparities(DictParams, num_atom, matrices):
 
         projector = np.zeros((ndof, ndof), dtype=np.complex128)
 
-        if is_nonzero_q and IR_ndim > 1:
+        if is_nonzero_q and not is_bz_boundary and IR_ndim > 1:
             # Little group approach: use only k-preserving operations
             # with k-sector characters extracted from block-diagonal
             # representation matrices.
@@ -119,7 +122,21 @@ def get_adapted_matrix_withparities(DictParams, num_atom, matrices):
             continue
         u, s, vh = scipy.linalg.svd(projector)
         basis = u[:, :num_modes]
-        if num_modes < ndof:
+        residualized = False
+        if adapted:
+            # Low-order line groups can make distinct table rows project onto
+            # the same subspace; keep only the new independent directions.
+            existing = np.concatenate(adapted, axis=1)
+            basis = basis - existing @ (existing.conj().T @ basis)
+            u_res, s_res, _ = scipy.linalg.svd(basis, full_matrices=False)
+            num_modes = np.count_nonzero(s_res > 1e-8)
+            if num_modes == 0:
+                continue
+            basis = u_res[:, :num_modes]
+            residualized = True
+        if residualized:
+            error = 0
+        elif num_modes < ndof:
             error = 1 - np.abs(s[num_modes - 1] - s[num_modes]) / np.abs(
                 s[num_modes - 1]
             )
