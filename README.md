@@ -138,7 +138,7 @@ pulgon-generate-structures-chirality -c "(8,4)" -b "('Mo','S')" -l 2.43 -s mos2_
 
 Identifies the complete line-group symmetry of a quasi-1D structure. The detection proceeds in two stages: generalized translational group (screw / glide) detection, followed by axial point group classification.
 
-### Detect line group family
+### Detect line group
 
 ```bash
 pulgon-detect-linegroup -p POSCAR [OPTIONS]
