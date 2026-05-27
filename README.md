@@ -138,6 +138,23 @@ pulgon-generate-structures-chirality -c "(8,4)" -b "('Mo','S')" -l 2.43 -s mos2_
 
 Identifies the complete line-group symmetry of a quasi-1D structure. The detection proceeds in two stages: generalized translational group (screw / glide) detection, followed by axial point group classification.
 
+### Detect line group family
+
+```bash
+pulgon-detect-linegroup -p POSCAR [OPTIONS]
+```
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-p`, `--POSCAR` | Path to input POSCAR structure | — |
+| `-t`, `--tolerance` | Numerical tolerance for symmetry detection | `0.01` |
+
+This command reports the generalized translational group `Z`, axial point group `P`, and line-group family number.
+
+```bash
+pulgon-detect-linegroup -p POSCAR -t 1e-2
+```
+
 ### Detect generalized translational group
 
 ```bash
@@ -166,6 +183,7 @@ pulgon-detect-AxialPointGroup -p POSCAR [OPTIONS]
 **Example** — detect the line group of a (5,5) SWCNT:
 
 ```bash
+pulgon-detect-linegroup -p POSCAR
 pulgon-detect-CyclicGroup -p POSCAR
 pulgon-detect-AxialPointGroup -p POSCAR
 ```
