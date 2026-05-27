@@ -320,6 +320,34 @@ def line_group_sympy_withparities(
                 paras_values.append([tmp_k1, tmp_m1, tmp_piH])
 
     elif family == 5:
+        # Family 5 (T_Q D_n) irrep table.
+        #
+        # The original tabulation was inconsistent with the |G|-sum rule
+        # (sum d_mu^2 != |G|) at every q-point.  Two corrections,
+        # mirroring the family-13 derivation, restore consistency:
+        #
+        # 1. The C_n axial rotation contributes a phase
+        #    exp(i*m*2*pi/n_axial); LineGroupAnalyzer reports
+        #    nrot = 2*n_axial for the D_n point group, so the formula
+        #    becomes exp(i*m*4*pi/nrot) (matching family 13's func1).
+        # 2. At Gamma the (+m, -m) pair is already encoded in the 2D
+        #    representation, so the m-range is reduced to
+        #    [0, floor(Q/2)] to avoid double counting.  Self-paired m
+        #    (m=0 and, when Q is even, m=Q/2) split into a 1D piU=+/-1
+        #    branch.  Sum d^2 = |G| is recovered.
+        # 3. At non-zero q the (+k, -k) sectors must be carried
+        #    explicitly.  Family 5 has no horizontal mirror, so a
+        #    family-13-style 4D representation on
+        #    (|+m,+k>, |-m,+k>, |+m,-k>, |-m,-k>) is reducible under
+        #    the lone U_x generator.  Instead, every m in [0, Q-1]
+        #    is given its own 2D representation:
+        #      * self-paired m (m=0 or m=Q/2): the 2D basis is
+        #        (|m,+k>, |m,-k>);  U_x swaps the two k-sectors;
+        #      * generic m: the 2D basis is (|+m,+k>, |-m,-k>);
+        #        U_x simultaneously flips m and k.
+        #    The little-group filter in the projector code selects the
+        #    +k sector for each m and the Q distinct +k characters
+        #    cover the full Hilbert space at the chosen k.
         qpoint = DictParams["qpoints"]
         nrot = DictParams["nrot"]
         order = DictParams["order"]
@@ -332,54 +360,70 @@ def line_group_sympy_withparities(
         q_frac = Fraction(str(q_screw)).limit_denominator(1000)
         q_num = DictParams.get("Q_num", q_frac.numerator)
 
-        k1, m1, n, Q, f, piU = symbols("k1 m1 n Q f piU")
+        k1, m1, n, Q, f, piU, alphaU = symbols("k1 m1 n Q f piU alphaU")
         screw_phase = sympy.exp(1j * (k1 * f + m1 * 2 * sympy.pi / Q))
-        rot_phase = _phase2(m1, n)
+        screw_phase_mk = sympy.exp(1j * (-k1 * f + m1 * 2 * sympy.pi / Q))
+        rot_phase = sympy.exp(1j * 4 * m1 * sympy.pi / n)
+
+        # 1D rep at Gamma for self-paired m (m=0 or m=Q/2 when Q even).
         func0 = sympy.Matrix([1, screw_phase, rot_phase, piU])
+        # 2D rep at Gamma for generic 0 < m < Q/2 on (|+m>, |-m>),
+        # and at non-zero q for generic m on (|+m,+k>, |-m,-k>).
         func1 = [
             sympy.eye(2),
             sympy.Matrix([[screw_phase, 0], [0, 1 / screw_phase]]),
             sympy.Matrix([[rot_phase, 0], [0, 1 / rot_phase]]),
-            _swap(),
+            _swap_with_angle(m1, alphaU),
+        ]
+        # 2D rep at non-zero q for self-paired m on (|m,+k>, |m,-k>).
+        # The screw matrix carries opposite Bloch phases on the two
+        # k-sectors; the axial rotation is a scalar; U_x swaps them.
+        func2 = [
+            sympy.eye(2),
+            sympy.Matrix([[screw_phase, 0], [0, screw_phase_mk]]),
+            sympy.Matrix([[rot_phase, 0], [0, rot_phase]]),
+            _swap_with_angle(m1, alphaU),
         ]
 
-        m1_value = _m_values_screw(q_num)
+        tmp_alphaU = DictParams.get("alphaU", 0.0)
+        if np.isclose(qpoint, 0, atol=symprec):
+            m1_value = list(range(0, int(q_num) // 2 + 1))
+        else:
+            m1_value = list(range(0, int(q_num)))
         paras_symbol = [k1, m1, piU]
         characters, paras_values = [], []
         for tmp_k1, tmp_m1 in itertools.product([qpoint], m1_value):
             is_special_m = np.isclose(tmp_m1, 0, atol=symprec) or (
-                q_num % 2 == 0
-                and np.isclose(abs(tmp_m1), q_num / 2, atol=symprec)
+                int(q_num) % 2 == 0
+                and np.isclose(tmp_m1, q_num / 2, atol=symprec)
             )
-            if np.isclose(tmp_k1, 0, atol=symprec) and is_special_m:
-                for tmp_piU in [-1, 1]:
-                    res = _value_fc(
-                        func0,
-                        {
-                            k1: tmp_k1,
-                            m1: tmp_m1,
-                            n: nrot,
-                            Q: q_screw,
-                            f: f_screw,
-                            piU: tmp_piU,
-                        },
-                        order,
-                    )
+            base_subs = {
+                k1: tmp_k1,
+                m1: tmp_m1,
+                n: nrot,
+                Q: q_screw,
+                f: f_screw,
+                alphaU: tmp_alphaU,
+            }
+
+            def eval_fc(fc, tmp_piU=0):
+                return _value_fc(fc, {**base_subs, piU: tmp_piU}, order)
+
+            if np.isclose(tmp_k1, 0, atol=symprec):
+                if is_special_m:
+                    for tmp_piU in [-1, 1]:
+                        res = eval_fc(func0, tmp_piU)
+                        characters.append(_as_complex_array(res))
+                        paras_values.append([tmp_k1, tmp_m1, tmp_piU])
+                else:
+                    res = eval_fc(func1, 0)
                     characters.append(_as_complex_array(res))
-                    paras_values.append([tmp_k1, tmp_m1, tmp_piU])
+                    paras_values.append([tmp_k1, tmp_m1, 0])
             else:
-                res = _value_fc(
-                    func1,
-                    {
-                        k1: tmp_k1,
-                        m1: tmp_m1,
-                        n: nrot,
-                        Q: q_screw,
-                        f: f_screw,
-                        piU: 0,
-                    },
-                    order,
-                )
+                if is_special_m:
+                    res = eval_fc(func2, 0)
+                else:
+                    res = eval_fc(func1, 0)
                 characters.append(_as_complex_array(res))
                 paras_values.append([tmp_k1, tmp_m1, 0])
 

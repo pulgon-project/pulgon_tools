@@ -29,6 +29,7 @@ from pulgon_tools.line_group_table import get_family_num_from_sym_symbol
 from pulgon_tools.symmetry_projector import (
     _extract_generator_angles,
     _extract_screw_parameters,
+    _s2n_affine_generator,
 )
 from pulgon_tools.utils import (
     brute_force_generate_group_subsequent,
@@ -80,9 +81,13 @@ def get_linegroup_symmetry_dataset(
     cyclic_groups, _ = cyclic.get_cyclic_group()
     trans_sym = cyclic_groups[0]
     rota_sym = obj.sch_symbol
+    family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
 
     trans_op = np.round(cyclic.get_generators(), 6)
-    rots_op = np.round(obj.get_generators(), 6)
+    if family == 2:
+        rots_op = np.array([np.round(_s2n_affine_generator(nrot), 6)])
+    else:
+        rots_op = np.round(obj.get_generators(), 6)
 
     if rots_op.size != 0:
         mats = np.vstack(([trans_op], rots_op))
@@ -99,7 +104,6 @@ def get_linegroup_symmetry_dataset(
             op[:3, :3], op[:3, 3] * aL
         )
         ops_car_sym.append(tmp_sym)
-    family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
     return atom_center, family, nrot, aL, ops_car_sym, order_ops, gen_angles
 
 

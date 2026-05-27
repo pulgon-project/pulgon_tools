@@ -211,6 +211,26 @@ def _extract_screw_parameters(trans_sym):
     }
 
 
+def _s2n_affine_generator(nrot):
+    """Return the axial S2n generator for family-2 line groups.
+
+    ``LineGroupAnalyzer.get_generators()`` currently returns the proper
+    rotation subgroup generator for axial ``S2n`` groups, e.g. ``C2`` for
+    ``S4``. Family 2 irreps are tabulated against the improper generator
+    ``sigma_h C_{2n}``, so the dataset must use that generator explicitly.
+    """
+    angle = np.pi / nrot
+    generator = np.eye(4)
+    generator[:3, :3] = np.array(
+        [
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
+            [0, 0, -1],
+        ]
+    )
+    return generator
+
+
 def get_linegroup_symmetry_dataset(poscar):
     if type(poscar) == str:
         atom = read_vasp(poscar)
@@ -229,9 +249,13 @@ def get_linegroup_symmetry_dataset(poscar):
     cyclic_groups, _ = cyclic.get_cyclic_group()
     trans_sym = cyclic_groups[0]
     rota_sym = obj.sch_symbol
+    family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
 
     trans_op = np.round(cyclic.get_generators(), 6)
-    rots_op = np.round(obj.get_generators(), 6)
+    if family == 2:
+        rots_op = np.array([np.round(_s2n_affine_generator(nrot), 6)])
+    else:
+        rots_op = np.round(obj.get_generators(), 6)
     mats = np.vstack(([trans_op], rots_op))
     ops, order_ops = brute_force_generate_group_subsequent(mats, symec=1e-2)
 
@@ -246,7 +270,6 @@ def get_linegroup_symmetry_dataset(poscar):
         cart_trans[2] = unreduced_tz[idx] * aL
         tmp_sym = SymmOp.from_rotation_and_translation(op[:3, :3], cart_trans)
         ops_car_sym.append(tmp_sym)
-    family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
     return atom_center, family, nrot, aL, ops_car_sym, order_ops, gen_angles
 
 

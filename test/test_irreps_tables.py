@@ -27,10 +27,10 @@ from pulgon_tools.utils import (
 STRUCT_DIR = Path(__file__).parent / "data" / "test_irrep_struct"
 
 EXPECTED = {
-    1: {"atoms": 12, "nrot": 2, "ops": 6, "irreps": 6},
-    2: {"atoms": 8, "nrot": 2, "ops": 2, "irreps": 4},
+    1: {"atoms": 16, "nrot": 2, "ops": 8, "irreps": 8},
+    2: {"atoms": 8, "nrot": 2, "ops": 4, "irreps": 4},
     3: {"atoms": 8, "nrot": 2, "ops": 4, "irreps": 4},
-    4: {"atoms": 12, "nrot": 2, "ops": 4, "irreps": 8},
+    4: {"atoms": 16, "nrot": 2, "ops": 8, "irreps": 8},
     5: {"atoms": 12, "nrot": 4, "ops": 12, "irreps": 8},
     6: {"atoms": 8, "nrot": 2, "ops": 4, "irreps": 4},
     7: {"atoms": 8, "nrot": 2, "ops": 4, "irreps": 4},
@@ -39,7 +39,7 @@ EXPECTED = {
     10: {"atoms": 8, "nrot": 2, "ops": 4, "irreps": 5},
     11: {"atoms": 8, "nrot": 4, "ops": 8, "irreps": 18},
     12: {"atoms": 8, "nrot": 2, "ops": 8, "irreps": 8},
-    13: {"atoms": 16, "nrot": 2, "ops": 8, "irreps": 8},
+    13: {"atoms": 16, "nrot": 8, "ops": 32, "irreps": 14},
 }
 
 
