@@ -275,12 +275,12 @@ def main():
     st_name = args.POSCAR
     st = read(st_name)
 
-    mol = Molecule(species=st.numbers, coords=st.positions)
-    obj = LineGroupAnalyzer(mol, tolerance=args.tolerance)
+    obj = LineGroupAnalyzer(st, tolerance=args.tolerance)
     apg = obj.sch_symbol
     print(" Axial point group: ", apg)
 
     if point_group_ind:
+        mol = Molecule(species=st.numbers, coords=st.positions)
         obj2 = PointGroupAnalyzer(mol, tolerance=args.tolerance)
         pg2 = obj2.get_pointgroup()
         print(" Point group: ", pg2)
