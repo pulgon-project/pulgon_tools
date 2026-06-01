@@ -53,12 +53,15 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self,
         mol: Union[Molecule, Atoms],
         tolerance: float = 0.01,
+        matrix_tolerance: float = 0.01,
     ):
         """
         Args:
             mol (Molecule or Atoms): Structure to determine axial point group.
             tolerance (float): Distance tolerance to consider sites as
                 symmetrically equivalent. Defaults to 0.01 Angstrom.
+            matrix_tolerance (float): Tolerance for generating and comparing
+                symmetry operation matrices. Defaults to 0.01.
         """
         logging.debug("--------------------start detecting axial point group")
 
@@ -70,7 +73,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         self.centered_mol = mol.get_centered_molecule()
 
         self.tol = tolerance
-        self.mat_tol = tolerance
+        self.mat_tol = matrix_tolerance
         self._zaxis = np.array([0, 0, 1])
 
         self._analyze()
@@ -201,7 +204,7 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
             for op in self.symmops
             if not np.allclose(op.affine_matrix, np.eye(4))
         ]
-        ops = brute_force_generate_group(generators, self.tol)
+        ops = brute_force_generate_group(generators, self.mat_tol)
         ops_sym = [SymmOp(op) for op in ops]
         return ops_sym
 
@@ -246,7 +249,7 @@ def main():
     parser.add_argument(
         "-t",
         "--tolerance",
-        default=1e-3,
+        default=1e-2,
         type=float,
         help="Tolerance for atomic positions",
     )

@@ -61,12 +61,15 @@ class CyclicGroupAnalyzer:
         self,
         atom: ase.atoms.Atoms,
         tolerance: float = 0.001,
+        layer_tolerance: float = 0.05,
     ) -> None:
         """
         Args:
             atom: Line group structure to determine
                 the generalized translational group
             tolerance: distance tolerance for symmetry detection
+            layer_tolerance: fractional tolerance for identifying
+                z-layer and monomer translation candidates
 
         """
         logging.debug(
@@ -79,7 +82,7 @@ class CyclicGroupAnalyzer:
             )
         else:
             self._symprec = tolerance
-            self._layer_symprec = 0.05
+            self._layer_fraction_tol = layer_tolerance
 
             round_symprec = decimal_places(tolerance)
             self._round_symprec = round_symprec
@@ -208,7 +211,7 @@ class CyclicGroupAnalyzer:
             tran = potential_tans[ii]
             ind = int(np.round(1 / tran))
 
-            if ind - 1 / tran > self._symprec:
+            if abs(ind - 1 / tran) > self._symprec:
                 logging.error("Selecting wrong translational vector")
                 continue
 
@@ -245,7 +248,7 @@ class CyclicGroupAnalyzer:
                     logging.debug("None of the candidate rotations works")
 
                 if (
-                    ind == 2 and abs(tran - 0.5) < self._layer_symprec
+                    ind == 2 and abs(tran - 0.5) < self._layer_fraction_tol
                 ):  # only 2 layer in primitive cell
                     # detect mirror
                     logging.debug(
@@ -448,7 +451,7 @@ class CyclicGroupAnalyzer:
 
             if (
                 s1.number == s2.number
-                and (s1.position[2] + tran - s2.position[2]) < self._symprec
+                and abs(s1.position[2] + tran - s2.position[2]) < self._symprec
             ):
                 normal = s1.position - s2.position
                 normal[2] = 0
@@ -517,7 +520,7 @@ class CyclicGroupAnalyzer:
                 == 0  # atom number is multiple of monomer
                 and len(z_uniq) % (ii + 1) == 0  #
                 and abs(len(z_uniq) / (ii + 1) - 1 / potential_trans[ii])
-                < self._layer_symprec
+                < self._layer_fraction_tol
             ):
                 if len(self._primitive) == monomer_num:
                     # if the monomer is the whole structure
@@ -650,9 +653,18 @@ def main():
     parser.add_argument(
         "-t",
         "--tolerance",
-        default=1e-3,
+        default=1e-2,
         type=float,
         help="Tolerance for atomic positions",
+    )
+    parser.add_argument(
+        "--layer-tolerance",
+        default=0.05,
+        type=float,
+        help=(
+            "Fractional tolerance for z-layer and monomer translation "
+            "candidate detection"
+        ),
     )
     parser.add_argument(
         "-o",
@@ -672,7 +684,11 @@ def main():
     st_name = args.POSCAR
     st = read(st_name)
 
-    cyclic = CyclicGroupAnalyzer(st, tolerance=args.tolerance)
+    cyclic = CyclicGroupAnalyzer(
+        st,
+        tolerance=args.tolerance,
+        layer_tolerance=args.layer_tolerance,
+    )
     cy, monomers = cyclic.get_cyclic_group()
     print("The generalized translational group symbol:")
     for ii, cg in enumerate(cy):

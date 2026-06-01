@@ -138,6 +138,11 @@ pulgon-generate-structures-chirality -c "(8,4)" -b "('Mo','S')" -l 2.43 -s mos2_
 
 Identifies the complete line-group symmetry of a quasi-1D structure. The detection proceeds in two stages: generalized translational group (screw / glide) detection, followed by axial point group classification.
 
+Two tolerance settings are used during symmetry detection:
+
+- `--tolerance` is the atomic-coordinate matching tolerance. It controls whether transformed atoms are considered equivalent and is used by both cyclic-group and axial-point-group detection.
+- `--layer-tolerance` is only used by cyclic-group detection. It is a fractional tolerance along the periodic z direction for grouping layers into monomer translation candidates; it does not replace the coordinate-matching tolerance.
+
 ### Detect line group
 
 ```bash
@@ -147,7 +152,8 @@ pulgon-detect-linegroup -p POSCAR [OPTIONS]
 | Flag | Description | Default |
 |------|-------------|---------|
 | `-p`, `--POSCAR` | Path to input POSCAR structure | — |
-| `-t`, `--tolerance` | Numerical tolerance for symmetry detection | `0.01` |
+| `-t`, `--tolerance` | Atomic-coordinate matching tolerance for symmetry detection | `0.01` |
+| `--layer-tolerance` | Fractional z-layer tolerance for cyclic monomer translation candidates | `0.05` |
 
 This command reports the generalized translational group `Z`, axial point group `P`, and line-group family number.
 
@@ -164,7 +170,8 @@ pulgon-detect-CyclicGroup -p POSCAR [OPTIONS]
 | Flag | Description | Default |
 |------|-------------|---------|
 | `-p`, `--poscar` | Path to input structure (POSCAR/cif/xyz) | — |
-| `-t`, `--tolerance` | Numerical tolerance for symmetry detection | `0.01` |
+| `-t`, `--tolerance` | Atomic-coordinate matching tolerance for cyclic symmetry detection | `0.01` |
+| `--layer-tolerance` | Fractional z-layer tolerance for monomer translation candidates | `0.05` |
 | `-o`, `--output` | Enable logging to file | `False` |
 
 ### Detect axial point group
@@ -176,7 +183,7 @@ pulgon-detect-AxialPointGroup -p POSCAR [OPTIONS]
 | Flag | Description | Default |
 |------|-------------|---------|
 | `-p`, `--poscar` | Path to input structure | — |
-| `-t`, `--tolerance` | Numerical tolerance | `0.01` |
+| `-t`, `--tolerance` | Atomic-coordinate matching tolerance for axial point-group detection | `0.01` |
 | `-g`, `--group` | Enable full point group detection | `False` |
 | `-o`, `--output` | Enable logging to file | `False` |
 

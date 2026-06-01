@@ -29,18 +29,25 @@ from pulgon_tools.utils import find_axis_center_of_nanotube
 def detect_linegroup(
     atom: Atoms,
     tolerance: float = 1e-2,
+    layer_tolerance: float = 0.05,
 ) -> Tuple[str, str, int]:
     """Detect the line-group symbols and family number.
 
     Args:
         atom: line-group structure.
         tolerance: distance tolerance for symmetry detection.
+        layer_tolerance: fractional tolerance for cyclic-group z-layer and
+            monomer translation candidate detection.
 
     Returns:
         tuple of (generalized translational group Z, axial point group P,
         line-group family number).
     """
-    cyclic = CyclicGroupAnalyzer(atom, tolerance=tolerance)
+    cyclic = CyclicGroupAnalyzer(
+        atom,
+        tolerance=tolerance,
+        layer_tolerance=layer_tolerance,
+    )
     atom_center = find_axis_center_of_nanotube(cyclic._primitive)
 
     point_group = LineGroupAnalyzer(atom_center, tolerance=tolerance)
@@ -70,11 +77,24 @@ def main() -> None:
         type=float,
         help="Tolerance for atomic positions",
     )
+    parser.add_argument(
+        "--layer-tolerance",
+        default=0.05,
+        type=float,
+        help=(
+            "Fractional tolerance for z-layer and monomer translation "
+            "candidate detection"
+        ),
+    )
 
     args = parser.parse_args()
 
     atom = read_vasp(args.POSCAR)
-    z_sym, p_sym, family = detect_linegroup(atom, tolerance=args.tolerance)
+    z_sym, p_sym, family = detect_linegroup(
+        atom,
+        tolerance=args.tolerance,
+        layer_tolerance=args.layer_tolerance,
+    )
 
     print("generalized translational group Z:", z_sym)
     print("axial point group P:", p_sym)
