@@ -13,6 +13,8 @@
 # permissions and limitations under the License.
 
 
+from pathlib import Path
+
 import numpy as np
 from ase import Atoms
 from ase.io.vasp import read_vasp, write_vasp
@@ -20,11 +22,14 @@ from ase.io.vasp import read_vasp, write_vasp
 from pulgon_tools.structure_chirality import get_nanotube_from_n1n2
 
 if __name__ == "__main__":
+    output_dir = Path("examples/data")
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     ###################### inner-layer ######################
     n1, n2 = 10, 0
     symbol1, symbol2 = 74, 16  # W, S
     name1 = "WS2"
-    atom1 = read_vasp("examples/poscar_monolayer_%s" % name1)
+    atom1 = read_vasp("examples/data/poscar_monolayer_%s" % name1)
     delta_Z1 = abs((atom1.positions - atom1.positions[2])[0, 2])
     bond_length1 = np.linalg.norm((atom1.positions[0] - atom1.positions[2]))
 
@@ -37,7 +42,7 @@ if __name__ == "__main__":
     n3, n4 = 20, 0
     symbol1, symbol2 = 42, 16  # Mo, S
     name2 = "MoS2"
-    atom2 = read_vasp("examples/poscar_monolayer_%s" % name2)
+    atom2 = read_vasp("examples/data/poscar_monolayer_%s" % name2)
     delta_Z2 = abs((atom2.positions - atom2.positions[2])[0, 2])
     bond_length2 = np.linalg.norm((atom2.positions[0] - atom2.positions[2]))
 
@@ -62,4 +67,9 @@ if __name__ == "__main__":
     cell = new_atom2.cell
     numbers = np.concatenate((new_atom1.numbers, new_atom2.numbers), axis=0)
     new_atom = Atoms(positions=pos, cell=cell, numbers=numbers)
-    write_vasp("poscar_%s.vasp" % (name), new_atom, direct=True, sort=True)
+    write_vasp(
+        output_dir / ("poscar_%s.vasp" % name),
+        new_atom,
+        direct=True,
+        sort=True,
+    )
