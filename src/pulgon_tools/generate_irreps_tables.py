@@ -27,6 +27,10 @@ from pulgon_tools.detect_generalized_translational_group import (
 from pulgon_tools.detect_point_group import LineGroupAnalyzer
 from pulgon_tools.line_group_table import get_family_num_from_sym_symbol
 from pulgon_tools.symmetry_projector import (
+    DEFAULT_LAYER_TOLERANCE,
+    DEFAULT_MATRIX_TOLERANCE,
+    DEFAULT_SYMMETRY_TOLERANCE,
+    GENERATOR_ROUND_DECIMALS,
     _extract_generator_angles,
     _extract_screw_parameters,
     _normalize_generators_for_irrep_table,
@@ -51,7 +55,9 @@ LineGroupDataset = Tuple[
 
 def get_linegroup_symmetry_dataset(
     poscar: Union[str, Atom, Atoms],
-    tolerance: float = 1e-2,
+    tolerance: float = DEFAULT_SYMMETRY_TOLERANCE,
+    layer_tolerance: float = DEFAULT_LAYER_TOLERANCE,
+    matrix_tolerance: float = DEFAULT_MATRIX_TOLERANCE,
 ) -> LineGroupDataset:
     """Extract the full line group symmetry dataset from a structure.
 
@@ -61,6 +67,10 @@ def get_linegroup_symmetry_dataset(
     Args:
         poscar: path to a POSCAR file, or an ASE Atom/Atoms object.
         tolerance: tolerance used for line-group symmetry detection.
+        layer_tolerance: fractional z-layer tolerance for cyclic-group
+            monomer translation candidates.
+        matrix_tolerance: tolerance for matrix classification and group
+            closure during operation generation.
 
     Returns:
         tuple of (atom_center, family, nrot, aL, ops_car_sym,
@@ -74,8 +84,16 @@ def get_linegroup_symmetry_dataset(
         raise TypeError("poscar must be a path string, ASE Atom, or ASE Atoms")
 
     atom_center = find_axis_center_of_nanotube(atom)
-    obj = LineGroupAnalyzer(atom_center, tolerance=tolerance)
-    cyclic = CyclicGroupAnalyzer(atom_center, tolerance=tolerance)
+    obj = LineGroupAnalyzer(
+        atom_center,
+        tolerance=tolerance,
+        matrix_tolerance=matrix_tolerance,
+    )
+    cyclic = CyclicGroupAnalyzer(
+        atom_center,
+        tolerance=tolerance,
+        layer_tolerance=layer_tolerance,
+    )
     nrot = obj.get_rotational_symmetry_number()
     aL = atom_center.cell[2, 2]
     cyclic_groups, _ = cyclic.get_cyclic_group()
@@ -83,14 +101,18 @@ def get_linegroup_symmetry_dataset(
     rota_sym = obj.sch_symbol
     family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
 
-    trans_op = np.round(cyclic.get_generators(), 6)
-    rots_op = np.round(obj.get_generators(), 6)
+    trans_op = np.round(cyclic.get_generators(), GENERATOR_ROUND_DECIMALS)
+    rots_op = np.round(obj.get_generators(), GENERATOR_ROUND_DECIMALS)
     mats = _normalize_generators_for_irrep_table(
         family, nrot, trans_op, rots_op
     )
-    ops, order_ops = brute_force_generate_group_subsequent(mats, symprec=1e-2)
+    ops, order_ops = brute_force_generate_group_subsequent(
+        mats, symprec=matrix_tolerance
+    )
 
-    gen_angles: Dict[str, Union[float, int]] = _extract_generator_angles(mats)
+    gen_angles: Dict[str, Union[float, int]] = _extract_generator_angles(
+        mats, matrix_tolerance=matrix_tolerance
+    )
     gen_angles.update(_extract_screw_parameters(trans_sym))
 
     ops_car_sym: List[SymmOp] = []

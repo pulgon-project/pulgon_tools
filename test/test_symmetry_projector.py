@@ -173,6 +173,60 @@ def test_linegroup_dataset_from_test_irrep_struct(family):
     assert ds["a_lattice"] > 0
 
 
+def test_linegroup_dataset_accepts_tolerance_parameters():
+    path = _structure_path(1)
+    (
+        atom_center,
+        detected_family,
+        nrot,
+        a_lattice,
+        ops_car_sym,
+        order_ops,
+        gen_angles,
+    ) = get_linegroup_symmetry_dataset(
+        str(path),
+        tolerance=1e-2,
+        layer_tolerance=0.05,
+        matrix_tolerance=1e-2,
+    )
+
+    assert len(atom_center) == EXPECTED[1]["atoms"]
+    assert detected_family == 1
+    assert nrot == EXPECTED[1]["nrot"]
+    assert a_lattice > 0
+    assert len(ops_car_sym) == EXPECTED[1]["ops"]
+    assert len(order_ops) == EXPECTED[1]["ops"]
+    assert gen_angles
+
+
+def test_adapted_matrix_accepts_projector_tolerances():
+    ds = _dataset_for_family(1)
+    qpoint = 0.0
+    dict_params = {
+        "qpoints": qpoint,
+        "nrot": ds["nrot"],
+        "order": ds["order_ops"],
+        "family": ds["family"],
+        "a": ds["a_lattice"],
+        **ds["gen_angles"],
+    }
+    matrices = get_matrices_withPhase(
+        ds["atom_center"], ds["ops_car_sym"], qpoint, symprec=1e-3
+    )
+
+    adapted, dimensions, _, _ = get_adapted_matrix_withparities(
+        dict_params,
+        ds["num_atom"],
+        matrices,
+        block_tolerance=1e-6,
+        rank_tolerance=1e-8,
+        gap_warning_tolerance=0.05,
+    )
+
+    assert adapted.shape == (ds["ndof"], ds["ndof"])
+    assert sum(dimensions) == ds["ndof"]
+
+
 def _assert_adapted_result_smoke(result):
     adapted = result["adapted"]
     dimensions = result["dimensions"]

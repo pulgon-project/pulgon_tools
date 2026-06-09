@@ -21,8 +21,26 @@ from pulgon_tools.utils import (
     get_matrices_withPhase,
 )
 
+DEFAULT_SYMMETRY_TOLERANCE = 1e-2
+DEFAULT_LAYER_TOLERANCE = 0.05
+DEFAULT_MATRIX_TOLERANCE = 1e-2
+DEFAULT_PERMUTATION_TOLERANCE = 1e-3
+GENERATOR_ROUND_DECIMALS = 6
+GENERATOR_CLASSIFICATION_TOLERANCE = 1e-2
+PROJECTOR_BLOCK_TOLERANCE = 1e-6
+PROJECTOR_RANK_TOLERANCE = 1e-8
+PROJECTOR_GAP_WARNING_TOLERANCE = 0.05
 
-def get_adapted_matrix_withparities(DictParams, num_atom, matrices):
+
+def get_adapted_matrix_withparities(
+    DictParams,
+    num_atom,
+    matrices,
+    *,
+    block_tolerance=PROJECTOR_BLOCK_TOLERANCE,
+    rank_tolerance=PROJECTOR_RANK_TOLERANCE,
+    gap_warning_tolerance=PROJECTOR_GAP_WARNING_TOLERANCE,
+):
     """
     Calculate the symmetry projection basis matrix for irreducible representation
 
@@ -39,6 +57,12 @@ def get_adapted_matrix_withparities(DictParams, num_atom, matrices):
         The number of atoms
     matrices : list of numpy arrays
         The matrices used to calculate the symmetry projection basis matrix
+    block_tolerance : float
+        Tolerance used to identify k-preserving representation blocks.
+    rank_tolerance : float
+        Singular-value cutoff used after residualizing duplicate subspaces.
+    gap_warning_tolerance : float
+        Warning threshold for a small singular-value gap in projectors.
 
     Returns
     -------
@@ -86,12 +110,12 @@ def get_adapted_matrix_withparities(DictParams, num_atom, matrices):
                     off = np.linalg.norm(mat[:2, 2:]) + np.linalg.norm(
                         mat[2:, :2]
                     )
-                    if off < 1e-6:
+                    if off < block_tolerance:
                         k_chars.append(np.trace(mat[:2, :2]))
                         k_indices.append(kk)
                 elif IR_ndim == 2:
                     off = abs(mat[0, 1]) + abs(mat[1, 0])
-                    if off < 1e-6:
+                    if off < block_tolerance:
                         k_chars.append(mat[0, 0])
                         k_indices.append(kk)
 
@@ -129,7 +153,7 @@ def get_adapted_matrix_withparities(DictParams, num_atom, matrices):
             existing = np.concatenate(adapted, axis=1)
             basis = basis - existing @ (existing.conj().T @ basis)
             u_res, s_res, _ = scipy.linalg.svd(basis, full_matrices=False)
-            num_modes = np.count_nonzero(s_res > 1e-8)
+            num_modes = np.count_nonzero(s_res > rank_tolerance)
             if num_modes == 0:
                 continue
             basis = u_res[:, :num_modes]
@@ -143,7 +167,7 @@ def get_adapted_matrix_withparities(DictParams, num_atom, matrices):
         else:
             error = 0
 
-        if error > 0.05:
+        if error > gap_warning_tolerance:
             print("ii=", ii, "error=", error)
 
         dimension.append(basis.shape[1])
@@ -192,7 +216,9 @@ def _compute_unreduced_z_translations(generators, order_ops):
     return result
 
 
-def _extract_generator_angles(mats):
+def _extract_generator_angles(
+    mats, matrix_tolerance=GENERATOR_CLASSIFICATION_TOLERANCE
+):
     """Extract geometric angles from C2' and sigma_d generators.
 
     For each generator in mats, detect C2' (det=+1, R[2,2]=-1) and
@@ -205,10 +231,10 @@ def _extract_generator_angles(mats):
     for mat in mats:
         R = mat[:3, :3]
         det = np.linalg.det(R)
-        if np.isclose(R[2, 2], -1, atol=1e-2) and det > 0:
+        if np.isclose(R[2, 2], -1, atol=matrix_tolerance) and det > 0:
             # C2' perpendicular rotation
             angles["alphaU"] = np.arctan2(R[0, 1], R[0, 0]) / 2
-        elif np.isclose(R[2, 2], 1, atol=1e-2) and det < 0:
+        elif np.isclose(R[2, 2], 1, atol=matrix_tolerance) and det < 0:
             # sigma_d mirror plane
             angles["betaS"] = np.arctan2(R[0, 1], R[0, 0]) / 2
     return angles
@@ -264,7 +290,14 @@ def _normalize_generators_for_irrep_table(
     if family == 2:
         # Family 2 is tabulated against S2n = sigma_h C_{2n}; the point-group
         # detector may return the proper rotation subgroup instead.
-        rots_op = np.array([np.round(_s2n_affine_generator(nrot), 6)])
+        rots_op = np.array(
+            [
+                np.round(
+                    _s2n_affine_generator(nrot),
+                    GENERATOR_ROUND_DECIMALS,
+                )
+            ]
+        )
     elif family == 8 and nrot == 1:
         # Family 8 table columns are [screw, Cn, sigmaV].  When n=1, Cn is
         # identity but its column must remain so sigmaV keeps index 3.
@@ -278,7 +311,22 @@ def _normalize_generators_for_irrep_table(
     return np.asarray([trans_op])
 
 
-def get_linegroup_symmetry_dataset(poscar):
+def get_linegroup_symmetry_dataset(
+    poscar,
+    tolerance=DEFAULT_SYMMETRY_TOLERANCE,
+    layer_tolerance=DEFAULT_LAYER_TOLERANCE,
+    matrix_tolerance=DEFAULT_MATRIX_TOLERANCE,
+):
+    """Extract line-group symmetry data for projector construction.
+
+    Args:
+        poscar: path to a POSCAR file, ASE Atom, or ASE Atoms object.
+        tolerance: distance tolerance for symmetry detection.
+        layer_tolerance: fractional z-layer tolerance for cyclic-group
+            monomer translation candidates.
+        matrix_tolerance: tolerance for matrix classification and group
+            closure during operation generation.
+    """
     if type(poscar) == str:
         atom = read_vasp(poscar)
     elif type(poscar) == Atom or type(poscar) == Atoms:
@@ -288,8 +336,16 @@ def get_linegroup_symmetry_dataset(poscar):
 
     atom_center = find_axis_center_of_nanotube(atom)
 
-    obj = LineGroupAnalyzer(atom_center, tolerance=1e-2)
-    cyclic = CyclicGroupAnalyzer(atom_center, tolerance=1e-2)
+    obj = LineGroupAnalyzer(
+        atom_center,
+        tolerance=tolerance,
+        matrix_tolerance=matrix_tolerance,
+    )
+    cyclic = CyclicGroupAnalyzer(
+        atom_center,
+        tolerance=tolerance,
+        layer_tolerance=layer_tolerance,
+    )
 
     nrot = obj.get_rotational_symmetry_number()
     aL = atom_center.cell[2, 2]
@@ -298,14 +354,18 @@ def get_linegroup_symmetry_dataset(poscar):
     rota_sym = obj.sch_symbol
     family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
 
-    trans_op = np.round(cyclic.get_generators(), 6)
-    rots_op = np.round(obj.get_generators(), 6)
+    trans_op = np.round(cyclic.get_generators(), GENERATOR_ROUND_DECIMALS)
+    rots_op = np.round(obj.get_generators(), GENERATOR_ROUND_DECIMALS)
     mats = _normalize_generators_for_irrep_table(
         family, nrot, trans_op, rots_op
     )
-    ops, order_ops = brute_force_generate_group_subsequent(mats, symprec=1e-2)
+    ops, order_ops = brute_force_generate_group_subsequent(
+        mats, symprec=matrix_tolerance
+    )
 
-    gen_angles = _extract_generator_angles(mats)
+    gen_angles = _extract_generator_angles(
+        mats, matrix_tolerance=matrix_tolerance
+    )
     gen_angles.update(_extract_screw_parameters(trans_sym))
 
     unreduced_tz = _compute_unreduced_z_translations(mats, order_ops)
@@ -358,7 +418,16 @@ def get_adapted_eigenmodes(D, adapted, dimensions):
     return freqs, eigvals, eigenvecs
 
 
-def get_eigenmodes_from_phonon(phonon, q_vector, adapted=True):
+def get_eigenmodes_from_phonon(
+    phonon,
+    q_vector,
+    adapted=True,
+    *,
+    tolerance=DEFAULT_SYMMETRY_TOLERANCE,
+    layer_tolerance=DEFAULT_LAYER_TOLERANCE,
+    matrix_tolerance=DEFAULT_MATRIX_TOLERANCE,
+    permutation_tolerance=DEFAULT_PERMUTATION_TOLERANCE,
+):
     if adapted:
         num_atom = len(phonon.primitive.get_atomic_numbers())
         atom = Atoms(
@@ -374,7 +443,12 @@ def get_eigenmodes_from_phonon(phonon, q_vector, adapted=True):
             ops_car_sym,
             order_ops,
             gen_angles,
-        ) = get_linegroup_symmetry_dataset(atom)
+        ) = get_linegroup_symmetry_dataset(
+            atom,
+            tolerance=tolerance,
+            layer_tolerance=layer_tolerance,
+            matrix_tolerance=matrix_tolerance,
+        )
 
         qp_1dim = np.array(q_vector[2]) * 2 * np.pi
         qp_1dim = qp_1dim / aL
@@ -388,7 +462,10 @@ def get_eigenmodes_from_phonon(phonon, q_vector, adapted=True):
         }
 
         matrices = get_matrices_withPhase(
-            atom_center, ops_car_sym, qp_1dim, symprec=1e-3
+            atom_center,
+            ops_car_sym,
+            qp_1dim,
+            symprec=permutation_tolerance,
         )
 
         (

@@ -22,14 +22,15 @@ from ase.io.vasp import read_vasp, write_vasp
 from pulgon_tools.structure_chirality import get_nanotube_from_n1n2
 
 if __name__ == "__main__":
-    output_dir = Path("examples/data")
+    data_dir = Path(__file__).resolve().parent / "data"
+    output_dir = data_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
     ###################### inner-layer ######################
     n1, n2 = 10, 0
     symbol1, symbol2 = 74, 16  # W, S
     name1 = "WS2"
-    atom1 = read_vasp("examples/data/poscar_monolayer_%s" % name1)
+    atom1 = read_vasp(data_dir / ("poscar_monolayer_%s" % name1))
     delta_Z1 = abs((atom1.positions - atom1.positions[2])[0, 2])
     bond_length1 = np.linalg.norm((atom1.positions[0] - atom1.positions[2]))
 
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     n3, n4 = 20, 0
     symbol1, symbol2 = 42, 16  # Mo, S
     name2 = "MoS2"
-    atom2 = read_vasp("examples/data/poscar_monolayer_%s" % name2)
+    atom2 = read_vasp(data_dir / ("poscar_monolayer_%s" % name2))
     delta_Z2 = abs((atom2.positions - atom2.positions[2])[0, 2])
     bond_length2 = np.linalg.norm((atom2.positions[0] - atom2.positions[2]))
 
