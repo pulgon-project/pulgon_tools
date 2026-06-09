@@ -45,7 +45,7 @@ def pre_processing(pos_cylin, pos_symbols, generators):
             ]
         )
         pos = pos.T
-    rot_sym = dimino(generators, symec=4)
+    rot_sym = dimino(generators, symprec=4)
     monomer_pos, monomer_symbols = [], []
 
     for sym in rot_sym:

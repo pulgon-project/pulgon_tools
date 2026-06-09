@@ -485,13 +485,13 @@ def affine_matrix_op(
 def dimino_affine_matrix_and_character(
     generators: np.ndarray,
     character: np.ndarray,
-    symec: float = 0.001,
+    symprec: float = 0.001,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
 
     Args:
         generators: the generators of point group
-        symec: system precision
+        symprec: system precision
 
     Returns: all the group elements and correspond character
 
@@ -509,7 +509,7 @@ def dimino_affine_matrix_and_character(
     g, g1 = G[0].copy(), G[0].copy()
     g_chara, g1_chara = character[0].copy(), character[0].copy()
     L = np.array([e_in])
-    while not ((g - e_in) < symec).all():
+    while not ((g - e_in) < symprec).all():
         L = np.vstack((L, [g]))
         L_chara = np.vstack((L_chara, [g_chara]))
 
@@ -532,7 +532,9 @@ def dimino_affine_matrix_and_character(
                     sg = affine_matrix_op(ss, g)
                     sg_chara = np.dot(ss_chara, g_chara)
 
-                    itp = (abs((sg - L).sum(axis=1).sum(axis=1)) < 0.001).any()
+                    itp = (
+                        abs((sg - L).sum(axis=1).sum(axis=1)) < symprec
+                    ).any()
                     if not itp:
                         if C.ndim == 3:
                             C = np.vstack((C, [sg]))
@@ -574,13 +576,13 @@ def dimino_affine_matrix_and_character(
     return L, np.array(L_chara_trace)
 
 
-def brute_force_generate_group(generators: np.ndarray, symec: float = 0.01):
+def brute_force_generate_group(generators: np.ndarray, symprec: float = 0.01):
     """Generate all group elements by brute-force
     multiplication of generators.
 
     Args:
         generators: array of 4x4 affine matrices as group generators.
-        symec: tolerance for comparing matrix elements.
+        symprec: tolerance for comparing matrix elements.
 
     Returns:
         np.ndarray: array of all group element affine matrices.
@@ -593,7 +595,7 @@ def brute_force_generate_group(generators: np.ndarray, symec: float = 0.01):
         for g in L:
             for h in G:
                 gh = affine_matrix_op(g, h)
-                judge = (abs(L - gh) < symec).all(axis=1).all(axis=1).any()
+                judge = (abs(L - gh) < symprec).all(axis=1).all(axis=1).any()
                 if not judge:
                     L = np.concatenate((L, [gh]), axis=0)
         numL_new = len(L)
@@ -603,13 +605,13 @@ def brute_force_generate_group(generators: np.ndarray, symec: float = 0.01):
 
 
 def brute_force_generate_group_subsequent(
-    generators: np.ndarray, symec: float = 0.01
+    generators: np.ndarray, symprec: float = 0.01
 ) -> Tuple[np.ndarray, List[List[int]]]:
     """generate all the group elements by brute force algorithm
 
     Args:
         generators: The most basic elements used to generate complete groups
-        symec: tolerance
+        symprec: tolerance
 
     Returns:
         L: all group elements
@@ -627,7 +629,7 @@ def brute_force_generate_group_subsequent(
             for jj, h in enumerate(G):
                 gh = affine_matrix_op(g, h, symprec=1e-5)
                 tmp_seq2 = tmp_seq1 + [jj + 1]
-                judge = (abs(L - gh) < symec).all(axis=1).all(axis=1).any()
+                judge = (abs(L - gh) < symprec).all(axis=1).all(axis=1).any()
                 if not judge:
                     L = np.concatenate((L, [gh]), axis=0)
                     L_seq.append(tmp_seq2)
@@ -637,7 +639,7 @@ def brute_force_generate_group_subsequent(
     return L, L_seq
 
 
-def dimino(generators: np.ndarray, symec: int = 4) -> np.ndarray:
+def dimino(generators: np.ndarray, symprec: int = 4) -> np.ndarray:
     """
     Generate all group elements from a set of generators
     using Dimino's algorithm.
@@ -657,7 +659,7 @@ def dimino(generators: np.ndarray, symec: int = 4) -> np.ndarray:
             the generator matrices of the point group. Each
             matrix is a 3x3 real orthogonal matrix
             representing a symmetry operation.
-        symec: Number of decimal places for rounding when
+        symprec: Number of decimal places for rounding when
             comparing matrices (to handle floating-point
             near-equalities). Default is 4.
 
@@ -668,7 +670,7 @@ def dimino(generators: np.ndarray, symec: int = 4) -> np.ndarray:
     Example:
         >>> from pulgon_tools.utils import Cn, sigmaV, e
         >>> gens = np.array([Cn(6), sigmaV()])
-        >>> all_ops = dimino(gens, symec=4)
+        >>> all_ops = dimino(gens, symprec=4)
         >>> all_ops.shape  # C6v has 12 elements
         (12, 3, 3)
     """
@@ -682,11 +684,11 @@ def dimino(generators: np.ndarray, symec: int = 4) -> np.ndarray:
         [e()]
     )  # L holds all known group elements; initialise with identity
 
-    while not (np.round(g, symec) == e()).all():
+    while not (np.round(g, symprec) == e()).all():
         L = np.vstack((L, [g]))
         g = np.dot(g, g1)
 
-    L = np.round(L, symec)
+    L = np.round(L, symprec)
 
     # --- Step 2: Extend L by coset enumeration over each generator ---
     # For each generator G[i], try to find elements s*g
@@ -705,11 +707,11 @@ def dimino(generators: np.ndarray, symec: int = 4) -> np.ndarray:
             more = False
             for g in C:  # iterate over current coset representatives
                 for s in G[: ii + 1]:  # multiply by all generators seen so far
-                    sg = np.round(np.dot(s, g), symec)
+                    sg = np.round(np.dot(s, g), symprec)
 
                     # Check whether sg is already in L
                     already_in_L = (
-                        (np.round(sg, symec) == L)
+                        (np.round(sg, symprec) == L)
                         .all(axis=1)
                         .all(axis=1)
                         .any()
@@ -730,13 +732,13 @@ def dimino(generators: np.ndarray, symec: int = 4) -> np.ndarray:
 
 
 def dimino_affine_matrix(
-    generators: np.ndarray, symec: float = 0.01
+    generators: np.ndarray, symprec: float = 0.01
 ) -> np.ndarray:
     """
 
     Args:
         generators: the generators of point group
-        symec: system precision
+        symprec: system precision
 
     Returns: all the group elements and correspond character
 
@@ -746,7 +748,7 @@ def dimino_affine_matrix(
     G = generators
     g, g1 = G[0].copy(), G[0].copy()
     L = np.array([e_in])
-    while not ((g - e_in) < symec).all():
+    while not ((g - e_in) < symprec).all():
         L = np.vstack((L, [g]))
         g = affine_matrix_op(g, g1)
     for ii in range(len(G)):
@@ -758,7 +760,9 @@ def dimino_affine_matrix(
             for g in list(C):
                 for ss in G[: ii + 1]:
                     sg = affine_matrix_op(ss, g)
-                    itp = (abs((sg - L).sum(axis=1).sum(axis=1)) < symec).any()
+                    itp = (
+                        abs((sg - L).sum(axis=1).sum(axis=1)) < symprec
+                    ).any()
                     if not itp:
                         if C.ndim == 3:
                             C = np.vstack((C, [sg]))
@@ -777,13 +781,13 @@ def dimino_affine_matrix(
 
 
 def dimino_affine_matrix_and_subsequent(
-    generators: np.ndarray, symec: float = 0.001
+    generators: np.ndarray, symprec: float = 0.001
 ) -> Tuple[np.ndarray, List[List[int]]]:
     """
 
     Args:
         generators: the generators of point group
-        symec: system precision
+        symprec: system precision
 
     Returns: all the group elements and correspond character
 
@@ -796,7 +800,7 @@ def dimino_affine_matrix_and_subsequent(
     L = np.array([e_in])
     L_subs = [[0]]
 
-    while not ((g - e_in) < symec).all():
+    while not ((g - e_in) < symprec).all():
         L = np.vstack((L, [g]))
         L_subs.append(g_subs.copy())
 
@@ -819,7 +823,9 @@ def dimino_affine_matrix_and_subsequent(
                     sg = affine_matrix_op(ss, g)
                     sg_subs = ss_subs + g_subs
 
-                    itp = (abs((sg - L).sum(axis=1).sum(axis=1)) < 0.001).any()
+                    itp = (
+                        abs((sg - L).sum(axis=1).sum(axis=1)) < symprec
+                    ).any()
                     if not itp:
                         if C.ndim == 3:
                             C = np.vstack((C, [sg]))

@@ -169,7 +169,7 @@ def _build_monomer(
             pos_cylin[:, 2],
         ]
     ).T
-    rot_sym = dimino(generators, symec=4)
+    rot_sym = dimino(generators, symprec=4)
     monomer_pos, monomer_symbols = [], []
     for sym in rot_sym:
         monomer_pos.extend([np.dot(sym, line) for line in pos])
@@ -188,7 +188,7 @@ def generate_structure(
         pos_cylin, symbols, generators
     )
     st = generate_line_group_structure(
-        monomer_pos, monomer_symbols, cg, symec=4
+        monomer_pos, monomer_symbols, cg, symprec=4
     )
     output_path = output_dir / st_name
     write_vasp(output_path, st, direct=True, sort=True)

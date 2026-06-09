@@ -234,7 +234,7 @@ class TestDiminoAffineMatrix:
     def test_cyclic_group(self):
         # C3 affine -> should produce 3 elements
         gen = np.array([_make_affine(Cn(3))])
-        group = dimino_affine_matrix(gen, symec=0.01)
+        group = dimino_affine_matrix(gen, symprec=0.01)
         assert len(group) >= 3
 
     def test_includes_identity(self):
@@ -605,25 +605,25 @@ class TestGetCharacterNumWithparities:
 class TestDimino:
     def test_single_generator_c4(self):
         gens = np.array([Cn(4)])
-        group = dimino(gens, symec=4)
+        group = dimino(gens, symprec=4)
         assert group.shape == (4, 3, 3)
 
     def test_two_generators_c6v(self):
         gens = np.array([Cn(6), sigmaV()])
-        group = dimino(gens, symec=4)
+        group = dimino(gens, symprec=4)
         # C6v has 12 elements
         assert group.shape == (12, 3, 3)
 
     def test_contains_identity(self):
         gens = np.array([Cn(3)])
-        group = dimino(gens, symec=4)
+        group = dimino(gens, symprec=4)
         has_id = any(np.allclose(g, np.eye(3), atol=1e-6) for g in group)
         assert has_id
 
     def test_closure(self):
         """Every product of two group elements is in the group."""
         gens = np.array([Cn(4)])
-        group = dimino(gens, symec=4)
+        group = dimino(gens, symprec=4)
         for a in group:
             for b in group:
                 prod = a @ b
@@ -645,7 +645,7 @@ class TestDiminoAffineMatrixExtended:
                 _make_affine(sigmaV()),
             ]
         )
-        group = dimino_affine_matrix(gen, symec=0.01)
+        group = dimino_affine_matrix(gen, symprec=0.01)
         # C3v has 6 elements
         assert len(group) == 6
 

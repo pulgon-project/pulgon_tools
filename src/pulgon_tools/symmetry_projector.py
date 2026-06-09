@@ -303,7 +303,7 @@ def get_linegroup_symmetry_dataset(poscar):
     mats = _normalize_generators_for_irrep_table(
         family, nrot, trans_op, rots_op
     )
-    ops, order_ops = brute_force_generate_group_subsequent(mats, symec=1e-2)
+    ops, order_ops = brute_force_generate_group_subsequent(mats, symprec=1e-2)
 
     gen_angles = _extract_generator_angles(mats)
     gen_angles.update(_extract_screw_parameters(trans_sym))

@@ -364,7 +364,7 @@ def get_nanotube_from_n1n2(
             rotation_matrix=Cn(q / R), translation_vec=[0, 0, 1 / int(t / f)]
         ).affine_matrix,
     ]
-    ops = brute_force_generate_group(generators, symec=1e-2)
+    ops = brute_force_generate_group(generators, symprec=1e-2)
 
     pos_car = np.array([])
     ops_sym = [

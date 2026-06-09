@@ -190,14 +190,14 @@ def generate_line_group_structure(
     monomer_pos: np.ndarray,
     monomer_symbols: Union[list, np.ndarray],
     cyclic_group: dict,
-    symec: int = 4,
+    symprec: int = 4,
 ) -> ase.atoms.Atoms:
     """
     Args:
         monomer_pos: the positions of monomer
         monomer_symbols: atomic symbols of monomer
         cyclic_group: the generalized translation group
-        symec: number of decimal places for rounding in deduplication
+        symprec: number of decimal places for rounding in deduplication
 
     Returns:
         the final structure after all symmetry operations
@@ -220,8 +220,8 @@ def generate_line_group_structure(
 
             judge = np.sum(
                 (
-                    sortrows(np.round(monomer_pos[:, :2], symec))
-                    - sortrows(np.round(tmp_monomer_pos[:, :2], symec))
+                    sortrows(np.round(monomer_pos[:, :2], symprec))
+                    - sortrows(np.round(tmp_monomer_pos[:, :2], symprec))
                 )
                 ** 2
             )
@@ -231,7 +231,7 @@ def generate_line_group_structure(
                 break
 
         # Remove exact cartesian duplicates
-        pos_round = np.round(all_pos, symec)
+        pos_round = np.round(all_pos, symprec)
         _, unique_idx = np.unique(pos_round, axis=0, return_index=True)
         all_pos = all_pos[unique_idx]
         all_symbols = [all_symbols[i] for i in unique_idx]
@@ -246,7 +246,7 @@ def generate_line_group_structure(
             all_symbols.extend(all_symbols[: len(new_pos)])
 
         # Remove exact cartesian duplicates
-        pos_round = np.round(all_pos, symec)
+        pos_round = np.round(all_pos, symprec)
         _, unique_idx = np.unique(pos_round, axis=0, return_index=True)
         all_pos = all_pos[unique_idx]
         all_symbols = [all_symbols[i] for i in unique_idx]
@@ -264,7 +264,7 @@ def generate_line_group_structure(
     # Remove periodic duplicates along z using scaled positions
     scaled = st2.get_scaled_positions()
     # Fold into [0, 1) and round; snap near-boundary values to 0
-    scaled_folded = np.round(scaled % 1, symec)
+    scaled_folded = np.round(scaled % 1, symprec)
     scaled_folded[scaled_folded >= 1.0] = 0.0
     pos_uni, idx = np.unique(scaled_folded, return_index=True, axis=0)
     symbols = st2.symbols[idx]
@@ -354,7 +354,7 @@ def main():
         pos = pos.T
     st_name = args.st_name
 
-    rot_sym = dimino(generators, symec=3)
+    rot_sym = dimino(generators, symprec=3)
 
     monomer_pos, monomer_symbols = [], []
     for sym in rot_sym:
@@ -369,7 +369,7 @@ def main():
     monomer_symbols = np.array(monomer_symbols)
 
     st = generate_line_group_structure(
-        monomer_pos, monomer_symbols, cg, symec=3
+        monomer_pos, monomer_symbols, cg, symprec=3
     )
     write_vasp("%s" % st_name, st, direct=True, sort=True)
 
