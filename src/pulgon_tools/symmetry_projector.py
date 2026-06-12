@@ -27,7 +27,6 @@ DEFAULT_MATRIX_TOLERANCE = 1e-2
 DEFAULT_PERMUTATION_TOLERANCE = 1e-3
 GENERATOR_ROUND_DECIMALS = 6
 GENERATOR_CLASSIFICATION_TOLERANCE = 1e-2
-PROJECTOR_BLOCK_TOLERANCE = 1e-6
 PROJECTOR_RANK_TOLERANCE = 1e-8
 PROJECTOR_GAP_WARNING_TOLERANCE = 0.05
 
@@ -37,7 +36,6 @@ def get_adapted_matrix_withparities(
     num_atom,
     matrices,
     *,
-    block_tolerance=PROJECTOR_BLOCK_TOLERANCE,
     rank_tolerance=PROJECTOR_RANK_TOLERANCE,
     gap_warning_tolerance=PROJECTOR_GAP_WARNING_TOLERANCE,
 ):
@@ -57,8 +55,6 @@ def get_adapted_matrix_withparities(
         The number of atoms
     matrices : list of numpy arrays
         The matrices used to calculate the symmetry projection basis matrix
-    block_tolerance : float
-        Tolerance used to identify k-preserving representation blocks.
     rank_tolerance : float
         Singular-value cutoff used after residualizing duplicate subspaces.
     gap_warning_tolerance : float
@@ -78,16 +74,6 @@ def get_adapted_matrix_withparities(
     ) = get_character_withparities(DictParams)
     ndof = 3 * num_atom
 
-    # Away from Gamma and the BZ boundary, screw translations accumulate
-    # Bloch phases (winding numbers) that break representation closure.
-    # Use only k-preserving operations there.  At q=pi/a, -k is equivalent
-    # to k modulo a reciprocal vector, so the full boundary little group
-    # must be retained.
-    qpoint = DictParams.get("qpoints", 0.0)
-    bz_boundary = np.pi / DictParams["a"]
-    is_nonzero_q = not np.isclose(qpoint, 0)
-    is_bz_boundary = np.isclose(abs(qpoint), bz_boundary)
-
     adapted = []
     dimension = []
     for ii, rep_mat in enumerate(representation_mat):  # loop IR
@@ -98,42 +84,13 @@ def get_adapted_matrix_withparities(
 
         projector = np.zeros((ndof, ndof), dtype=np.complex128)
 
-        if is_nonzero_q and not is_bz_boundary and IR_ndim > 1:
-            # Little group approach: use only k-preserving operations
-            # with k-sector characters extracted from block-diagonal
-            # representation matrices.
-            k_chars = []
-            k_indices = []
-            for kk in range(len(rep_mat)):
-                mat = rep_mat[kk]
-                if IR_ndim == 4:
-                    off = np.linalg.norm(mat[:2, 2:]) + np.linalg.norm(
-                        mat[2:, :2]
-                    )
-                    if off < block_tolerance:
-                        k_chars.append(np.trace(mat[:2, :2]))
-                        k_indices.append(kk)
-                elif IR_ndim == 2:
-                    off = abs(mat[0, 1]) + abs(mat[1, 0])
-                    if off < block_tolerance:
-                        k_chars.append(mat[0, 0])
-                        k_indices.append(kk)
-
-            k_IR_ndim = IR_ndim // 2
-            n_H = len(k_indices)
-            for jj, kk in enumerate(k_indices):
-                chara_conj = np.conj(k_chars[jj])
-                projector += chara_conj * matrices[kk]
-            projector = k_IR_ndim * projector / n_H
-        else:
-            # Standard approach for Gamma, BZ boundary, or 1D reps
-            for kk in range(len(rep_mat)):
-                if rep_mat.ndim == 1:
-                    chara_conj = rep_mat[kk].conj()
-                else:
-                    chara_conj = rep_mat[kk].trace().conj()
-                projector += chara_conj * matrices[kk]
-            projector = IR_ndim * projector / len(rep_mat)
+        for kk in range(len(rep_mat)):
+            if rep_mat.ndim == 1:
+                chara_conj = rep_mat[kk].conj()
+            else:
+                chara_conj = rep_mat[kk].trace().conj()
+            projector += chara_conj * matrices[kk]
+        projector = IR_ndim * projector / len(rep_mat)
 
         num_modes = projector.trace().real
 

@@ -218,7 +218,6 @@ def test_adapted_matrix_accepts_projector_tolerances():
         dict_params,
         ds["num_atom"],
         matrices,
-        block_tolerance=1e-6,
         rank_tolerance=1e-8,
         gap_warning_tolerance=0.05,
     )
