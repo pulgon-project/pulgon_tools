@@ -658,6 +658,7 @@ def main():
         help="Tolerance for atomic positions",
     )
     parser.add_argument(
+        "-d",
         "--layer-tolerance",
         default=0.05,
         type=float,

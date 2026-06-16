@@ -112,7 +112,7 @@ pulgon-generate-structures-chirality \
   -c CHIRALITY \
   -b SYMBOLS \
   -l BOND_LENGTH \
-  -d INTERLAYER_SPACING \
+  -d DELTA_Z \
   -s OUTPUT_FILENAME
 ```
 
@@ -121,8 +121,8 @@ pulgon-generate-structures-chirality \
 | `-c`, `--chirality` | Chiral indices as a Python literal pair of non-negative integers, e.g. `"(8, 4)"` | — |
 | `-b`, `--symbol` | Atomic species as a Python literal pair of strings, e.g. `"('Mo', 'S')"` | `('Mo', 'S')` |
 | `-l`, `--bond_length` | M–X bond length in Å | `2.43` |
-| `-d`, `--interlayer_spacing` | Out-of-plane spacing dz between M and X layers in Å | — |
-| `-s`, `--st_name` | Output filename | `poscar.vasp` |
+| `-d`, `--delta_Z` | Vertical offset dz of X atoms from the M layer in Å | `1.57` |
+| `-s`, `--st_name` | Output filename | `POSCAR` |
 
 **Example** — MoS₂ zigzag, armchair, and chiral nanotubes:
 
@@ -153,7 +153,7 @@ pulgon-detect-linegroup -p POSCAR [OPTIONS]
 |------|-------------|---------|
 | `-p`, `--POSCAR` | Path to input POSCAR structure | — |
 | `-t`, `--tolerance` | Atomic-coordinate matching tolerance for symmetry detection | `0.01` |
-| `--layer-tolerance` | Fractional z-layer tolerance for cyclic monomer translation candidates | `0.05` |
+| `-d`, `--layer-tolerance` | Fractional z-layer tolerance for cyclic monomer translation candidates | `0.05` |
 
 This command reports the generalized translational group `Z`, axial point group `P`, and line-group family number.
 
@@ -171,7 +171,7 @@ pulgon-detect-CyclicGroup -p POSCAR [OPTIONS]
 |------|-------------|---------|
 | `-p`, `--poscar` | Path to input structure (POSCAR/cif/xyz) | — |
 | `-t`, `--tolerance` | Atomic-coordinate matching tolerance for cyclic symmetry detection | `0.01` |
-| `--layer-tolerance` | Fractional z-layer tolerance for monomer translation candidates | `0.05` |
+| `-d`, `--layer-tolerance` | Fractional z-layer tolerance for monomer translation candidates | `0.05` |
 | `-o`, `--output` | Enable logging to file | `False` |
 
 ### Detect axial point group
