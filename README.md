@@ -228,16 +228,20 @@ pulgon-irreps-tables -p POSCAR -q 0.0 -s mos2_chartable.npz
 Enforces translational and rotational invariance conditions (Born–Huang sum rules, Huang invariance conditions) on second-order harmonic interatomic force constants (IFCs). Formulated as a linearly constrained quadratic optimization problem solved via CVXPY/OSQP.
 
 ```bash
-pulgon-fcs-correction -p POSCAR -b -x SUPERCELL_MATRIX -f FORCE_CONSTANTS [OPTIONS]
+pulgon-fcs-correction -p POSCAR -x SUPERCELL_MATRIX -f FORCE_CONSTANTS [OPTIONS]
 ```
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-p`, `--poscar` | Path to primitive structure | — |
-| `-x`, `--supercell` | Supercell matrix, e.g. `"[1,1,3]"` | — |
-| `-f`, `--force_constants` | Path to force constants file (Phonopy format) | — |
-| `-n`, `--plot` | Plot phonon spectrum before and after correction | `False` |
-| `-m`, `--method` | Optimization backend: `convex_opt` (CVXPY/OSQP) or `ridge_model` (sklearn) | `convex_opt` |
+| `-p`, `--POSCAR` | Path to primitive structure | `POSCAR` |
+| `-x`, `--supercell_matrix` | Supercell matrix, e.g. `"[1,1,3]"` | — |
+| `-y`, `--path_yaml` | Path to `phonopy.yaml`; if provided, load structure and force constants from phonopy | — |
+| `-f`, `--fcs` | Path to `force_constants.hdf5` or `FORCE_CONSTANTS` | `./FORCE_CONSTANTS` |
+| `-n`, `--plot_phonon` | Plot phonon spectrum before and after correction | `False` |
+| `-k`, `--k_path` | k-path for phonon plotting, e.g. `"[[0,0,0],[0.5,0,0]]"` | — |
+| `-r`, `--recenter` | Recenter supercell scaled positions before building constraints | `False` |
+| `-m`, `--methods` | Optimization backend: `convex_opt` or `ridge_model` | `convex_opt` |
+| `-z`, `--full_fcs` | Save full force constants instead of compact force constants | `False` |
 
 **Example** — correct IFCs for a (12,12) MoS₂ nanotube:
 
