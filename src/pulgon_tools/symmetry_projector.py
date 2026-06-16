@@ -6,7 +6,7 @@ import numpy as np
 import scipy
 from ase import Atom, Atoms
 from ase.io.vasp import read_vasp
-from phonopy.units import VaspToTHz
+from phonopy.physical_units import get_physical_units
 from pymatgen.core.operations import SymmOp
 
 from pulgon_tools.detect_generalized_translational_group import (
@@ -29,6 +29,7 @@ GENERATOR_ROUND_DECIMALS = 6
 GENERATOR_CLASSIFICATION_TOLERANCE = 1e-2
 PROJECTOR_RANK_TOLERANCE = 1e-8
 PROJECTOR_GAP_WARNING_TOLERANCE = 0.05
+DEFAULT_TO_THZ = get_physical_units().DefaultToTHz
 
 
 def get_adapted_matrix_withparities(
@@ -371,7 +372,7 @@ def get_adapted_eigenmodes(D, adapted, dimensions):
         start = end
     eigvals = np.concatenate(tmp_eigval)
     eigenvecs = np.concatenate(tmp_eigvec, axis=1)
-    freqs = np.sqrt(np.abs(eigvals)) * np.sign(eigvals) * VaspToTHz
+    freqs = np.sqrt(np.abs(eigvals)) * np.sign(eigvals) * DEFAULT_TO_THZ
     return freqs, eigvals, eigenvecs
 
 
@@ -440,5 +441,5 @@ def get_eigenmodes_from_phonon(
     else:
         dmat = phonon.get_dynamical_matrix_at_q(q_vector)
         eigvals, eigvecs = np.linalg.eigh(dmat)
-        freqs = np.sqrt(np.abs(eigvals)) * np.sign(eigvals) * VaspToTHz
+        freqs = np.sqrt(np.abs(eigvals)) * np.sign(eigvals) * DEFAULT_TO_THZ
         return freqs, eigvals, eigvecs
