@@ -365,7 +365,7 @@ def main():
         "-r",
         "--recenter",
         action="store_true",
-        help="(atoms.positions - [0.5,0.5,0.5])%1",
+        help="(atoms.positions - [0.5,0.5,0.5]) %% 1",
     )
     parser.add_argument(
         "-m",

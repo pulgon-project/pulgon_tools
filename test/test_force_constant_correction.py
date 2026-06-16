@@ -23,6 +23,7 @@ from phonopy.file_IO import parse_FORCE_CONSTANTS
 from pulgon_tools.force_constant_correction import (
     build_constraint_matrix,
     calc_dists,
+    main,
     parse_bool_list,
     parse_int_list,
     solve_fcs,
@@ -164,3 +165,16 @@ class TestStr2List:
     def test_invalid_string(self):
         with pytest.raises(argparse.ArgumentTypeError):
             str2list("not valid python")
+
+
+def test_main_help_exits_cleanly(monkeypatch, capsys):
+    """CLI help should render without argparse format errors."""
+    monkeypatch.setattr(
+        "sys.argv", ["pulgon-fcs-correction", "--help"]
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 0
+    assert "Apply the sum rules to fcs" in capsys.readouterr().out
