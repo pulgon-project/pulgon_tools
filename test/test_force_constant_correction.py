@@ -169,12 +169,13 @@ class TestStr2List:
 
 def test_main_help_exits_cleanly(monkeypatch, capsys):
     """CLI help should render without argparse format errors."""
-    monkeypatch.setattr(
-        "sys.argv", ["pulgon-fcs-correction", "--help"]
-    )
+    monkeypatch.setattr("sys.argv", ["pulgon-fcs-correction", "--help"])
 
     with pytest.raises(SystemExit) as exc_info:
         main()
 
     assert exc_info.value.code == 0
-    assert "Apply the sum rules to fcs" in capsys.readouterr().out
+    assert (
+        "Correct phonopy force constants of quasi-1D systems"
+        in capsys.readouterr().out
+    )
