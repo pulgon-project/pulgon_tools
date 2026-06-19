@@ -13,7 +13,6 @@
 # permissions and limitations under the License.
 
 import argparse
-import ast
 import copy
 import re
 from typing import Sequence, Union
@@ -51,44 +50,25 @@ _SUPPORTED_GENERATORS = (
     "Cn(number), S2n(number), U_d(angle), sigmaV(), sigmaH(), U()"
 )
 
-
-def _parse_literal(value: object) -> object:
-    if isinstance(value, str):
-        return ast.literal_eval(value)
-    return value
-
-
-def _parse_sequence(value: object, name: str) -> Sequence:
-    parsed = _parse_literal(value)
-    if not isinstance(parsed, (list, tuple)):
-        raise ValueError(f"{name} must be a list or tuple.")
-    return parsed
+DEFAULT_MOTIF = [[3, np.pi / 24, 0.6], [2.2, np.pi / 24, 0.8]]
+DEFAULT_SYMBOLS = ("Mo", "S")
+DEFAULT_GENERATORS = ["Cn(6)", "sigmaV()"]
+DEFAULT_CYCLIC = ["T_Q", "6", "1.5"]
 
 
 def _parse_symbol_list(value: object) -> Sequence[str]:
-    symbols = _parse_sequence(value, "--symbol")
+    symbols = value
     if not symbols or not all(isinstance(symbol, str) for symbol in symbols):
-        raise ValueError(
-            "--symbol must be a non-empty list or tuple of strings."
-        )
+        raise ValueError("--symbol must contain one or more element symbols.")
     return symbols
 
 
-def _parse_cyclic_group(value: object) -> dict:
-    cyclic_group = _parse_literal(value)
-    if not isinstance(cyclic_group, dict) or len(cyclic_group) != 1:
-        raise ValueError("--cyclic must be a dict with exactly one key.")
-
-    key = next(iter(cyclic_group))
+def _parse_cyclic_group(value: Sequence[str]) -> dict:
+    key = value[0]
     if key == "T_Q":
-        params = cyclic_group[key]
-        if not isinstance(params, (list, tuple)) or len(params) != 2:
-            raise ValueError("--cyclic T_Q value must be [Q, f].")
-        q, f = params
-        if not isinstance(q, (int, float)) or not isinstance(f, (int, float)):
-            raise ValueError(
-                "--cyclic T_Q parameters Q and f must be numeric."
-            )
+        if len(value) != 3:
+            raise ValueError("--cyclic T_Q must be given as: T_Q Q f.")
+        q, f = float(value[1]), float(value[2])
         if q <= 0 or f <= 0:
             raise ValueError(
                 "--cyclic T_Q parameters Q and f must be positive."
@@ -96,14 +76,14 @@ def _parse_cyclic_group(value: object) -> dict:
         return {"T_Q": [q, f]}
 
     if key == "T_V":
-        f = cyclic_group[key]
-        if not isinstance(f, (int, float)):
-            raise ValueError("--cyclic T_V value f must be numeric.")
+        if len(value) != 2:
+            raise ValueError("--cyclic T_V must be given as: T_V f.")
+        f = float(value[1])
         if f <= 0:
             raise ValueError("--cyclic T_V value f must be positive.")
         return {"T_V": f}
 
-    raise ValueError("--cyclic key must be 'T_Q' or 'T_V'.")
+    raise ValueError("--cyclic must start with 'T_Q' or 'T_V'.")
 
 
 def _parse_generator(generator: str) -> np.ndarray:
@@ -289,17 +269,18 @@ def main():
         epilog=(
             "Examples:\n"
             "  pulgon-generate-structures-sym_based "
-            "-m '[[3, 0.13, 0.6], [2.2, 0.13, 0.8]]' "
-            "-b \"('Mo', 'S')\" "
-            "-g \"['Cn(6)', 'sigmaV()']\" "
-            "-c \"{'T_Q': [6, 1.5]}\" "
+            "-m 3 0.13 0.6 "
+            "2.2 0.13 0.8 "
+            "-b Mo S "
+            '-g "Cn(6)" "sigmaV()" '
+            "-c T_Q 6 1.5 "
             "-s poscar.vasp\n\n"
             "Notes:\n"
             "  - Motif coordinates are [r, phi, z] in cylindrical "
-            "coordinates.\n"
+            "coordinates; provide one group of three values per motif atom.\n"
             "  - Supported generators: Cn(number), S2n(number), U_d(angle), "
             "sigmaV(), sigmaH(), U().\n"
-            "  - Generalized translations are {'T_Q': [Q, f]} or {'T_V': f}."
+            "  - Generalized translations are T_Q Q f or T_V f."
         ),
         formatter_class=RawDescriptionDefaultsHelpFormatter,
     )
@@ -307,17 +288,21 @@ def main():
     parser.add_argument(
         "-m",
         "--motif",
-        default=[[3, np.pi / 24, 0.6], [2.2, np.pi / 24, 0.8]],
+        nargs="+",
+        type=float,
+        default=None,
+        metavar="VALUE",
         help=(
-            "Initial motif in cylindrical coordinates as [[r, phi, z], ...]. "
-            "Use a Python literal list."
+            "Motif coordinates as r phi z groups; the number of values must "
+            "be a multiple of three."
         ),
     )
 
     parser.add_argument(
         "-g",
         "--generators",
-        default=["Cn(6)", "sigmaV()"],
+        nargs="+",
+        default=DEFAULT_GENERATORS,
         help=(
             "Point-group generators for the motif. Supported: "
             "Cn(number), S2n(number), U_d(angle), sigmaV(), sigmaH(), U()."
@@ -327,11 +312,12 @@ def main():
     parser.add_argument(
         "-c",
         "--cyclic",
-        default={"T_Q": [6, 1.5]},
+        nargs="+",
+        default=DEFAULT_CYCLIC,
+        metavar="ARG",
         help=(
-            "Generalized translation group as {'T_Q': [Q, f]} for a screw "
-            "operation or {'T_V': f} for a glide operation; f is the z "
-            "translation."
+            "Generalized translation group: T_Q Q f for a screw operation "
+            "or T_V f for a glide operation; f is the z translation."
         ),
     )
 
@@ -345,25 +331,33 @@ def main():
     parser.add_argument(
         "-b",
         "--symbol",
-        default=("Mo", "S"),
-        help="Atomic symbols for the motif atoms.",
+        nargs="+",
+        default=DEFAULT_SYMBOLS,
+        help="Atomic symbols for the motif atoms, in the same order as -m.",
     )
 
     args = parser.parse_args()
     try:
         symbols = _parse_symbol_list(args.symbol)
-        pos_cylin = np.array(
-            _parse_sequence(args.motif, "--motif"), dtype=float
-        )
+        motif_values = args.motif
+        if motif_values is None:
+            pos_cylin = np.array(DEFAULT_MOTIF, dtype=float)
+        elif len(motif_values) % 3 != 0:
+            parser.error(
+                "--motif expects coordinates in groups of three: r phi z."
+            )
+        else:
+            pos_cylin = np.array(motif_values, dtype=float).reshape(-1, 3)
         generators = np.array(
-            [
-                _parse_generator(tmp)
-                for tmp in _parse_sequence(args.generators, "--generators")
-            ]
+            [_parse_generator(tmp) for tmp in args.generators]
         )
         cg = _parse_cyclic_group(args.cyclic)
     except (SyntaxError, ValueError) as exc:
         parser.error(str(exc))
+    if len(symbols) != len(pos_cylin):
+        parser.error(
+            "--symbol must provide exactly one symbol for each -m motif atom."
+        )
 
     if pos_cylin.ndim == 1:
         pos = np.array(
@@ -402,6 +396,7 @@ def main():
         monomer_pos, monomer_symbols, cg, symprec=3
     )
     write_vasp("%s" % st_name, st, direct=True, sort=True)
+    print(f"Successfully generated {st_name}.")
 
 
 if __name__ == "__main__":

@@ -483,6 +483,7 @@ def main():
 
             phonon.auto_band_structure()
             phonon.plot_band_structure().savefig(phononfig_savename, dpi=500)
+            print(f"Successfully generated {phononfig_savename}.")
         else:
             qpoints, connections = get_band_qpoints_and_path_connections(
                 [k_path], npoints=101
@@ -519,6 +520,7 @@ def main():
             plt.legend()
             # plt.ylim(bottom=0)
             plt.savefig(phononfig_savename, dpi=300)
+            print(f"Successfully generated {phononfig_savename}.")
 
     if full_fcs:
         IFC_full = compact_fc_to_full_fc(phonon.primitive, IFC_sym)
@@ -536,6 +538,7 @@ def main():
             filename=(fcs_savename + ".hdf5"),
             p2s_map=phonon.primitive.p2s_map,
         )
+    print(f"Successfully generated {fcs_savename} and {fcs_savename}.hdf5.")
 
 
 def parse_bool_list(value: str) -> List[bool]:

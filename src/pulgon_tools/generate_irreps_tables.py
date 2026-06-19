@@ -54,6 +54,13 @@ LineGroupDataset = Tuple[
 ]
 
 
+def _npz_output_name(filename: str) -> str:
+    """Return the filename written by np.savez for a string path."""
+    if filename.endswith(".npz"):
+        return filename
+    return f"{filename}.npz"
+
+
 def get_linegroup_symmetry_dataset(
     poscar: Union[str, Atom, Atoms],
     tolerance: float = DEFAULT_SYMMETRY_TOLERANCE,
@@ -242,6 +249,7 @@ def main() -> None:
             ireps_symbols=irreps_symbols,
             **representation_mat_dict,
         )
+        print(f"Successfully generated {_npz_output_name(chara_filename)}.")
 
     else:
 
@@ -257,6 +265,7 @@ def main() -> None:
             ireps_values=irreps_values,
             ireps_symbols=irreps_symbols,
         )
+        print(f"Successfully generated {_npz_output_name(chara_filename)}.")
 
 
 if __name__ == "__main__":

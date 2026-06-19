@@ -21,6 +21,7 @@ from pulgon_tools.structure_chirality import (
     generate_symcell_and_linegroup_elements,
     get_nanotube_from_n1n2,
     helical_group_analysis,
+    main,
 )
 
 
@@ -233,3 +234,28 @@ class TestGetNanotubeFromN1N2:
         assert "W" in symbols
         assert "Se" in symbols
         assert symbols.count("Se") == 2 * symbols.count("W")
+
+
+def test_main_accepts_plain_cli_values(monkeypatch, tmp_path, capsys):
+    outfile = tmp_path / "chirality.vasp"
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "pulgon-generate-structures-chirality",
+            "-c",
+            "8",
+            "4",
+            "-b",
+            "Mo",
+            "S",
+            "-l",
+            "2.43",
+            "-s",
+            str(outfile),
+        ],
+    )
+
+    main()
+
+    assert outfile.exists()
+    assert f"Successfully generated {outfile}." in capsys.readouterr().out

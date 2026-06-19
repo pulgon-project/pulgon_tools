@@ -77,29 +77,30 @@ Builds a periodic structure from a set of line-group generators and an atomic mo
 
 ```bash
 pulgon-generate-structures-sym_based \
-  -m MOTIF \
-  -b SYMBOL \
-  -g APG_GENERATOR \
-  -c TG_GENERATOR \
+  -m R1 PHI1 Z1 [R2 PHI2 Z2 ...] \
+  -b SYMBOL [SYMBOL ...] \
+  -g APG_GENERATOR [APG_GENERATOR ...] \
+  -c TG_TYPE TG_VALUE [TG_VALUE] \
   -s OUTPUT_FILENAME
 ```
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-m`, `--motif` | Cylindrical coordinates `[r, φ, z]` of the initial atomic motif as a Python literal list. Use numeric values only, not expressions such as `np.pi/24`. | `[[3, 0.1308996939, 0.6], [2.2, 0.1308996939, 0.8]]` |
-| `-b`, `--symbol` | Atomic species symbols as a Python literal tuple/list of strings, e.g. `"('Mo', 'S')"` | `('Mo', 'S')` |
-| `-g`, `--generators` | Axial point group generators as a Python literal list of whitelisted strings. Supported: `Cn(number)`, `S2n(number)`, `U_d(angle)`, `sigmaV()`, `sigmaH()`, `U()` | `['Cn(6)', 'sigmaV()']` |
-| `-c`, `--cyclic` | Generalized translational group as a Python literal dict. Supported keys: `T_Q: [Q, f]` for screw (positive rotation order Q and translation f Å); `T_V: f` for glide (positive translation f Å). | `{'T_Q': [6, 1.5]}` |
+| `-m`, `--motif` | Motif coordinates as `r φ z` groups; the number of values must be a multiple of three | `[[3, 0.1308996939, 0.6], [2.2, 0.1308996939, 0.8]]` |
+| `-b`, `--symbol` | Atomic species symbols in the same order as the `-m` motif atoms | `('Mo', 'S')` |
+| `-g`, `--generators` | Axial point group generators. Supported: `Cn(number)`, `S2n(number)`, `U_d(angle)`, `sigmaV()`, `sigmaH()`, `U()` | `['Cn(6)', 'sigmaV()']` |
+| `-c`, `--cyclic` | Generalized translational group: `T_Q Q f` for screw, or `T_V f` for glide; `f` is the z translation in Å | `T_Q 6 1.5` |
 | `-s`, `--st_name` | Output filename | `poscar.vasp` |
 
 **Example** — C/N nanotube with C₈ symmetry and screw translation T₃(1.6):
 
 ```bash
 pulgon-generate-structures-sym_based \
-  -m "[[3, 0, 0], [2.2, 0.2618, 0]]" \
-  -b "('C', 'N')" \
-  -g "['Cn(8)']" \
-  -c "{'T_Q': [3, 1.6]}" \
+  -m 3 0 0 \
+     2.2 0.2618 0 \
+  -b C N \
+  -g "Cn(8)" \
+  -c T_Q 3 1.6 \
   -s structure.vasp
 ```
 
@@ -109,8 +110,8 @@ Generates MX₂-type nanotubes from chiral indices `(n, m)` by rolling up a hexa
 
 ```bash
 pulgon-generate-structures-chirality \
-  -c CHIRALITY \
-  -b SYMBOLS \
+  -c N M \
+  -b METAL CHALCOGEN \
   -l BOND_LENGTH \
   -d DELTA_Z \
   -s OUTPUT_FILENAME
@@ -118,8 +119,8 @@ pulgon-generate-structures-chirality \
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-c`, `--chirality` | Chiral indices as a Python literal pair of non-negative integers, e.g. `"(8, 4)"` | — |
-| `-b`, `--symbol` | Atomic species as a Python literal pair of strings, e.g. `"('Mo', 'S')"` | `('Mo', 'S')` |
+| `-c`, `--chirality` | Chiral indices as two non-negative integers `n m` | `(10, 10)` |
+| `-b`, `--symbol` | Exactly two atomic symbols: metal and chalcogen | `('Mo', 'S')` |
 | `-l`, `--bond_length` | M–X bond length in Å | `2.43` |
 | `-d`, `--delta_Z` | Pre-roll-up layer spacing between the M and X layers in the 2D sheet, in Å | `1.57` |
 | `-s`, `--st_name` | Output filename | `POSCAR` |
@@ -127,9 +128,9 @@ pulgon-generate-structures-chirality \
 **Example** — MoS₂ zigzag, armchair, and chiral nanotubes:
 
 ```bash
-pulgon-generate-structures-chirality -c "(8,0)" -b "('Mo','S')" -l 2.43 -s mos2_zigzag.vasp
-pulgon-generate-structures-chirality -c "(8,8)" -b "('Mo','S')" -l 2.43 -s mos2_armchair.vasp
-pulgon-generate-structures-chirality -c "(8,4)" -b "('Mo','S')" -l 2.43 -s mos2_chiral.vasp
+pulgon-generate-structures-chirality -c 8 0 -b Mo S -l 2.43 -s mos2_zigzag.vasp
+pulgon-generate-structures-chirality -c 8 8 -b Mo S -l 2.43 -s mos2_armchair.vasp
+pulgon-generate-structures-chirality -c 8 4 -b Mo S -l 2.43 -s mos2_chiral.vasp
 ```
 
 ---

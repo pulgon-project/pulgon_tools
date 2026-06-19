@@ -13,7 +13,6 @@
 # permissions and limitations under the License.
 
 import argparse
-import ast
 from typing import List, Sequence, Tuple, Union
 
 import numpy as np
@@ -28,14 +27,8 @@ from pulgon_tools.cli import RawDescriptionDefaultsHelpFormatter
 from pulgon_tools.utils import Cn, brute_force_generate_group
 
 
-def _parse_literal(value: object) -> object:
-    if isinstance(value, str):
-        return ast.literal_eval(value)
-    return value
-
-
 def _parse_sequence(value: object, name: str) -> Sequence:
-    parsed = _parse_literal(value)
+    parsed = value
     if not isinstance(parsed, (list, tuple)):
         raise ValueError(f"{name} must be a list or tuple.")
     return parsed
@@ -46,9 +39,7 @@ def _parse_chirality(value: object) -> Tuple[int, int]:
     if len(chirality) != 2 or not all(
         isinstance(index, int) for index in chirality
     ):
-        raise ValueError(
-            "--chirality must be a pair of integers, e.g. '(8, 4)'."
-        )
+        raise ValueError("--chirality must be two integers, e.g. -c 8 4.")
     n1, n2 = chirality
     if n1 < 0 or n2 < 0 or n1 + n2 <= 0:
         raise ValueError(
@@ -408,10 +399,10 @@ def main():
         epilog=(
             "Examples:\n"
             "  pulgon-generate-structures-chirality "
-            "-c '(10, 10)' -b \"('Mo', 'S')\" "
+            "-c 10 10 -b Mo S "
             "-l 2.43 -d 1.57 -s POSCAR\n\n"
             "Notes:\n"
-            "  - The chiral indices are given as (n1, n2).\n"
+            "  - The chiral indices are given as two integers: n1 n2.\n"
             "  - bond_length is the metal-chalcogen 3D bond length.\n"
             "  - delta_Z is the pre-roll-up layer spacing in the 2D sheet."
         ),
@@ -421,16 +412,17 @@ def main():
     parser.add_argument(
         "-c",
         "--chirality",
+        nargs=2,
+        type=int,
         default=(10, 10),
-        help=(
-            "Chiral indices (n1, n2) as a Python literal pair, "
-            "e.g. '(10, 10)'."
-        ),
+        metavar=("N1", "N2"),
+        help="Chiral indices as two non-negative integers n1 n2.",
     )
 
     parser.add_argument(
         "-b",
         "--symbol",
+        nargs=2,
         default=("Mo", "S"),
         help="Exactly two atomic symbols: metal and chalcogen.",
     )
@@ -482,6 +474,7 @@ def main():
         positions=pos, cell=new_atom.cell, numbers=new_atom.numbers
     )
     write_vasp(filename, new_atom, direct=True, sort=True)
+    print(f"Successfully generated {filename}.")
 
 
 if __name__ == "__main__":

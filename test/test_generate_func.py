@@ -21,6 +21,7 @@ from pulgon_tools.structures_sym_based import (
     T_v,
     change_center,
     generate_line_group_structure,
+    main,
 )
 from pulgon_tools.utils import Cn, S2n, U, U_d, dimino, sigmaH, sigmaV
 
@@ -236,6 +237,44 @@ def test_st13():
     monomer_pos, monomer_symbols = pre_processing(motif, symbols, generators)
     st = generate_line_group_structure(monomer_pos, monomer_symbols, cyclic)
     assert len(st) == 48
+
+
+def test_main_accepts_plain_cli_values(monkeypatch, tmp_path, capsys):
+    outfile = tmp_path / "sym_based.vasp"
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "pulgon-generate-structures-sym_based",
+            "-m",
+            "4",
+            "0.1",
+            "0.3",
+            "2.0",
+            "0.2",
+            "0.05",
+            "1.5",
+            "0.3",
+            "0.55",
+            "-b",
+            "W",
+            "S",
+            "H",
+            "-g",
+            "Cn(2)",
+            "sigmaH()",
+            "-c",
+            "T_Q",
+            "9",
+            "2",
+            "-s",
+            str(outfile),
+        ],
+    )
+
+    main()
+
+    assert outfile.exists()
+    assert f"Successfully generated {outfile}." in capsys.readouterr().out
 
 
 class TestTQ:
