@@ -22,7 +22,11 @@ import numpy as np
 from ase import Atoms
 from ase.io.vasp import write_vasp
 
-from pulgon_tools.cli import RawDescriptionDefaultsHelpFormatter
+from pulgon_tools.cli import (
+    RawDescriptionDefaultsHelpFormatter,
+    parse_motif_groups,
+    parse_symbols,
+)
 from pulgon_tools.utils import (
     Cn,
     S2n,
@@ -54,13 +58,6 @@ DEFAULT_MOTIF = [[3, 0, 0], [2.2, 0.2618, 0]]
 DEFAULT_SYMBOLS = ("C", "N")
 DEFAULT_GENERATORS = ["Cn(8)"]
 DEFAULT_CYCLIC = ["T_Q", "3", "1.6"]
-
-
-def _parse_symbol_list(value: object) -> Sequence[str]:
-    symbols = value
-    if not symbols or not all(isinstance(symbol, str) for symbol in symbols):
-        raise ValueError("--symbol must contain one or more element symbols.")
-    return symbols
 
 
 def _parse_cyclic_group(value: Sequence[str]) -> dict:
@@ -338,16 +335,8 @@ def main():
 
     args = parser.parse_args()
     try:
-        symbols = _parse_symbol_list(args.symbol)
-        motif_values = args.motif
-        if motif_values is None:
-            pos_cylin = np.array(DEFAULT_MOTIF, dtype=float)
-        elif len(motif_values) % 3 != 0:
-            parser.error(
-                "--motif expects coordinates in groups of three: r phi z."
-            )
-        else:
-            pos_cylin = np.array(motif_values, dtype=float).reshape(-1, 3)
+        symbols = parse_symbols(args.symbol)
+        pos_cylin = parse_motif_groups(args.motif, DEFAULT_MOTIF)
         generators = np.array(
             [_parse_generator(tmp) for tmp in args.generators]
         )

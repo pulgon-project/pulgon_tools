@@ -13,7 +13,7 @@
 # permissions and limitations under the License.
 
 import argparse
-from typing import List, Sequence, Tuple, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 import sympy
@@ -23,38 +23,21 @@ from pulp import LpMinimize, LpProblem, LpVariable, value
 from pymatgen.core.operations import SymmOp
 from scipy.optimize import fsolve
 
-from pulgon_tools.cli import RawDescriptionDefaultsHelpFormatter
+from pulgon_tools.cli import (
+    RawDescriptionDefaultsHelpFormatter,
+    parse_positive_int_pair,
+    parse_symbols,
+)
 from pulgon_tools.utils import Cn, brute_force_generate_group
 
 
-def _parse_sequence(value: object, name: str) -> Sequence:
-    parsed = value
-    if not isinstance(parsed, (list, tuple)):
-        raise ValueError(f"{name} must be a list or tuple.")
-    return parsed
-
-
 def _parse_chirality(value: object) -> Tuple[int, int]:
-    chirality = _parse_sequence(value, "--chirality")
-    if len(chirality) != 2 or not all(
-        isinstance(index, int) for index in chirality
-    ):
-        raise ValueError("--chirality must be two integers, e.g. -c 8 4.")
-    n1, n2 = chirality
-    if n1 < 0 or n2 < 0 or n1 + n2 <= 0:
+    try:
+        return parse_positive_int_pair(value, "--chirality")
+    except ValueError as exc:
         raise ValueError(
-            "--chirality indices must be non-negative and non-zero."
-        )
-    return n1, n2
-
-
-def _parse_symbols(value: object) -> Tuple[str, str]:
-    symbols = _parse_sequence(value, "--symbol")
-    if len(symbols) != 2 or not all(
-        isinstance(symbol, str) for symbol in symbols
-    ):
-        raise ValueError("--symbol must be a pair of element symbols.")
-    return symbols[0], symbols[1]
+            "--chirality must be two non-negative integers, e.g. -c 8 4."
+        ) from exc
 
 
 def cyl2car(
@@ -458,7 +441,7 @@ def main():
 
     try:
         n1, n2 = _parse_chirality(args.chirality)
-        symbol1, symbol2 = _parse_symbols(args.symbol)
+        symbol1, symbol2 = parse_symbols(args.symbol, expected_count=2)
     except (SyntaxError, ValueError) as exc:
         parser.error(str(exc))
 
