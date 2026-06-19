@@ -50,10 +50,10 @@ _SUPPORTED_GENERATORS = (
     "Cn(number), S2n(number), U_d(angle), sigmaV(), sigmaH(), U()"
 )
 
-DEFAULT_MOTIF = [[3, np.pi / 24, 0.6], [2.2, np.pi / 24, 0.8]]
-DEFAULT_SYMBOLS = ("Mo", "S")
-DEFAULT_GENERATORS = ["Cn(6)", "sigmaV()"]
-DEFAULT_CYCLIC = ["T_Q", "6", "1.5"]
+DEFAULT_MOTIF = [[3, 0, 0], [2.2, 0.2618, 0]]
+DEFAULT_SYMBOLS = ("C", "N")
+DEFAULT_GENERATORS = ["Cn(8)"]
+DEFAULT_CYCLIC = ["T_Q", "3", "1.6"]
 
 
 def _parse_symbol_list(value: object) -> Sequence[str]:
@@ -325,7 +325,7 @@ def main():
         "-s",
         "--st_name",
         type=str,
-        default="poscar.vasp",
+        default="structure.vasp",
         help="Output VASP/POSCAR filename.",
     )
     parser.add_argument(

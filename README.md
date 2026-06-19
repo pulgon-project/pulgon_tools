@@ -83,13 +83,13 @@ pulgon-generate-structures-sym_based \
   -s OUTPUT_FILENAME
 ```
 
-| Flag                 | Description                                                                                                      | Default                                       |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| `-m`, `--motif`      | Motif coordinates as`r φ z` groups; the number of values must be a multiple of three                            | `3, 0.1308996939, 0.6 2.2, 0.1308996939, 0.8` |
-| `-b`, `--symbol`     | Atomic species symbols in the same order as the`-m` motif atoms                                                  | `'Mo', 'S'`                                 |
-| `-g`, `--generators` | Axial point group generators. Supported:`Cn(number)`, `S2n(number)`, `U_d(angle)`, `sigmaV()`, `sigmaH()`, `U()` | `'Cn(6)', 'sigmaV()'`                       |
-| `-c`, `--cyclic`     | Generalized translational group:`T_Q Q f` for screw, or `T_V f` for glide; `f` is the z translation in Å        | `T_Q 6 1.5`                                   |
-| `-s`, `--st_name`    | Output filename                                                                                                  | `poscar.vasp`                                 |
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-m`, `--motif` | Motif coordinates as `r φ z` groups; the number of values must be a multiple of three | `3 0 0 2.2 0.2618 0` |
+| `-b`, `--symbol` | Atomic species symbols in the same order as the `-m` motif atoms | `C N` |
+| `-g`, `--generators` | Axial point group generators. Supported: `Cn(number)`, `S2n(number)`, `U_d(angle)`, `sigmaV()`, `sigmaH()`, `U()` | `Cn(8)` |
+| `-c`, `--cyclic` | Generalized translational group: `T_Q Q f` for screw, or `T_V f` for glide; `f` is the z translation in Å | `T_Q 3 1.6` |
+| `-s`, `--st_name` | Output filename | `structure.vasp` |
 
 **Example** — C/N nanotube with C₈ symmetry and screw translation T₃(1.6):
 
