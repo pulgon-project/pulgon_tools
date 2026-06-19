@@ -35,7 +35,6 @@ pytest                    # run the test suite
 
 ---
 
-
 ## Modules Overview
 
 ```
@@ -66,7 +65,6 @@ Structure + Supercell + IFC
 
 ---
 
-
 ## Module 1: Structure Generation
 
 Generates quasi-1D structures from line-group symmetry. Two approaches are supported.
@@ -77,20 +75,21 @@ Builds a periodic structure from a set of line-group generators and an atomic mo
 
 ```bash
 pulgon-generate-structures-sym_based \
-  -m R1 PHI1 Z1 [R2 PHI2 Z2 ...] \
-  -b SYMBOL [SYMBOL ...] \
-  -g APG_GENERATOR [APG_GENERATOR ...] \
-  -c TG_TYPE TG_VALUE [TG_VALUE] \
+  -m R1 PHI1 Z1 \
+     R2 PHI2 Z2 \
+  -b SYMBOL1 SYMBOL2 \
+  -g APG_GENERATOR  \
+  -c TG_TYPE TG_VALUE \
   -s OUTPUT_FILENAME
 ```
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-m`, `--motif` | Motif coordinates as `r φ z` groups; the number of values must be a multiple of three | `[[3, 0.1308996939, 0.6], [2.2, 0.1308996939, 0.8]]` |
-| `-b`, `--symbol` | Atomic species symbols in the same order as the `-m` motif atoms | `('Mo', 'S')` |
-| `-g`, `--generators` | Axial point group generators. Supported: `Cn(number)`, `S2n(number)`, `U_d(angle)`, `sigmaV()`, `sigmaH()`, `U()` | `['Cn(6)', 'sigmaV()']` |
-| `-c`, `--cyclic` | Generalized translational group: `T_Q Q f` for screw, or `T_V f` for glide; `f` is the z translation in Å | `T_Q 6 1.5` |
-| `-s`, `--st_name` | Output filename | `poscar.vasp` |
+| Flag                 | Description                                                                                                      | Default                                       |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| `-m`, `--motif`      | Motif coordinates as`r φ z` groups; the number of values must be a multiple of three                            | `3, 0.1308996939, 0.6 2.2, 0.1308996939, 0.8` |
+| `-b`, `--symbol`     | Atomic species symbols in the same order as the`-m` motif atoms                                                  | `'Mo', 'S'`                                 |
+| `-g`, `--generators` | Axial point group generators. Supported:`Cn(number)`, `S2n(number)`, `U_d(angle)`, `sigmaV()`, `sigmaH()`, `U()` | `'Cn(6)', 'sigmaV()'`                       |
+| `-c`, `--cyclic`     | Generalized translational group:`T_Q Q f` for screw, or `T_V f` for glide; `f` is the z translation in Å        | `T_Q 6 1.5`                                   |
+| `-s`, `--st_name`    | Output filename                                                                                                  | `poscar.vasp`                                 |
 
 **Example** — C/N nanotube with C₈ symmetry and screw translation T₃(1.6):
 
@@ -117,13 +116,13 @@ pulgon-generate-structures-chirality \
   -s OUTPUT_FILENAME
 ```
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-c`, `--chirality` | Chiral indices as two non-negative integers `n m` | `(10, 10)` |
-| `-b`, `--symbol` | Exactly two atomic symbols: metal and chalcogen | `('Mo', 'S')` |
-| `-l`, `--bond_length` | M–X bond length in Å | `2.43` |
-| `-d`, `--delta_Z` | Pre-roll-up layer spacing between the M and X layers in the 2D sheet, in Å | `1.57` |
-| `-s`, `--st_name` | Output filename | `POSCAR` |
+| Flag                  | Description                                                                 | Default       |
+| --------------------- | --------------------------------------------------------------------------- | ------------- |
+| `-c`, `--chirality`   | Chiral indices as two non-negative integers`n m`                            | `(10, 10)`    |
+| `-b`, `--symbol`      | Exactly two atomic symbols: metal and chalcogen                             | `('Mo', 'S')` |
+| `-l`, `--bond_length` | M–X bond length in Å                                                      | `2.43`        |
+| `-d`, `--delta_Z`     | Pre-roll-up layer spacing between the M and X layers in the 2D sheet, in Å | `1.57`        |
+| `-s`, `--st_name`     | Output filename                                                             | `POSCAR`      |
 
 **Example** — MoS₂ zigzag, armchair, and chiral nanotubes:
 
@@ -150,11 +149,11 @@ Two tolerance settings are used during symmetry detection:
 pulgon-detect-linegroup -p POSCAR [OPTIONS]
 ```
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-p`, `--POSCAR` | Input structure file in a format readable by ASE | — |
-| `-t`, `--tolerance` | Distance tolerance in Å for matching transformed atoms to existing atoms | `0.01` |
-| `-d`, `--layer-tolerance` | Fractional z-layer tolerance for cyclic monomer translation candidates | `0.05` |
+| Flag                      | Description                                                               | Default |
+| ------------------------- | ------------------------------------------------------------------------- | ------- |
+| `-p`, `--POSCAR`          | Input structure file in a format readable by ASE                          | —      |
+| `-t`, `--tolerance`       | Distance tolerance in Å for matching transformed atoms to existing atoms | `0.01`  |
+| `-d`, `--layer-tolerance` | Fractional z-layer tolerance for cyclic monomer translation candidates    | `0.05`  |
 
 This command reports the generalized translational group `Z`, axial point group `P`, and line-group family number.
 
@@ -168,12 +167,12 @@ pulgon-detect-linegroup -p POSCAR -t 1e-2
 pulgon-detect-CyclicGroup -p POSCAR [OPTIONS]
 ```
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-p`, `--POSCAR` | Input structure file in a format readable by ASE | — |
-| `-t`, `--tolerance` | Distance tolerance in Å for cyclic-group atom matching | `0.01` |
-| `-d`, `--layer-tolerance` | Fractional z-layer tolerance for monomer translation candidates | `0.05` |
-| `-o`, `--enable_log` | Print detailed debug logs for cyclic-group detection | `False` |
+| Flag                      | Description                                                     | Default |
+| ------------------------- | --------------------------------------------------------------- | ------- |
+| `-p`, `--POSCAR`          | Input structure file in a format readable by ASE                | —      |
+| `-t`, `--tolerance`       | Distance tolerance in Å for cyclic-group atom matching         | `0.01`  |
+| `-d`, `--layer-tolerance` | Fractional z-layer tolerance for monomer translation candidates | `0.05`  |
+| `-o`, `--enable_log`      | Print detailed debug logs for cyclic-group detection            | `False` |
 
 ### Detect axial point group
 
@@ -181,12 +180,12 @@ pulgon-detect-CyclicGroup -p POSCAR [OPTIONS]
 pulgon-detect-AxialPointGroup -p POSCAR [OPTIONS]
 ```
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-p`, `--POSCAR` | Input structure file in a format readable by ASE | — |
-| `-t`, `--tolerance` | Distance tolerance in Å for axial point-group atom matching | `0.01` |
-| `-g`, `--enable_pg` | Also print pymatgen's full molecular point-group result | `False` |
-| `-o`, `--enable_log` | Print detailed debug logs for axial point-group detection | `False` |
+| Flag                 | Description                                                  | Default |
+| -------------------- | ------------------------------------------------------------ | ------- |
+| `-p`, `--POSCAR`     | Input structure file in a format readable by ASE             | —      |
+| `-t`, `--tolerance`  | Distance tolerance in Å for axial point-group atom matching | `0.01`  |
+| `-g`, `--enable_pg`  | Also print pymatgen's full molecular point-group result      | `False` |
+| `-o`, `--enable_log` | Print detailed debug logs for axial point-group detection    | `False` |
 
 **Example** — detect the line group of a (5,5) SWCNT:
 
@@ -208,13 +207,13 @@ Constructs irreducible representations and character tables for all 13 line-grou
 pulgon-irreps-tables -p POSCAR [OPTIONS]
 ```
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-p`, `--POSCAR` | Input structure file in a format readable by ASE | — |
-| `-q`, `--qpoint_z` | Reduced q coordinate along periodic z; internally converted to `qpoint_z * 2π/a` | `0.0` |
-| `-t`, `--tolerance` | Optional numerical tolerance; if omitted, symmetry detection uses `1e-2` and character evaluation uses `1e-8` | — |
-| `-s`, `--savename_chara` | Output base filename for the `.npz` file | `characters` |
-| `-r`, `--enable_rep_matrix` | Also save irreducible representation matrices as `D_irrep_*` arrays | `False` |
+| Flag                        | Description                                                                                                  | Default      |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------ |
+| `-p`, `--POSCAR`            | Input structure file in a format readable by ASE                                                             | —           |
+| `-q`, `--qpoint_z`          | Reduced q coordinate along periodic z; internally converted to`qpoint_z * 2π/a`                             | `0.0`        |
+| `-t`, `--tolerance`         | Optional numerical tolerance; if omitted, symmetry detection uses`1e-2` and character evaluation uses `1e-8` | —           |
+| `-s`, `--savename_chara`    | Output base filename for the`.npz` file                                                                      | `characters` |
+| `-r`, `--enable_rep_matrix` | Also save irreducible representation matrices as`D_irrep_*` arrays                                           | `False`      |
 
 **Example** — character table of MoS₂-(5,0) at q = 0:
 
@@ -234,17 +233,17 @@ Enforces invariance sum rules on second-order harmonic interatomic force constan
 pulgon-fcs-correction -p POSCAR -x SUPERCELL_MATRIX -f FORCE_CONSTANTS [OPTIONS]
 ```
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-p`, `--POSCAR` | Input structure file used when `--path_yaml` is not provided | `POSCAR` |
-| `-x`, `--supercell_matrix` | Diagonal supercell size used for the force constants, e.g. `"[1,1,5]"` | — |
-| `-y`, `--path_yaml` | Optional `phonopy.yaml`; when provided, phonopy loads structure and supercell settings from this file | — |
-| `-f`, `--fcs` | Input force constants file, either `FORCE_CONSTANTS` or `force_constants.hdf5` | `./FORCE_CONSTANTS` |
-| `-n`, `--plot_phonon` | Plot phonon bands before and after correction and save `phonon_fix.png` | `False` |
-| `-k`, `--k_path` | Band path used with `--plot_phonon`, e.g. `"[[0,0,0],[0.5,0,0],[0,0,0]]"` | — |
-| `-r`, `--recenter` | Recenter fractional coordinates using `(scaled_positions - [0.5,0.5,0.5]) % 1` before building constraints | `False` |
-| `-m`, `--methods` | Solver used to enforce constraints: `convex_opt` or `ridge_model` | `convex_opt` |
-| `-z`, `--full_fcs` | Write full supercell force-constant matrix instead of compact primitive-to-supercell form | `False` |
+| Flag                       | Description                                                                                               | Default             |
+| -------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------- |
+| `-p`, `--POSCAR`           | Input structure file used when`--path_yaml` is not provided                                               | `POSCAR`            |
+| `-x`, `--supercell_matrix` | Diagonal supercell size used for the force constants, e.g.`"[1,1,5]"`                                     | —                  |
+| `-y`, `--path_yaml`        | Optional`phonopy.yaml`; when provided, phonopy loads structure and supercell settings from this file      | —                  |
+| `-f`, `--fcs`              | Input force constants file, either`FORCE_CONSTANTS` or `force_constants.hdf5`                             | `./FORCE_CONSTANTS` |
+| `-n`, `--plot_phonon`      | Plot phonon bands before and after correction and save`phonon_fix.png`                                    | `False`             |
+| `-k`, `--k_path`           | Band path used with`--plot_phonon`, e.g. `"[[0,0,0],[0.5,0,0],[0,0,0]]"`                                  | —                  |
+| `-r`, `--recenter`         | Recenter fractional coordinates using`(scaled_positions - [0.5,0.5,0.5]) % 1` before building constraints | `False`             |
+| `-m`, `--methods`          | Solver used to enforce constraints:`convex_opt` or `ridge_model`                                          | `convex_opt`        |
+| `-z`, `--full_fcs`         | Write full supercell force-constant matrix instead of compact primitive-to-supercell form                 | `False`             |
 
 **Example** — correct IFCs for a (12,12) MoS₂ nanotube:
 
@@ -291,7 +290,6 @@ phonopy.file_IO.write_force_constants_to_hdf5(
 Additional examples for all modules are available in the `examples/` directory of the repository.
 
 ---
-
 
 ## Citation
 
