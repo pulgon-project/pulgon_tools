@@ -432,7 +432,7 @@ def main():
         "-b",
         "--symbol",
         default=("Mo", "S"),
-        help="Atomic symbols for the metal and chalcogen atoms.",
+        help="Exactly two atomic symbols: metal and chalcogen.",
     )
 
     parser.add_argument(
