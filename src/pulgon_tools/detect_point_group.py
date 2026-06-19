@@ -239,31 +239,50 @@ def get_symcell(monomer: Atoms) -> Atoms:
 def main():
     """CLI entry point for detecting the axial point group of a structure."""
     parser = argparse.ArgumentParser(
-        description="Detect the line group of a system"
+        description="Detect the axial point group P of a 1D periodic structure.",
+        epilog=(
+            "Examples:\n"
+            "  pulgon-detect-AxialPointGroup -p POSCAR -t 1e-2\n"
+            "  pulgon-detect-AxialPointGroup -p POSCAR -g\n\n"
+            "Notes:\n"
+            "  - The periodic axis is expected to be along the Cartesian "
+            "z direction.\n"
+            "  - The axial point group P is detected with the z axis as "
+            "the tube axis.\n"
+            "  - Use -g to also print pymatgen's full molecular point-group "
+            "result."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "-p",
         "--POSCAR",
-        help="path to the file from which coordinates will be read",
+        help="Input structure file in a format readable by ASE.",
     )
     parser.add_argument(
         "-t",
         "--tolerance",
         default=1e-2,
         type=float,
-        help="Tolerance for atomic positions",
+        help=(
+            "Distance tolerance in Angstrom for matching transformed atoms "
+            "to existing atoms during axial point-group detection."
+        ),
     )
     parser.add_argument(
         "-g",
         "--enable_pg",
         action="store_true",
-        help="open the detection of point group",
+        help="Also print pymatgen's full molecular point-group result.",
     )
     parser.add_argument(
         "-o",
         "--enable_log",
         action="store_true",
-        help="Enable the output of detection process",
+        help=(
+            "Print detailed debug logs for the axial point-group detection "
+            "steps."
+        ),
     )
 
     args = parser.parse_args()

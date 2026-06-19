@@ -16,7 +16,8 @@ import argparse
 from typing import Tuple
 
 from ase import Atoms
-from ase.io.vasp import read_vasp
+from ase.io import read
+from ase.io.formats import UnknownFileTypeError
 
 from pulgon_tools.detect_generalized_translational_group import (
     CyclicGroupAnalyzer,
@@ -24,6 +25,14 @@ from pulgon_tools.detect_generalized_translational_group import (
 from pulgon_tools.detect_point_group import LineGroupAnalyzer
 from pulgon_tools.line_group_table import get_family_num_from_sym_symbol
 from pulgon_tools.utils import find_axis_center_of_nanotube
+
+
+def _read_structure(filename: str) -> Atoms:
+    """Read a structure with ASE, preserving extensionless POSCAR support."""
+    try:
+        return read(filename)
+    except UnknownFileTypeError:
+        return read(filename, format="vasp")
 
 
 def detect_linegroup(
@@ -62,20 +71,39 @@ def detect_linegroup(
 def main() -> None:
     """CLI entry point for detecting line-group symbols."""
     parser = argparse.ArgumentParser(
-        description="Detect the line group of a nanostructure"
+        description=(
+            "Detect the generalized translational group Z, axial point "
+            "group P, and line-group family number of a 1D periodic structure."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  pulgon-detect-linegroup -p POSCAR -t 1e-2 "
+            "--layer-tolerance 0.05\n\n"
+            "Notes:\n"
+            "  - The periodic axis is expected to be along the Cartesian "
+            "z direction.\n"
+            "  - Z is the generalized translational group; P is the axial "
+            "point group.\n"
+            "  - tolerance matches atomic positions; layer-tolerance groups "
+            "z-layers into monomer translation candidates."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "-p",
         "--POSCAR",
         required=True,
-        help="path to the file from which coordinates will be read",
+        help="Input structure file in a format readable by ASE.",
     )
     parser.add_argument(
         "-t",
         "--tolerance",
         default=1e-2,
         type=float,
-        help="Tolerance for atomic positions",
+        help=(
+            "Distance tolerance in Angstrom for matching transformed atoms "
+            "to existing atoms during symmetry detection."
+        ),
     )
     parser.add_argument(
         "-d",
@@ -83,14 +111,14 @@ def main() -> None:
         default=0.05,
         type=float,
         help=(
-            "Fractional tolerance for z-layer and monomer translation "
-            "candidate detection"
+            "Fractional z-coordinate tolerance for grouping atomic layers "
+            "and selecting monomer translation candidates."
         ),
     )
 
     args = parser.parse_args()
 
-    atom = read_vasp(args.POSCAR)
+    atom = _read_structure(args.POSCAR)
     z_sym, p_sym, family = detect_linegroup(
         atom,
         tolerance=args.tolerance,

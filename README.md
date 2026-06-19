@@ -86,7 +86,7 @@ pulgon-generate-structures-sym_based \
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-m`, `--motif` | Cylindrical coordinates `[r, φ, z]` of the initial atomic motif as a Python literal list. Use numeric values only, not expressions such as `np.pi/24`. | `[[3, π/24, 0.6], [2.2, π/24, 0.8]]` |
+| `-m`, `--motif` | Cylindrical coordinates `[r, φ, z]` of the initial atomic motif as a Python literal list. Use numeric values only, not expressions such as `np.pi/24`. | `[[3, 0.1308996939, 0.6], [2.2, 0.1308996939, 0.8]]` |
 | `-b`, `--symbol` | Atomic species symbols as a Python literal tuple/list of strings, e.g. `"('Mo', 'S')"` | `('Mo', 'S')` |
 | `-g`, `--generators` | Axial point group generators as a Python literal list of whitelisted strings. Supported: `Cn(number)`, `S2n(number)`, `U_d(angle)`, `sigmaV()`, `sigmaH()`, `U()` | `['Cn(6)', 'sigmaV()']` |
 | `-c`, `--cyclic` | Generalized translational group as a Python literal dict. Supported keys: `T_Q: [Q, f]` for screw (positive rotation order Q and translation f Å); `T_V: f` for glide (positive translation f Å). | `{'T_Q': [6, 1.5]}` |
@@ -121,7 +121,7 @@ pulgon-generate-structures-chirality \
 | `-c`, `--chirality` | Chiral indices as a Python literal pair of non-negative integers, e.g. `"(8, 4)"` | — |
 | `-b`, `--symbol` | Atomic species as a Python literal pair of strings, e.g. `"('Mo', 'S')"` | `('Mo', 'S')` |
 | `-l`, `--bond_length` | M–X bond length in Å | `2.43` |
-| `-d`, `--delta_Z` | Vertical offset dz of X atoms from the M layer in Å | `1.57` |
+| `-d`, `--delta_Z` | Pre-roll-up layer spacing between the M and X layers in the 2D sheet, in Å | `1.57` |
 | `-s`, `--st_name` | Output filename | `POSCAR` |
 
 **Example** — MoS₂ zigzag, armchair, and chiral nanotubes:
@@ -151,8 +151,8 @@ pulgon-detect-linegroup -p POSCAR [OPTIONS]
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-p`, `--POSCAR` | Path to input POSCAR structure | — |
-| `-t`, `--tolerance` | Atomic-coordinate matching tolerance for symmetry detection | `0.01` |
+| `-p`, `--POSCAR` | Input structure file in a format readable by ASE | — |
+| `-t`, `--tolerance` | Distance tolerance in Å for matching transformed atoms to existing atoms | `0.01` |
 | `-d`, `--layer-tolerance` | Fractional z-layer tolerance for cyclic monomer translation candidates | `0.05` |
 
 This command reports the generalized translational group `Z`, axial point group `P`, and line-group family number.
@@ -169,10 +169,10 @@ pulgon-detect-CyclicGroup -p POSCAR [OPTIONS]
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-p`, `--poscar` | Path to input structure (POSCAR/cif/xyz) | — |
-| `-t`, `--tolerance` | Atomic-coordinate matching tolerance for cyclic symmetry detection | `0.01` |
+| `-p`, `--POSCAR` | Input structure file in a format readable by ASE | — |
+| `-t`, `--tolerance` | Distance tolerance in Å for cyclic-group atom matching | `0.01` |
 | `-d`, `--layer-tolerance` | Fractional z-layer tolerance for monomer translation candidates | `0.05` |
-| `-o`, `--output` | Enable logging to file | `False` |
+| `-o`, `--enable_log` | Print detailed debug logs for cyclic-group detection | `False` |
 
 ### Detect axial point group
 
@@ -182,10 +182,10 @@ pulgon-detect-AxialPointGroup -p POSCAR [OPTIONS]
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-p`, `--poscar` | Path to input structure | — |
-| `-t`, `--tolerance` | Atomic-coordinate matching tolerance for axial point-group detection | `0.01` |
-| `-g`, `--group` | Enable full point group detection | `False` |
-| `-o`, `--output` | Enable logging to file | `False` |
+| `-p`, `--POSCAR` | Input structure file in a format readable by ASE | — |
+| `-t`, `--tolerance` | Distance tolerance in Å for axial point-group atom matching | `0.01` |
+| `-g`, `--enable_pg` | Also print pymatgen's full molecular point-group result | `False` |
+| `-o`, `--enable_log` | Print detailed debug logs for axial point-group detection | `False` |
 
 **Example** — detect the line group of a (5,5) SWCNT:
 
@@ -209,23 +209,25 @@ pulgon-irreps-tables -p POSCAR [OPTIONS]
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-p`, `--poscar` | Path to input structure | — |
-| `-q`, `--qpoint` | Axial wave vector k (normalized, 0 to 1) | `0.0` |
-| `-t`, `--tolerance` | Numerical tolerance | `0.01` |
-| `-r`, `--representations` | Save full representation matrices to file | `False` |
-| `-s`, `--st_name` | Output filename for the character table | — |
+| `-p`, `--POSCAR` | Input structure file in a format readable by ASE | — |
+| `-q`, `--qpoint_z` | Reduced q coordinate along periodic z; internally converted to `qpoint_z * 2π/a` | `0.0` |
+| `-t`, `--tolerance` | Optional numerical tolerance; if omitted, symmetry detection uses `1e-2` and character evaluation uses `1e-8` | — |
+| `-s`, `--savename_chara` | Output base filename for the `.npz` file | `characters` |
+| `-r`, `--enable_rep_matrix` | Also save irreducible representation matrices as `D_irrep_*` arrays | `False` |
 
-**Example** — character table of MoS₂-(5,0) at k = 0:
+**Example** — character table of MoS₂-(5,0) at q = 0:
 
 ```bash
-pulgon-irreps-tables -p POSCAR -q 0.0 -s mos2_chartable.npz
+pulgon-irreps-tables -p POSCAR -q 0.0 -s mos2_chartable
 ```
+
+The output is saved by `numpy.savez`; for example, `-s mos2_chartable` writes `mos2_chartable.npz`.
 
 ---
 
 ## Module 4: IFC Correction
 
-Enforces translational and rotational invariance conditions (Born–Huang sum rules, Huang invariance conditions) on second-order harmonic interatomic force constants (IFCs). Formulated as a linearly constrained quadratic optimization problem solved via CVXPY/OSQP.
+Enforces invariance sum rules on second-order harmonic interatomic force constants (IFCs) of quasi-1D systems, including acoustic, Born-Huang rotational, Huang, matrix-symmetry, and cutoff constraints. Formulated as a linearly constrained quadratic optimization problem solved via CVXPY/OSQP.
 
 ```bash
 pulgon-fcs-correction -p POSCAR -x SUPERCELL_MATRIX -f FORCE_CONSTANTS [OPTIONS]
@@ -233,22 +235,22 @@ pulgon-fcs-correction -p POSCAR -x SUPERCELL_MATRIX -f FORCE_CONSTANTS [OPTIONS]
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `-p`, `--POSCAR` | Path to primitive structure | `POSCAR` |
-| `-x`, `--supercell_matrix` | Supercell matrix, e.g. `"[1,1,3]"` | — |
-| `-y`, `--path_yaml` | Path to `phonopy.yaml`; if provided, load structure and force constants from phonopy | — |
-| `-f`, `--fcs` | Path to `force_constants.hdf5` or `FORCE_CONSTANTS` | `./FORCE_CONSTANTS` |
-| `-n`, `--plot_phonon` | Plot phonon spectrum before and after correction | `False` |
-| `-k`, `--k_path` | k-path for phonon plotting, e.g. `"[[0,0,0],[0.5,0,0]]"` | — |
-| `-r`, `--recenter` | Recenter supercell scaled positions before building constraints | `False` |
-| `-m`, `--methods` | Optimization backend: `convex_opt` or `ridge_model` | `convex_opt` |
-| `-z`, `--full_fcs` | Save full force constants instead of compact force constants | `False` |
+| `-p`, `--POSCAR` | Input structure file used when `--path_yaml` is not provided | `POSCAR` |
+| `-x`, `--supercell_matrix` | Diagonal supercell size used for the force constants, e.g. `"[1,1,5]"` | — |
+| `-y`, `--path_yaml` | Optional `phonopy.yaml`; when provided, phonopy loads structure and supercell settings from this file | — |
+| `-f`, `--fcs` | Input force constants file, either `FORCE_CONSTANTS` or `force_constants.hdf5` | `./FORCE_CONSTANTS` |
+| `-n`, `--plot_phonon` | Plot phonon bands before and after correction and save `phonon_fix.png` | `False` |
+| `-k`, `--k_path` | Band path used with `--plot_phonon`, e.g. `"[[0,0,0],[0.5,0,0],[0,0,0]]"` | — |
+| `-r`, `--recenter` | Recenter fractional coordinates using `(scaled_positions - [0.5,0.5,0.5]) % 1` before building constraints | `False` |
+| `-m`, `--methods` | Solver used to enforce constraints: `convex_opt` or `ridge_model` | `convex_opt` |
+| `-z`, `--full_fcs` | Write full supercell force-constant matrix instead of compact primitive-to-supercell form | `False` |
 
 **Example** — correct IFCs for a (12,12) MoS₂ nanotube:
 
 ```bash
 pulgon-fcs-correction \
   -p POSCAR \
-  -x "[1,1,3]" \
+  -x "[1,1,5]" \
   -f FORCE_CONSTANTS \
   -n \
   -m convex_opt
@@ -259,6 +261,7 @@ pulgon-fcs-correction \
 All modules expose a Python API for integration into custom workflows:
 
 ```python
+import numpy as np
 import phonopy
 from phonopy.interface.vasp import read_vasp
 from pulgon_tools.force_constant_correction import (
@@ -267,15 +270,13 @@ from pulgon_tools.force_constant_correction import (
 
 # Step 1: Load structure with Phonopy
 unitcell = read_vasp("POSCAR")
-phonon = phonopy.Phonopy(unitcell, supercell_matrix=np.diag([1, 1, 3]))
+phonon = phonopy.Phonopy(unitcell, supercell_matrix=np.diag([1, 1, 5]))
 phonon.force_constants = phonopy.file_IO.parse_FORCE_CONSTANTS(
     "FORCE_CONSTANTS"
 )
 
-# Step 2: Build the sparse constraint matrix that enforces all constrains
-M, IFC = build_constraint_matrix(
-    phonon, cut_off=15.0, pbc=[False, False, True]
-)
+# Step 2: Build the sparse constraint matrix that enforces all constraints
+M, IFC = build_constraint_matrix(phonon, recenter=False)
 
 # Step 3: Solve the constrained quadratic optimization problem
 IFC_corrected = solve_fcs(IFC, M, methods="convex_opt")

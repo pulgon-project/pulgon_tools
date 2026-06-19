@@ -400,31 +400,68 @@ def main():
     """CLI entry point for generating a chiral nanotube
     and saving as POSCAR."""
     parser = argparse.ArgumentParser(
-        description="generating chiral nanotube structure from (n1, n2) indices"
+        description=(
+            "Generate a MoS2-type chiral nanotube from chiral indices "
+            "(n1, n2)."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  pulgon-generate-structures-chirality "
+            "-c '(10, 10)' -b \"('Mo', 'S')\" "
+            "-l 2.43 -d 1.57 -s POSCAR\n\n"
+            "Notes:\n"
+            "  - The chiral indices are given as (n1, n2).\n"
+            "  - bond_length is the metal-chalcogen 3D bond length.\n"
+            "  - delta_Z is the pre-roll-up layer spacing in the 2D sheet."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     parser.add_argument(
         "-c",
         "--chirality",
         default=(10, 10),
+        help=(
+            "Chiral indices (n1, n2) as a Python literal pair, "
+            "e.g. '(10, 10)'."
+        ),
     )
 
     parser.add_argument(
         "-b",
         "--symbol",
         default=("Mo", "S"),
+        help=(
+            "Atomic symbols for the metal and chalcogen atoms, "
+            "e.g. ('Mo', 'S')."
+        ),
     )
 
-    parser.add_argument("-l", "--bond_length", default=2.43, type=float)
+    parser.add_argument(
+        "-l",
+        "--bond_length",
+        default=2.43,
+        type=float,
+        help="Metal-chalcogen bond length in Angstrom.",
+    )
 
-    parser.add_argument("-d", "--delta_Z", default=1.57, type=float)
+    parser.add_argument(
+        "-d",
+        "--delta_Z",
+        default=1.57,
+        type=float,
+        help=(
+            "Pre-roll-up layer spacing in the 2D sheet between metal and "
+            "chalcogen layers, in Angstrom."
+        ),
+    )
 
     parser.add_argument(
         "-s",
         "--st_name",
         type=str,
         default="POSCAR",
-        help="the saved file name",
+        help="Output VASP/POSCAR filename.",
     )
 
     args = parser.parse_args()

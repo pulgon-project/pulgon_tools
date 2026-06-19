@@ -23,6 +23,7 @@ import ase
 import numpy as np
 from ase import Atoms
 from ase.io import read
+from ase.io.formats import UnknownFileTypeError
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
 
@@ -37,6 +38,14 @@ warnings.filterwarnings(
     category=RuntimeWarning,
     message="invalid value encountered in divide",
 )
+
+
+def _read_structure(filename: str) -> Atoms:
+    """Read a structure with ASE, preserving extensionless POSCAR support."""
+    try:
+        return read(filename)
+    except UnknownFileTypeError:
+        return read(filename, format="vasp")
 
 
 class CyclicGroupAnalyzer:
@@ -643,19 +652,37 @@ class CyclicGroupAnalyzer:
 def main():
     """CLI entry point for detecting the generalized translational group."""
     parser = argparse.ArgumentParser(
-        description="Try to detect the generalized translational group of a line group structure"
+        description=(
+            "Detect the generalized translational group Z of a 1D periodic "
+            "structure."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  pulgon-detect-CyclicGroup -p POSCAR -t 1e-2 "
+            "--layer-tolerance 0.05\n\n"
+            "Notes:\n"
+            "  - The periodic axis is expected to be along the Cartesian "
+            "z direction.\n"
+            "  - tolerance matches transformed atomic positions in Angstrom.\n"
+            "  - layer-tolerance is a fractional z-coordinate tolerance for "
+            "layer grouping and monomer translation candidates."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "-p",
         "--POSCAR",
-        help="path to the file from which coordinates will be read",
+        help="Input structure file in a format readable by ASE.",
     )
     parser.add_argument(
         "-t",
         "--tolerance",
         default=1e-2,
         type=float,
-        help="Tolerance for atomic positions",
+        help=(
+            "Distance tolerance in Angstrom for matching transformed atoms "
+            "to existing atoms during cyclic-group detection."
+        ),
     )
     parser.add_argument(
         "-d",
@@ -663,15 +690,15 @@ def main():
         default=0.05,
         type=float,
         help=(
-            "Fractional tolerance for z-layer and monomer translation "
-            "candidate detection"
+            "Fractional z-coordinate tolerance for grouping atomic layers "
+            "and selecting monomer translation candidates."
         ),
     )
     parser.add_argument(
         "-o",
         "--enable_log",
         action="store_true",
-        help="Enable the output of detection process",
+        help="Print detailed debug logs for the cyclic-group detection steps.",
     )
     args = parser.parse_args()
 
@@ -683,7 +710,7 @@ def main():
         )
 
     st_name = args.POSCAR
-    st = read(st_name)
+    st = _read_structure(st_name)
 
     cyclic = CyclicGroupAnalyzer(
         st,

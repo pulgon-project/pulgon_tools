@@ -321,12 +321,38 @@ def solve_fcs(
 
 def main():
     """CLI entry point for correcting force constants with sum rules."""
-    parser = argparse.ArgumentParser(description="Apply the sum rules to fcs")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Correct phonopy force constants of quasi-1D systems by imposing "
+            "invariance sum rules."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  pulgon-fcs-correction -p POSCAR -x [1,1,5] -f FORCE_CONSTANTS\n"
+            "  pulgon-fcs-correction -y phonopy.yaml -x [1,1,5] -f "
+            "force_constants.hdf5\n"
+            "  pulgon-fcs-correction -p POSCAR -x [1,1,5] -f "
+            'FORCE_CONSTANTS -n -k "[[0,0,0],[0.5,0,0],[0,0,0]]"\n'
+            "\n"
+            "Notes:\n"
+            "  The corrected force constants are written to "
+            "FORCE_CONSTANTS_correction and "
+            "FORCE_CONSTANTS_correction.hdf5.\n"
+            "  Use --full_fcs to write the full supercell force-constant "
+            "matrix instead of the compact primitive-to-supercell form.\n"
+            "  If --path_yaml is provided, the structure and supercell "
+            "information are read from phonopy.yaml."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument(
         "-p",
         "--POSCAR",
         default="POSCAR",
-        help="The path of poscar",
+        help=(
+            "Input structure file used when --path_yaml is not provided "
+            "(default: POSCAR)."
+        ),
     )
     parser.add_argument(
         "-x",
@@ -334,50 +360,75 @@ def main():
         required=True,
         # default=[5,5,1],
         type=parse_int_list,
-        help="The supercell matrix that used to calculate fcs",
+        help=(
+            "Diagonal supercell size used for the force constants, "
+            "e.g. [1,1,5]."
+        ),
     )
     parser.add_argument(
         "-y",
         "--path_yaml",
         default=None,
-        help="The path of phonopy.yaml",
+        help=(
+            "Optional phonopy.yaml file; when provided, phonopy loads the "
+            "structure and supercell settings from this file."
+        ),
     )
     parser.add_argument(
         "-f",
         "--fcs",
         default="./FORCE_CONSTANTS",
-        help="The path of force_constants.hdf5 or FORCE_CONSTANTS",
+        help=(
+            "Input force constants file, either FORCE_CONSTANTS or "
+            "force_constants.hdf5 (default: ./FORCE_CONSTANTS)."
+        ),
     )
     parser.add_argument(
         "-n",
         "--plot_phonon",
         action="store_true",
-        help="Enable plotting if specified (default: False)",
+        help=(
+            "Plot phonon bands before and after correction and save the "
+            "figure as phonon_fix.png."
+        ),
     )
     parser.add_argument(
         "-k",
         "--k_path",
         default=None,
         type=str2list,
-        help="The k path of plotting phonon, e.g. [[0.0, 0.0, 0.0], [0.5, 0.0, 0.0], [0.0, 0.0, 0.0]]",
+        help=(
+            "Band path used with --plot_phonon, e.g. "
+            '"[[0,0,0],[0.5,0,0],[0,0,0]]".'
+        ),
     )
     parser.add_argument(
         "-r",
         "--recenter",
         action="store_true",
-        help="(atoms.positions - [0.5,0.5,0.5]) %% 1",
+        help=(
+            "Recenter fractional coordinates before building constraints "
+            "using (scaled_positions - [0.5,0.5,0.5]) %% 1."
+        ),
     )
     parser.add_argument(
         "-m",
         "--methods",
         default="convex_opt",
-        help="The available methods are 'convex_opt', 'ridge_model'",
+        choices=["convex_opt", "ridge_model"],
+        help=(
+            "Solver used to enforce the constraints: 'convex_opt' or "
+            "'ridge_model' (default: convex_opt)."
+        ),
     )
     parser.add_argument(
         "-z",
         "--full_fcs",
         action="store_true",
-        help="Enable plotting if specified (default: False)",
+        help=(
+            "Write the full supercell force-constant matrix instead of the "
+            "compact primitive-to-supercell form."
+        ),
     )
 
     args = parser.parse_args()

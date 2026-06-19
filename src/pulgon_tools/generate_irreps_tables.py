@@ -127,17 +127,40 @@ def get_linegroup_symmetry_dataset(
 def main() -> None:
     """CLI entry point for computing irreps tables and character tables."""
     parser = argparse.ArgumentParser(
-        description="Return the representation matrices or character table from a structure"
+        description=(
+            "Generate line-group character tables, and optionally "
+            "representation matrices, from a 1D periodic structure."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  pulgon-irreps-tables -p POSCAR -q 0.0 -s characters\n"
+            "  pulgon-irreps-tables -p POSCAR -q 0.25 -r -s irreps_q025\n"
+            "\n"
+            "Notes:\n"
+            "  qpoint_z is the reduced q coordinate along the periodic z "
+            "direction.\n"
+            "  Output is saved as an .npz file; for example, -s characters "
+            "writes characters.npz.\n"
+            "  Without -r, the file stores character tables and irrep labels "
+            "only.\n"
+            "  With -r, representation matrices D_irrep_* are also stored."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        "-p", "--POSCAR", help="path to the file of a structure"
+        "-p",
+        "--POSCAR",
+        help="Input structure file in a format readable by ASE.",
     )
     parser.add_argument(
         "-q",
         "--qpoint_z",
         type=float,
         default=0.0,
-        help="The qpoint in the periodic direction (z), from 0 to 1",
+        help=(
+            "Reduced q coordinate along the periodic z direction; internally "
+            "converted to q = qpoint_z * 2*pi/a."
+        ),
     )
     parser.add_argument(
         "-t",
@@ -145,22 +168,28 @@ def main() -> None:
         type=float,
         default=None,
         help=(
-            "Tolerance for atomic positions and character calculations. "
-            "When omitted, symmetry detection uses 1e-2 and character "
-            "calculations use 1e-8."
+            "Optional numerical tolerance. If omitted, symmetry detection "
+            "uses 1e-2 and character evaluation uses 1e-8; if set, the same "
+            "value is used for both."
         ),
     )
     parser.add_argument(
         "-s",
         "--savename_chara",
         default="characters",
-        help="The filename of character",
+        help=(
+            "Output base filename for the .npz file; default 'characters' "
+            "writes characters.npz."
+        ),
     )
     parser.add_argument(
         "-r",
         "--enable_rep_matrix",
         action="store_true",
-        help="Enable output of irreducible representation matrices",
+        help=(
+            "Also save irreducible representation matrices as D_irrep_* "
+            "arrays in the output .npz file."
+        ),
     )
 
     args = parser.parse_args()

@@ -281,29 +281,57 @@ def generate_line_group_structure(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="generating line group structure by symmetry-based approach"
+        description=(
+            "Generate a 1D line-group structure from a cylindrical motif, "
+            "point-group generators, and a generalized translation."
+        ),
+        epilog=(
+            "Examples:\n"
+            "  pulgon-generate-structures-sym_based "
+            "-m '[[3, 0.13, 0.6], [2.2, 0.13, 0.8]]' "
+            "-b \"('Mo', 'S')\" "
+            "-g \"['Cn(6)', 'sigmaV()']\" "
+            "-c \"{'T_Q': [6, 1.5]}\" "
+            "-s poscar.vasp\n\n"
+            "Notes:\n"
+            "  - Motif coordinates are [r, phi, z] in cylindrical "
+            "coordinates.\n"
+            "  - Supported generators: Cn(number), S2n(number), U_d(angle), "
+            "sigmaV(), sigmaH(), U().\n"
+            "  - Generalized translations are {'T_Q': [Q, f]} or {'T_V': f}."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     parser.add_argument(
         "-m",
         "--motif",
         default=[[3, np.pi / 24, 0.6], [2.2, np.pi / 24, 0.8]],
-        help="the Cylindrical coordinates of initial atom position",
+        help=(
+            "Initial motif in cylindrical coordinates as [[r, phi, z], ...]. "
+            "Use a Python literal list."
+        ),
     )
 
     parser.add_argument(
         "-g",
         "--generators",
         default=["Cn(6)", "sigmaV()"],
-        help="the point group generator of monomer",
+        help=(
+            "Point-group generators for the motif. Supported: "
+            "Cn(number), S2n(number), U_d(angle), sigmaV(), sigmaH(), U()."
+        ),
     )
 
     parser.add_argument(
         "-c",
         "--cyclic",
         default={"T_Q": [6, 1.5]},
-        help="The generalized translation group. For T_Q the first parameter is Q and the second parameter is f."
-        " For T_V the parameter is f",
+        help=(
+            "Generalized translation group as {'T_Q': [Q, f]} for a screw "
+            "operation or {'T_V': f} for a glide operation; f is the z "
+            "translation."
+        ),
     )
 
     parser.add_argument(
@@ -311,12 +339,13 @@ def main():
         "--st_name",
         type=str,
         default="poscar.vasp",
-        help="the saved file name",
+        help="Output VASP/POSCAR filename.",
     )
     parser.add_argument(
         "-b",
         "--symbol",
         default=("Mo", "S"),
+        help="Atomic symbols for the motif atoms, e.g. ('Mo', 'S').",
     )
 
     args = parser.parse_args()
