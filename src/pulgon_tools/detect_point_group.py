@@ -24,6 +24,7 @@ from pymatgen.core import Molecule
 from pymatgen.core.operations import SymmOp
 from pymatgen.symmetry.analyzer import PointGroupAnalyzer
 
+from pulgon_tools.cli import RawDescriptionDefaultsHelpFormatter
 from pulgon_tools.utils import (
     brute_force_generate_group,
     find_axis_center_of_nanotube,
@@ -252,7 +253,7 @@ def main():
             "  - Use -g to also print pymatgen's full molecular point-group "
             "result."
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=RawDescriptionDefaultsHelpFormatter,
     )
     parser.add_argument(
         "-p",

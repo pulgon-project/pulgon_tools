@@ -23,6 +23,7 @@ import numpy as np
 from ase import Atoms
 from ase.io.vasp import write_vasp
 
+from pulgon_tools.cli import RawDescriptionDefaultsHelpFormatter
 from pulgon_tools.utils import (
     Cn,
     S2n,
@@ -300,7 +301,7 @@ def main():
             "sigmaV(), sigmaH(), U().\n"
             "  - Generalized translations are {'T_Q': [Q, f]} or {'T_V': f}."
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=RawDescriptionDefaultsHelpFormatter,
     )
 
     parser.add_argument(
@@ -345,7 +346,7 @@ def main():
         "-b",
         "--symbol",
         default=("Mo", "S"),
-        help="Atomic symbols for the motif atoms, e.g. ('Mo', 'S').",
+        help="Atomic symbols for the motif atoms.",
     )
 
     args = parser.parse_args()

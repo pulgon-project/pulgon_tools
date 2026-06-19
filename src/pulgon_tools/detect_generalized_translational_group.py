@@ -27,6 +27,7 @@ from ase.io.formats import UnknownFileTypeError
 from pymatgen.core.operations import SymmOp
 from pymatgen.util.coord import find_in_coord_list
 
+from pulgon_tools.cli import RawDescriptionDefaultsHelpFormatter
 from pulgon_tools.utils import (
     angle_between_points,
     decimal_places,
@@ -667,7 +668,7 @@ def main():
             "  - layer-tolerance is a fractional z-coordinate tolerance for "
             "layer grouping and monomer translation candidates."
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=RawDescriptionDefaultsHelpFormatter,
     )
     parser.add_argument(
         "-p",

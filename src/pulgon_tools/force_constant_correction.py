@@ -34,6 +34,8 @@ from phonopy.phonon.band_structure import get_band_qpoints_and_path_connections
 from phonopy.structure.atoms import PhonopyAtoms
 from sklearn.linear_model import Ridge
 
+from pulgon_tools.cli import RawDescriptionDefaultsHelpFormatter
+
 
 def calc_dists(
     atoms: Atoms, tolerance: float = 1e-4
@@ -343,7 +345,7 @@ def main():
             "  If --path_yaml is provided, the structure and supercell "
             "information are read from phonopy.yaml."
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=RawDescriptionDefaultsHelpFormatter,
     )
     parser.add_argument(
         "-p",
@@ -351,7 +353,7 @@ def main():
         default="POSCAR",
         help=(
             "Input structure file used when --path_yaml is not provided "
-            "(default: POSCAR)."
+            "for loading the primitive cell."
         ),
     )
     parser.add_argument(
@@ -380,7 +382,7 @@ def main():
         default="./FORCE_CONSTANTS",
         help=(
             "Input force constants file, either FORCE_CONSTANTS or "
-            "force_constants.hdf5 (default: ./FORCE_CONSTANTS)."
+            "force_constants.hdf5."
         ),
     )
     parser.add_argument(
@@ -418,7 +420,7 @@ def main():
         choices=["convex_opt", "ridge_model"],
         help=(
             "Solver used to enforce the constraints: 'convex_opt' or "
-            "'ridge_model' (default: convex_opt)."
+            "'ridge_model'."
         ),
     )
     parser.add_argument(

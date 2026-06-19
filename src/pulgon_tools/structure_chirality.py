@@ -24,6 +24,7 @@ from pulp import LpMinimize, LpProblem, LpVariable, value
 from pymatgen.core.operations import SymmOp
 from scipy.optimize import fsolve
 
+from pulgon_tools.cli import RawDescriptionDefaultsHelpFormatter
 from pulgon_tools.utils import Cn, brute_force_generate_group
 
 
@@ -414,7 +415,7 @@ def main():
             "  - bond_length is the metal-chalcogen 3D bond length.\n"
             "  - delta_Z is the pre-roll-up layer spacing in the 2D sheet."
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=RawDescriptionDefaultsHelpFormatter,
     )
 
     parser.add_argument(
@@ -431,10 +432,7 @@ def main():
         "-b",
         "--symbol",
         default=("Mo", "S"),
-        help=(
-            "Atomic symbols for the metal and chalcogen atoms, "
-            "e.g. ('Mo', 'S')."
-        ),
+        help="Atomic symbols for the metal and chalcogen atoms.",
     )
 
     parser.add_argument(

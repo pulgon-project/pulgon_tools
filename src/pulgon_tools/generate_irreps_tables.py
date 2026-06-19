@@ -21,6 +21,7 @@ from ase import Atom, Atoms
 from ase.io import read
 from pymatgen.core.operations import SymmOp
 
+from pulgon_tools.cli import RawDescriptionDefaultsHelpFormatter
 from pulgon_tools.detect_generalized_translational_group import (
     CyclicGroupAnalyzer,
 )
@@ -145,7 +146,7 @@ def main() -> None:
             "only.\n"
             "  With -r, representation matrices D_irrep_* are also stored."
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=RawDescriptionDefaultsHelpFormatter,
     )
     parser.add_argument(
         "-p",
@@ -178,8 +179,8 @@ def main() -> None:
         "--savename_chara",
         default="characters",
         help=(
-            "Output base filename for the .npz file; default 'characters' "
-            "writes characters.npz."
+            "Output base filename for the .npz file; the saved file is "
+            "<name>.npz."
         ),
     )
     parser.add_argument(

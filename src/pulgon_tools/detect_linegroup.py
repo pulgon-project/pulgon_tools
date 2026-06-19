@@ -19,6 +19,7 @@ from ase import Atoms
 from ase.io import read
 from ase.io.formats import UnknownFileTypeError
 
+from pulgon_tools.cli import RawDescriptionDefaultsHelpFormatter
 from pulgon_tools.detect_generalized_translational_group import (
     CyclicGroupAnalyzer,
 )
@@ -87,7 +88,7 @@ def main() -> None:
             "  - tolerance matches atomic positions; layer-tolerance groups "
             "z-layers into monomer translation candidates."
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=RawDescriptionDefaultsHelpFormatter,
     )
     parser.add_argument(
         "-p",
