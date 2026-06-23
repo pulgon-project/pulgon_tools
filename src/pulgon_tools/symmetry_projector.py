@@ -198,8 +198,15 @@ def _extract_generator_angles(
     return angles
 
 
-def _extract_screw_parameters(trans_sym):
-    """Extract screw parameters from a translational symbol like (C12|T3(1.5))."""
+def _extract_translation_parameters(trans_sym, a_lattice):
+    """Extract translation parameters needed by the irrep tables.
+
+    Pure translations are represented as the Q=1 screw limit so family-1
+    tables can use the same code path for ``T`` and ``T_Q`` groups.
+    """
+    if trans_sym == "T":
+        return {"Q_screw": 1.0, "Q_num": 1, "f_screw": float(a_lattice)}
+
     match = re.match(r"\(C([^|]+)\|T\d+\(([^)]+)\)\)", trans_sym)
     if match is None:
         return {}
@@ -210,6 +217,39 @@ def _extract_screw_parameters(trans_sym):
         "Q_num": q_frac.numerator,
         "f_screw": float(match.group(2)),
     }
+
+
+def _select_cyclic_candidate(cyclic, rota_sym):
+    """Return the first cyclic candidate that maps to a known family."""
+    cyclic_groups, _ = cyclic.get_cyclic_group()
+    for index, trans_sym in enumerate(cyclic_groups):
+        family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
+        if family is not None:
+            return index, trans_sym, family
+    raise ValueError(
+        f"Cannot identify a line-group family for axial point group {rota_sym} "
+        f"and cyclic groups {cyclic_groups}."
+    )
+
+
+def _get_cyclic_generator(cyclic, index, trans_sym):
+    """Return the generator matrix for the selected cyclic candidate."""
+    if trans_sym == "T":
+        return np.eye(4)
+
+    sym_operations = cyclic._sym_operations[index]
+    if isinstance(sym_operations, list):
+        op = sym_operations[1]
+    else:
+        op = sym_operations
+
+    fractional_translation = (
+        op.translation_vector @ np.linalg.inv(cyclic._atom.cell)
+    ) % 1
+    return SymmOp.from_rotation_and_translation(
+        rotation_matrix=op.rotation_matrix,
+        translation_vec=[0, 0, fractional_translation[2]],
+    ).affine_matrix
 
 
 def _s2n_affine_generator(nrot):
@@ -292,27 +332,30 @@ def get_linegroup_symmetry_dataset(
     else:
         print("Unknown input")
 
-    atom_center = find_axis_center_of_nanotube(atom)
+    cyclic = CyclicGroupAnalyzer(
+        atom,
+        tolerance=tolerance,
+        layer_tolerance=layer_tolerance,
+    )
+    atom_center = find_axis_center_of_nanotube(cyclic._primitive)
 
     obj = LineGroupAnalyzer(
         atom_center,
         tolerance=tolerance,
         matrix_tolerance=matrix_tolerance,
     )
-    cyclic = CyclicGroupAnalyzer(
-        atom_center,
-        tolerance=tolerance,
-        layer_tolerance=layer_tolerance,
-    )
 
+    rota_sym = obj.sch_symbol
+    selected_cyclic, trans_sym, family = _select_cyclic_candidate(
+        cyclic, rota_sym
+    )
     nrot = obj.get_rotational_symmetry_number()
     aL = atom_center.cell[2, 2]
-    cyclic_groups, _ = cyclic.get_cyclic_group()
-    trans_sym = cyclic_groups[0]
-    rota_sym = obj.sch_symbol
-    family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
 
-    trans_op = np.round(cyclic.get_generators(), GENERATOR_ROUND_DECIMALS)
+    trans_op = np.round(
+        _get_cyclic_generator(cyclic, selected_cyclic, trans_sym),
+        GENERATOR_ROUND_DECIMALS,
+    )
     rots_op = np.round(obj.get_generators(), GENERATOR_ROUND_DECIMALS)
     mats = _normalize_generators_for_irrep_table(
         family, nrot, trans_op, rots_op
@@ -324,7 +367,7 @@ def get_linegroup_symmetry_dataset(
     gen_angles = _extract_generator_angles(
         mats, matrix_tolerance=matrix_tolerance
     )
-    gen_angles.update(_extract_screw_parameters(trans_sym))
+    gen_angles.update(_extract_translation_parameters(trans_sym, aL))
 
     unreduced_tz = _compute_unreduced_z_translations(mats, order_ops)
 

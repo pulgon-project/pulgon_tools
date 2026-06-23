@@ -33,8 +33,10 @@ from pulgon_tools.symmetry_projector import (
     DEFAULT_SYMMETRY_TOLERANCE,
     GENERATOR_ROUND_DECIMALS,
     _extract_generator_angles,
-    _extract_screw_parameters,
+    _extract_translation_parameters,
+    _get_cyclic_generator,
     _normalize_generators_for_irrep_table,
+    _select_cyclic_candidate,
 )
 from pulgon_tools.utils import (
     brute_force_generate_group_subsequent,
@@ -91,25 +93,28 @@ def get_linegroup_symmetry_dataset(
     else:
         raise TypeError("poscar must be a path string, ASE Atom, or ASE Atoms")
 
-    atom_center = find_axis_center_of_nanotube(atom)
+    cyclic = CyclicGroupAnalyzer(
+        atom,
+        tolerance=tolerance,
+        layer_tolerance=layer_tolerance,
+    )
+    atom_center = find_axis_center_of_nanotube(cyclic._primitive)
     obj = LineGroupAnalyzer(
         atom_center,
         tolerance=tolerance,
         matrix_tolerance=matrix_tolerance,
     )
-    cyclic = CyclicGroupAnalyzer(
-        atom_center,
-        tolerance=tolerance,
-        layer_tolerance=layer_tolerance,
+    rota_sym = obj.sch_symbol
+    selected_cyclic, trans_sym, family = _select_cyclic_candidate(
+        cyclic, rota_sym
     )
     nrot = obj.get_rotational_symmetry_number()
     aL = atom_center.cell[2, 2]
-    cyclic_groups, _ = cyclic.get_cyclic_group()
-    trans_sym = cyclic_groups[0]
-    rota_sym = obj.sch_symbol
-    family = get_family_num_from_sym_symbol(trans_sym, rota_sym)
 
-    trans_op = np.round(cyclic.get_generators(), GENERATOR_ROUND_DECIMALS)
+    trans_op = np.round(
+        _get_cyclic_generator(cyclic, selected_cyclic, trans_sym),
+        GENERATOR_ROUND_DECIMALS,
+    )
     rots_op = np.round(obj.get_generators(), GENERATOR_ROUND_DECIMALS)
     mats = _normalize_generators_for_irrep_table(
         family, nrot, trans_op, rots_op
@@ -121,7 +126,7 @@ def get_linegroup_symmetry_dataset(
     gen_angles: Dict[str, Union[float, int]] = _extract_generator_angles(
         mats, matrix_tolerance=matrix_tolerance
     )
-    gen_angles.update(_extract_screw_parameters(trans_sym))
+    gen_angles.update(_extract_translation_parameters(trans_sym, aL))
 
     ops_car_sym: List[SymmOp] = []
     for op in ops:
