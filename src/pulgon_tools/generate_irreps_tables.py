@@ -156,7 +156,9 @@ def main() -> None:
             "writes characters.npz.\n"
             "  Without -r, the file stores character tables and irrep labels "
             "only.\n"
-            "  With -r, representation matrices D_irrep_* are also stored."
+            "  With -r, representation matrices D_irrep_* are also stored.\n"
+            "  tolerance controls atomic matching during symmetry detection; "
+            "qpoint-tolerance controls special-q-point numerical comparisons."
         ),
         formatter_class=RawDescriptionDefaultsHelpFormatter,
     )
@@ -179,11 +181,20 @@ def main() -> None:
         "-t",
         "--tolerance",
         type=float,
-        default=None,
+        default=DEFAULT_SYMMETRY_TOLERANCE,
         help=(
-            "Optional numerical tolerance. If omitted, symmetry detection "
-            "uses 1e-2 and character evaluation uses 1e-8; if set, the same "
-            "value is used for both."
+            "Distance tolerance in Angstrom for line-group symmetry "
+            "detection."
+        ),
+    )
+    parser.add_argument(
+        "-u",
+        "--qpoint-tolerance",
+        type=float,
+        default=1e-6,
+        help=(
+            "Numerical tolerance for identifying special q points and "
+            "boundary angular-momentum sectors in irrep construction."
         ),
     )
     parser.add_argument(
@@ -208,12 +219,12 @@ def main() -> None:
     args = parser.parse_args()
     st_name = args.POSCAR
     qpoint_z = args.qpoint_z
-    symprec = 1e-8 if args.tolerance is None else args.tolerance
+    symprec = args.qpoint_tolerance
     chara_filename = args.savename_chara
     enable_rep_matrix = args.enable_rep_matrix
 
     atom = read(st_name)
-    symmetry_tolerance = 1e-2 if args.tolerance is None else args.tolerance
+    symmetry_tolerance = args.tolerance
 
     (
         atom_center,

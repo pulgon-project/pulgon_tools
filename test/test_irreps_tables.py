@@ -161,6 +161,8 @@ def test_main_cli_saves_character_table(tmp_path, monkeypatch):
             str(_structure_path(4)),
             "-q",
             "0.0",
+            "-u",
+            "1e-6",
             "-s",
             str(outfile),
         ],

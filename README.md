@@ -207,13 +207,16 @@ Constructs irreducible representations and character tables for all 13 line-grou
 pulgon-irreps-tables -p POSCAR [OPTIONS]
 ```
 
-| Flag                        | Description                                                                                                  | Default      |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------ |
-| `-p`, `--POSCAR`            | Input structure file in a format readable by ASE                                                             | —           |
-| `-q`, `--qpoint_z`          | Reduced q coordinate along periodic z; internally converted to`qpoint_z * 2π/a`                             | `0.0`        |
-| `-t`, `--tolerance`         | Optional numerical tolerance; if omitted, symmetry detection uses`1e-2` and character evaluation uses `1e-8` | —           |
-| `-s`, `--savename_chara`    | Output base filename for the`.npz` file                                                                      | `characters` |
-| `-r`, `--enable_rep_matrix` | Also save irreducible representation matrices as`D_irrep_*` arrays                                           | `False`      |
+| Flag                         | Description                                                                                            | Default      |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------ | ------------ |
+| `-p`, `--POSCAR`             | Input structure file in a format readable by ASE                                                       | —           |
+| `-q`, `--qpoint_z`           | Reduced q coordinate along periodic z; internally converted to `qpoint_z * 2π/a`                       | `0.0`        |
+| `-t`, `--tolerance`          | Distance tolerance in Å for line-group symmetry detection                                              | `0.01`       |
+| `-u`, `--qpoint-tolerance`   | Numerical tolerance for special q points and boundary angular-momentum sectors in irrep construction   | `1e-6`       |
+| `-s`, `--savename_chara`     | Output base filename for the `.npz` file                                                               | `characters` |
+| `-r`, `--enable_rep_matrix`  | Also save irreducible representation matrices as `D_irrep_*` arrays                                    | `False`      |
+
+Here `--tolerance` acts on Cartesian atomic-position matching during symmetry detection, while `--qpoint-tolerance` is a dimensionless numerical tolerance used in the irrep/character-table stage.
 
 **Example** — character table of MoS₂-(5,0) at q = 0:
 
