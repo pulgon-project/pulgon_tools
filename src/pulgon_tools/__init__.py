@@ -12,4 +12,4 @@
 # implied. See the License for the specific language governing
 # permissions and limitations under the License.
 
-__version__ = "2026.3.3"
+__version__ = "2026.7.1"
