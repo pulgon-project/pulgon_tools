@@ -167,6 +167,39 @@ def test_gamma_character_table_satisfies_finite_group_invariants(family):
     assert len(np.unique(rounded_rows, axis=0)) == len(characters)
 
 
+def test_family_10_bz_boundary_has_two_projective_doublets():
+    (
+        _,
+        family,
+        nrot,
+        a_lattice,
+        operations,
+        operation_words,
+        gen_angles,
+    ) = get_linegroup_symmetry_dataset(str(_structure_path(10)))
+    params = {
+        "qpoints": np.pi / a_lattice,
+        "nrot": nrot,
+        "order": operation_words,
+        "family": family,
+        "a": a_lattice,
+        **gen_angles,
+    }
+
+    characters, irreps_values, _ = get_character_num_withparities(
+        params, symprec=1e-8
+    )
+    dimensions = np.rint(characters[:, 0].real).astype(int)
+
+    assert len(operations) == 8
+    assert characters.shape == (2, 8)
+    assert len(irreps_values) == 2
+    assert dimensions.tolist() == [2, 2]
+    assert np.sum(dimensions**2) == len(operations)
+    gram = characters @ characters.conj().T / len(operations)
+    np.testing.assert_allclose(gram, np.eye(2), atol=1e-10)
+
+
 @pytest.mark.parametrize(
     ("family", "expected_class_sizes"),
     [
@@ -257,7 +290,8 @@ def test_non_gamma_metadata_separates_little_group_and_factor_group():
 def test_higher_order_examples_satisfy_gamma_invariants(
     family, expected_ops, expected_dimensions
 ):
-    path = EXAMPLE_STRUCT_DIR / f"family_{family:02d}.vasp"
+    path = EXAMPLE_STRUCT_DIR / f"family_{family:02d}"
+    atom = read_vasp(path)
     (
         _,
         detected_family,
@@ -266,7 +300,7 @@ def test_higher_order_examples_satisfy_gamma_invariants(
         ops,
         order_ops,
         gen_params,
-    ) = get_linegroup_symmetry_dataset(str(path))
+    ) = get_linegroup_symmetry_dataset(atom)
     params = {
         "qpoints": 0.0,
         "nrot": nrot,

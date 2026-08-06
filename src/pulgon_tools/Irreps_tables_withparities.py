@@ -856,6 +856,15 @@ def line_group_sympy_withparities(
             sympy.Matrix([[glide_k, 0], [0, -glide_k]]),
             sympy.Matrix([[0, -sympy.exp(1j * k1 * a)], [1, 0]]),
         ]
+        # At (k=pi/a, m=n/2), the glide and S_2n generators form a
+        # non-trivial projective representation: they cannot be represented
+        # simultaneously by scalars.  The second band-sticking irrep differs
+        # from func3 by the sign of S_2n squared (the C_n character).
+        func5 = [
+            sympy.eye(2),
+            sympy.Matrix([[glide_k, 0], [0, -glide_k]]),
+            sympy.Matrix([[0, sympy.exp(1j * k1 * a)], [1, 0]]),
+        ]
         func4 = [
             sympy.eye(4),
             sympy.Matrix(
@@ -884,10 +893,12 @@ def line_group_sympy_withparities(
             base_subs = {k1: tmp_k1, m1: tmp_m1, n: n_axial}
             is_gamma = np.isclose(tmp_k1, 0, atol=symprec)
             is_pi = np.isclose(tmp_k1, np.pi / a, atol=symprec)
-            is_m_edge = _is_boundary_m(tmp_m1, n_axial, symprec)
-            if (is_gamma and np.isclose(tmp_m1, 0, atol=symprec)) or (
-                is_pi and np.isclose(tmp_m1, n_axial / 2, atol=symprec)
-            ):
+            is_m_zero = np.isclose(tmp_m1, 0, atol=symprec)
+            is_m_half = n_axial % 2 == 0 and np.isclose(
+                tmp_m1, n_axial / 2, atol=symprec
+            )
+            is_m_edge = is_m_zero or is_m_half
+            if is_gamma and is_m_zero:
                 for tmp_piU, tmp_piV in itertools.product([-1, 1], [-1, 1]):
                     res = _value_fc(
                         func0,
@@ -919,11 +930,17 @@ def line_group_sympy_withparities(
                     )
                     characters.append(_as_complex_array(res))
                     paras_values.append([tmp_k1, tmp_m1, 0, tmp_piV, 0])
-            elif (
-                is_gamma and np.isclose(tmp_m1, n_axial / 2, atol=symprec)
-            ) or (is_pi and np.isclose(tmp_m1, 0, atol=symprec)):
+            elif (is_gamma and is_m_half) or (is_pi and is_m_zero):
                 res = _value_fc(
                     func3,
+                    {**base_subs, piU: 0, piV: 0, piH: 0},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
+                paras_values.append([tmp_k1, tmp_m1, 0, 0, 0])
+            elif is_pi and is_m_half:
+                res = _value_fc(
+                    func5,
                     {**base_subs, piU: 0, piV: 0, piH: 0},
                     order,
                 )

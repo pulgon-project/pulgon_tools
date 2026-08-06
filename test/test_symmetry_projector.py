@@ -22,7 +22,10 @@ from pulgon_tools.symmetry_projector import (
     get_adapted_matrix_withparities,
     get_linegroup_symmetry_dataset,
 )
-from pulgon_tools.utils import get_matrices_withPhase
+from pulgon_tools.utils import (
+    get_character_withparities,
+    get_matrices_withPhase,
+)
 
 STRUCT_DIR = Path(__file__).parent / "data" / "test_irrep_struct"
 FAMILIES = tuple(range(1, 14))
@@ -224,6 +227,43 @@ def test_adapted_matrix_accepts_projector_tolerances():
 
     assert adapted.shape == (ds["ndof"], ds["ndof"])
     assert sum(dimensions) == ds["ndof"]
+
+
+def test_family_10_bz_boundary_projectors_are_orthogonal_idempotents():
+    ds = _dataset_for_family(10)
+    qpoint = _qpoint("bz_boundary", ds["a_lattice"])
+    dict_params = {
+        "qpoints": qpoint,
+        "nrot": ds["nrot"],
+        "order": ds["order_ops"],
+        "family": ds["family"],
+        "a": ds["a_lattice"],
+        **ds["gen_angles"],
+    }
+    matrices = get_matrices_withPhase(
+        ds["atom_center"], ds["ops_car_sym"], qpoint, symprec=1e-3
+    )
+    representation_matrices, _, _ = get_character_withparities(dict_params)
+
+    projectors = []
+    for representation in representation_matrices:
+        dimension = representation.shape[-1]
+        characters = np.trace(representation, axis1=1, axis2=2)
+        projector = sum(
+            character.conj() * matrix
+            for character, matrix in zip(characters, matrices)
+        )
+        projector *= dimension / len(matrices)
+        projectors.append(projector)
+
+        np.testing.assert_allclose(projector, projector.conj().T, atol=1e-10)
+        np.testing.assert_allclose(
+            projector @ projector, projector, atol=1e-10
+        )
+
+    assert len(projectors) == 2
+    np.testing.assert_allclose(projectors[0] @ projectors[1], 0.0, atol=1e-10)
+    np.testing.assert_allclose(sum(projectors), np.eye(ds["ndof"]), atol=1e-10)
 
 
 def _assert_adapted_result_smoke(result):
