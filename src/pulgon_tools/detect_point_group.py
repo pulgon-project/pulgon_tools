@@ -222,6 +222,29 @@ class LineGroupAnalyzer(PointGroupAnalyzer):
         ]
         return generators
 
+    def get_axial_rotation_order(self) -> int:
+        """Return the order of the proper rotation about the line-group axis.
+
+        ``PointGroupAnalyzer.get_rotational_symmetry_number`` counts every
+        proper rotation in the point group.  For dihedral groups that count is
+        twice the order of the principal ``C_n`` axis because the perpendicular
+        two-fold rotations are included as well.  Irrep tables use the
+        principal-axis order instead, so expose it separately.
+        """
+        for axis, order in self.rot_sym:
+            axis = np.asarray(axis, dtype=float)
+            norm = np.linalg.norm(axis)
+            if np.isclose(norm, 0.0, atol=self.mat_tol):
+                continue
+            axis /= norm
+            if np.isclose(
+                np.abs(np.dot(axis, self._zaxis)),
+                1.0,
+                atol=self.mat_tol,
+            ):
+                return int(order)
+        return 1
+
 
 def get_symcell(monomer: Atoms) -> Atoms:
     """Extract the symmetrically independent atoms from a monomer.

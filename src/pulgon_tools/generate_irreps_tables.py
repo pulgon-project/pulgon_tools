@@ -109,6 +109,7 @@ def get_linegroup_symmetry_dataset(
         cyclic, rota_sym
     )
     nrot = obj.get_rotational_symmetry_number()
+    n_axial = obj.get_axial_rotation_order()
     aL = atom_center.cell[2, 2]
 
     trans_op = np.round(
@@ -117,7 +118,7 @@ def get_linegroup_symmetry_dataset(
     )
     rots_op = np.round(obj.get_generators(), GENERATOR_ROUND_DECIMALS)
     mats = _normalize_generators_for_irrep_table(
-        family, nrot, trans_op, rots_op
+        family, n_axial, trans_op, rots_op
     )
     ops, order_ops = brute_force_generate_group_subsequent(
         mats, symprec=matrix_tolerance
@@ -126,6 +127,7 @@ def get_linegroup_symmetry_dataset(
     gen_angles: Dict[str, Union[float, int]] = _extract_generator_angles(
         mats, matrix_tolerance=matrix_tolerance
     )
+    gen_angles["n_axial"] = n_axial
     gen_angles.update(_extract_translation_parameters(trans_sym, aL))
 
     ops_car_sym: List[SymmOp] = []

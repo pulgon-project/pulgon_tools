@@ -139,6 +139,8 @@ class TestAxialPointGroupAnalyzer:
         obj = LineGroupAnalyzer(mol)
         pg = obj.get_pointgroup()
         assert str(pg) == "D6h"
+        assert obj.get_axial_rotation_order() == 6
+        assert obj.get_rotational_symmetry_number() == 12
 
     def test_axial_pg_st2(self, shared_datadir):
         st_name = shared_datadir / "m2"
@@ -163,6 +165,8 @@ class TestAxialPointGroupAnalyzer:
         obj = LineGroupAnalyzer(mol)
         pg = obj.get_pointgroup()
         assert str(pg) == "S18"
+        assert obj.get_axial_rotation_order() == 9
+        assert obj.get_rotational_symmetry_number() == 9
 
     def test_axial_pg_st6(self, shared_datadir):
         st_name = shared_datadir / "C4h"

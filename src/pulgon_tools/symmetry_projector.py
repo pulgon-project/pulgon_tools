@@ -27,6 +27,7 @@ DEFAULT_MATRIX_TOLERANCE = 1e-2
 DEFAULT_PERMUTATION_TOLERANCE = 1e-3
 GENERATOR_ROUND_DECIMALS = 6
 GENERATOR_CLASSIFICATION_TOLERANCE = 1e-2
+PROJECTOR_BLOCK_TOLERANCE = 1e-6
 PROJECTOR_RANK_TOLERANCE = 1e-8
 PROJECTOR_GAP_WARNING_TOLERANCE = 0.05
 DEFAULT_TO_THZ = get_physical_units().DefaultToTHz
@@ -37,6 +38,7 @@ def get_adapted_matrix_withparities(
     num_atom,
     matrices,
     *,
+    block_tolerance=PROJECTOR_BLOCK_TOLERANCE,
     rank_tolerance=PROJECTOR_RANK_TOLERANCE,
     gap_warning_tolerance=PROJECTOR_GAP_WARNING_TOLERANCE,
 ):
@@ -56,6 +58,8 @@ def get_adapted_matrix_withparities(
         The number of atoms
     matrices : list of numpy arrays
         The matrices used to calculate the symmetry projection basis matrix
+    block_tolerance : float
+        Tolerance used to identify k-preserving representation blocks.
     rank_tolerance : float
         Singular-value cutoff used after residualizing duplicate subspaces.
     gap_warning_tolerance : float
@@ -75,6 +79,20 @@ def get_adapted_matrix_withparities(
     ) = get_character_withparities(DictParams)
     ndof = 3 * num_atom
 
+    # At a generic q, operations that reverse z map +q to -q and are not in
+    # the little group of the requested Bloch sector.  The line-group irreps
+    # carry both sectors, so select their block-diagonal, q-preserving part.
+    # At Gamma and the BZ boundary, -q is equivalent to q and the full finite
+    # quotient is used.
+    qpoint = DictParams.get("qpoints", 0.0)
+    bz_boundary = np.pi / DictParams["a"]
+    negative_families = {2, 3, 4, 5, 9, 10, 11, 12, 13}
+    use_little_group = (
+        DictParams.get("family") in negative_families
+        and not np.isclose(qpoint, 0.0)
+        and not np.isclose(abs(qpoint), bz_boundary)
+    )
+
     adapted = []
     dimension = []
     for ii, rep_mat in enumerate(representation_mat):  # loop IR
@@ -85,13 +103,39 @@ def get_adapted_matrix_withparities(
 
         projector = np.zeros((ndof, ndof), dtype=np.complex128)
 
-        for kk in range(len(rep_mat)):
-            if rep_mat.ndim == 1:
-                chara_conj = rep_mat[kk].conj()
-            else:
-                chara_conj = rep_mat[kk].trace().conj()
-            projector += chara_conj * matrices[kk]
-        projector = IR_ndim * projector / len(rep_mat)
+        if use_little_group and IR_ndim > 1:
+            k_characters = []
+            k_indices = []
+            for kk, matrix in enumerate(rep_mat):
+                if IR_ndim == 4:
+                    off_block = np.linalg.norm(
+                        matrix[:2, 2:]
+                    ) + np.linalg.norm(matrix[2:, :2])
+                    if off_block < block_tolerance:
+                        k_characters.append(np.trace(matrix[:2, :2]))
+                        k_indices.append(kk)
+                elif IR_ndim == 2:
+                    off_block = abs(matrix[0, 1]) + abs(matrix[1, 0])
+                    if off_block < block_tolerance:
+                        k_characters.append(matrix[0, 0])
+                        k_indices.append(kk)
+
+            if not k_indices:
+                raise ValueError(
+                    "No q-preserving operations found for a generic-q irrep."
+                )
+            k_irrep_dimension = IR_ndim // 2
+            for chara, kk in zip(k_characters, k_indices):
+                projector += chara.conj() * matrices[kk]
+            projector *= k_irrep_dimension / len(k_indices)
+        else:
+            for kk in range(len(rep_mat)):
+                if rep_mat.ndim == 1:
+                    chara_conj = rep_mat[kk].conj()
+                else:
+                    chara_conj = rep_mat[kk].trace().conj()
+                projector += chara_conj * matrices[kk]
+            projector *= IR_ndim / len(rep_mat)
 
         num_modes = projector.trace().real
 
@@ -252,15 +296,15 @@ def _get_cyclic_generator(cyclic, index, trans_sym):
     ).affine_matrix
 
 
-def _s2n_affine_generator(nrot):
-    """Return the axial S2n generator for family-2 line groups.
+def _s2n_affine_generator(n_axial):
+    """Return the axial S2n generator for line-group irrep tables.
 
     ``LineGroupAnalyzer.get_generators()`` currently returns the proper
     rotation subgroup generator for axial ``S2n`` groups, e.g. ``C2`` for
-    ``S4``. Family 2 irreps are tabulated against the improper generator
+    ``S4``. Families 2 and 10 are tabulated against the improper generator
     ``sigma_h C_{2n}``, so the dataset must use that generator explicitly.
     """
-    angle = np.pi / nrot
+    angle = np.pi / n_axial
     generator = np.eye(4)
     generator[:3, :3] = np.array(
         [
@@ -274,7 +318,7 @@ def _s2n_affine_generator(nrot):
 
 def _normalize_generators_for_irrep_table(
     family,
-    nrot,
+    n_axial,
     trans_op,
     rots_op,
 ):
@@ -285,23 +329,77 @@ def _normalize_generators_for_irrep_table(
     shifting all later generator indices in ``order_ops``.  Keep explicit
     placeholders only for the affected families so generic cases are unchanged.
     """
-    if family == 2:
-        # Family 2 is tabulated against S2n = sigma_h C_{2n}; the point-group
-        # detector may return the proper rotation subgroup instead.
+    if family in (2, 10):
+        # Families 2 and 10 are tabulated against S2n = sigma_h C_{2n}; the
+        # point-group detector may return the proper Cn subgroup instead.
         rots_op = np.array(
             [
                 np.round(
-                    _s2n_affine_generator(nrot),
+                    _s2n_affine_generator(n_axial),
                     GENERATOR_ROUND_DECIMALS,
                 )
             ]
         )
-    elif family == 8 and nrot == 1:
+    elif family == 8 and n_axial == 1:
         # Family 8 table columns are [screw, Cn, sigmaV].  When n=1, Cn is
         # identity but its column must remain so sigmaV keeps index 3.
         rots = np.asarray(rots_op)
         if rots.size != 0:
             rots_op = np.concatenate(([np.eye(4)], rots), axis=0)
+    elif family == 11:
+        # Table 4.11 uses [Cn, sigmaV, sigmaH].  The point-group detector
+        # normally returns [Cn, U, sigmaH], where sigmaV = U sigmaH.  Build
+        # and order the table generators explicitly so their indices agree
+        # with the representation matrices at both special and generic k.
+        rots = np.asarray(rots_op)
+        if rots.ndim == 2:
+            rots = rots[np.newaxis, ...]
+
+        axial_rotations = []
+        perpendicular_rotations = []
+        vertical_mirrors = []
+        horizontal_mirrors = []
+        for op in rots:
+            rotation = op[:3, :3]
+            determinant = np.linalg.det(rotation)
+            z_sign = rotation[2, 2]
+            if determinant > 0 and np.isclose(
+                z_sign, 1.0, atol=GENERATOR_CLASSIFICATION_TOLERANCE
+            ):
+                axial_rotations.append(op)
+            elif determinant > 0 and np.isclose(
+                z_sign, -1.0, atol=GENERATOR_CLASSIFICATION_TOLERANCE
+            ):
+                perpendicular_rotations.append(op)
+            elif determinant < 0 and np.isclose(
+                z_sign, 1.0, atol=GENERATOR_CLASSIFICATION_TOLERANCE
+            ):
+                vertical_mirrors.append(op)
+            elif determinant < 0 and np.isclose(
+                z_sign, -1.0, atol=GENERATOR_CLASSIFICATION_TOLERANCE
+            ):
+                horizontal_mirrors.append(op)
+
+        if not horizontal_mirrors:
+            raise ValueError(
+                "Family 11 requires a horizontal mirror generator."
+            )
+        sigma_h = horizontal_mirrors[0]
+        if vertical_mirrors:
+            sigma_v = vertical_mirrors[0]
+        elif perpendicular_rotations:
+            sigma_v = np.round(
+                perpendicular_rotations[0] @ sigma_h,
+                GENERATOR_ROUND_DECIMALS,
+            )
+        else:
+            raise ValueError(
+                "Family 11 requires a vertical mirror or perpendicular "
+                "two-fold rotation generator."
+            )
+
+        c_n = axial_rotations[0] if axial_rotations else np.eye(4)
+        rots_op = np.array([c_n, sigma_v, sigma_h])
 
     rots_op = np.asarray(rots_op)
     if rots_op.size != 0:
@@ -350,6 +448,7 @@ def get_linegroup_symmetry_dataset(
         cyclic, rota_sym
     )
     nrot = obj.get_rotational_symmetry_number()
+    n_axial = obj.get_axial_rotation_order()
     aL = atom_center.cell[2, 2]
 
     trans_op = np.round(
@@ -358,7 +457,7 @@ def get_linegroup_symmetry_dataset(
     )
     rots_op = np.round(obj.get_generators(), GENERATOR_ROUND_DECIMALS)
     mats = _normalize_generators_for_irrep_table(
-        family, nrot, trans_op, rots_op
+        family, n_axial, trans_op, rots_op
     )
     ops, order_ops = brute_force_generate_group_subsequent(
         mats, symprec=matrix_tolerance
@@ -367,6 +466,7 @@ def get_linegroup_symmetry_dataset(
     gen_angles = _extract_generator_angles(
         mats, matrix_tolerance=matrix_tolerance
     )
+    gen_angles["n_axial"] = n_axial
     gen_angles.update(_extract_translation_parameters(trans_sym, aL))
 
     unreduced_tz = _compute_unreduced_z_translations(mats, order_ops)

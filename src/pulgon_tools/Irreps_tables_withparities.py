@@ -72,6 +72,27 @@ def _m_values_screw(q_num: int) -> list:
     return list(range(start, stop))
 
 
+def _axial_order(DictParams: dict) -> int:
+    """Return the principal Cn-axis order used by irrep tables.
+
+    ``nrot`` historically stores pymatgen's rotational symmetry number,
+    i.e. the number of all proper rotations.  That equals twice the axial
+    order for dihedral point groups.  New datasets provide ``n_axial``
+    explicitly; the family-based fallback keeps direct legacy callers working.
+    """
+    if "n_axial" in DictParams:
+        return int(DictParams["n_axial"])
+
+    nrot = int(DictParams["nrot"])
+    if DictParams.get("family") in (5, 9, 11, 13):
+        if nrot % 2 != 0:
+            raise ValueError(
+                "Dihedral families require an even proper-rotation count."
+            )
+        return nrot // 2
+    return nrot
+
+
 def _is_boundary_m(m_value: float, nrot: int, symprec: float) -> bool:
     return np.isclose(m_value, 0, atol=symprec) or np.isclose(
         m_value, nrot / 2, atol=symprec
@@ -603,7 +624,7 @@ def line_group_sympy_withparities(
 
     elif family == 9:
         qpoint = DictParams["qpoints"]
-        nrot = DictParams["nrot"]
+        n_axial = _axial_order(DictParams)
         a = DictParams["a"]
         order = DictParams["order"]
         n, k1, m1, piU, piV, piH, alphaU, betaS = symbols(
@@ -644,37 +665,46 @@ def line_group_sympy_withparities(
 
         characters, paras_values = [], []
         for tmp_k1, tmp_m1 in itertools.product(
-            [qpoint], _m_values_nonnegative(nrot)
+            [qpoint], _m_values_nonnegative(n_axial)
         ):
             base_subs = {
                 k1: tmp_k1,
                 m1: tmp_m1,
-                n: nrot,
+                n: n_axial,
                 alphaU: tmp_alphaU,
                 betaS: tmp_betaS,
             }
             is_k_edge = np.isclose(tmp_k1, 0, atol=symprec) or np.isclose(
                 tmp_k1, np.pi / a, atol=symprec
             )
-            is_m_edge = _is_boundary_m(tmp_m1, nrot, symprec)
-            if is_k_edge and is_m_edge:
-                for tmp_piU, tmp_piV, tmp_piH in itertools.product(
-                    [-1, 1], [-1, 1], [-1, 1]
-                ):
+            is_m_zero = np.isclose(tmp_m1, 0, atol=symprec)
+            is_m_half = n_axial % 2 == 0 and np.isclose(
+                tmp_m1, n_axial / 2, atol=symprec
+            )
+            if is_k_edge and is_m_zero:
+                for tmp_piU, tmp_piV in itertools.product([-1, 1], repeat=2):
                     res = _value_fc(
                         func0,
                         {
                             **base_subs,
                             piU: tmp_piU,
                             piV: tmp_piV,
-                            piH: tmp_piH,
                         },
                         order,
                     )
                     characters.append(_as_complex_array(res))
-                    paras_values.append(
-                        [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
-                    )
+                    paras_values.append([tmp_k1, tmp_m1, tmp_piU, tmp_piV, 0])
+            elif is_k_edge and is_m_half:
+                # Table 4.9 has one two-dimensional E_{n/2} irrep.  The
+                # piH=+1 choice fixes a basis gauge; the other sign is an
+                # equivalent representation and must not be enumerated again.
+                res = _value_fc(
+                    func1,
+                    {**base_subs, piU: 0, piV: 0, piH: 1},
+                    order,
+                )
+                characters.append(_as_complex_array(res))
+                paras_values.append([tmp_k1, tmp_m1, 0, 0, 0])
             elif is_k_edge:
                 for tmp_piH in [-1, 1]:
                     res = _value_fc(
@@ -684,7 +714,7 @@ def line_group_sympy_withparities(
                     )
                     characters.append(_as_complex_array(res))
                     paras_values.append([tmp_k1, tmp_m1, 0, 0, tmp_piH])
-            elif is_m_edge:
+            elif is_m_zero or is_m_half:
                 for tmp_piV in [-1, 1]:
                     res = _value_fc(
                         func2,
@@ -704,7 +734,7 @@ def line_group_sympy_withparities(
 
     elif family == 11:
         qpoint = DictParams["qpoints"]
-        nrot = DictParams["nrot"]
+        n_axial = _axial_order(DictParams)
         a = DictParams["a"]
         order = DictParams["order"]
         n, k1, m1, piU, piV, piH, alphaU, betaS = symbols(
@@ -745,37 +775,32 @@ def line_group_sympy_withparities(
 
         characters, paras_values = [], []
         for tmp_k1, tmp_m1 in itertools.product(
-            [qpoint], _m_values_nonnegative(nrot)
+            [qpoint], _m_values_nonnegative(n_axial)
         ):
             base_subs = {
                 k1: tmp_k1,
                 m1: tmp_m1,
-                n: nrot,
+                n: n_axial,
                 alphaU: tmp_alphaU,
                 betaS: tmp_betaS,
             }
             is_k_edge = np.isclose(tmp_k1, 0, atol=symprec) or np.isclose(
                 tmp_k1, np.pi / a, atol=symprec
             )
-            is_m_edge = _is_boundary_m(tmp_m1, nrot, symprec)
+            is_m_edge = _is_boundary_m(tmp_m1, n_axial, symprec)
             if is_k_edge and is_m_edge:
-                for tmp_piU, tmp_piV, tmp_piH in itertools.product(
-                    [-1, 1], [-1, 1], [-1, 1]
-                ):
+                for tmp_piV, tmp_piH in itertools.product([-1, 1], repeat=2):
                     res = _value_fc(
                         func0,
                         {
                             **base_subs,
-                            piU: tmp_piU,
                             piV: tmp_piV,
                             piH: tmp_piH,
                         },
                         order,
                     )
                     characters.append(_as_complex_array(res))
-                    paras_values.append(
-                        [tmp_k1, tmp_m1, tmp_piU, tmp_piV, tmp_piH]
-                    )
+                    paras_values.append([tmp_k1, tmp_m1, 0, tmp_piV, tmp_piH])
             elif is_k_edge:
                 for tmp_piH in [-1, 1]:
                     res = _value_fc(
@@ -805,7 +830,7 @@ def line_group_sympy_withparities(
 
     elif family == 10:
         qpoint = DictParams["qpoints"]
-        nrot = DictParams["nrot"]
+        n_axial = _axial_order(DictParams)
         a = DictParams["a"]
         order = DictParams["order"]
         n, k1, m1, piU, piV, piH = symbols("n k1 m1 piU piV piH")
@@ -816,12 +841,15 @@ def line_group_sympy_withparities(
         func1 = [
             sympy.eye(2),
             glide_k * _swap(),
-            piH * sympy.Matrix([[s_phase, 0], [0, 1 / s_phase]]),
+            piH
+            * sympy.Matrix(
+                [[s_phase, 0], [0, sympy.exp(1j * k1 * a) / s_phase]]
+            ),
         ]
         func2 = [
             sympy.eye(2),
-            piV * sympy.Matrix([[glide_k, 0], [0, 1 / glide_k]]),
-            sympy.Matrix([[0, s_phase], [1 / s_phase, 0]]),
+            piV * sympy.Matrix([[glide_k, 0], [0, rot_m / glide_k]]),
+            sympy.Matrix([[0, rot_m], [1, 0]]),
         ]
         func3 = [
             sympy.eye(2),
@@ -834,16 +862,16 @@ def line_group_sympy_withparities(
                 [
                     [0, glide_k, 0, 0],
                     [glide_k, 0, 0, 0],
-                    [0, 0, 0, 1 / glide_k],
-                    [0, 0, 1 / glide_k, 0],
+                    [0, 0, 0, 1 / (rot_m * glide_k)],
+                    [0, 0, rot_m / glide_k, 0],
                 ]
             ),
             sympy.Matrix(
                 [
-                    [0, 0, s_phase, 0],
-                    [0, 0, 0, 1 / s_phase],
-                    [s_phase, 0, 0, 0],
-                    [0, 1 / s_phase, 0, 0],
+                    [0, 0, rot_m, 0],
+                    [0, 0, 0, 1 / rot_m],
+                    [1, 0, 0, 0],
+                    [0, 1, 0, 0],
                 ]
             ),
         ]
@@ -851,14 +879,14 @@ def line_group_sympy_withparities(
         paras_symbol = [k1, m1, piU, piV, piH]
         characters, paras_values = [], []
         for tmp_k1, tmp_m1 in itertools.product(
-            [qpoint], _m_values_nonnegative(nrot)
+            [qpoint], _m_values_nonnegative(n_axial)
         ):
-            base_subs = {k1: tmp_k1, m1: tmp_m1, n: nrot}
+            base_subs = {k1: tmp_k1, m1: tmp_m1, n: n_axial}
             is_gamma = np.isclose(tmp_k1, 0, atol=symprec)
             is_pi = np.isclose(tmp_k1, np.pi / a, atol=symprec)
-            is_m_edge = _is_boundary_m(tmp_m1, nrot, symprec)
+            is_m_edge = _is_boundary_m(tmp_m1, n_axial, symprec)
             if (is_gamma and np.isclose(tmp_m1, 0, atol=symprec)) or (
-                is_pi and np.isclose(tmp_m1, nrot / 2, atol=symprec)
+                is_pi and np.isclose(tmp_m1, n_axial / 2, atol=symprec)
             ):
                 for tmp_piU, tmp_piV in itertools.product([-1, 1], [-1, 1]):
                     res = _value_fc(
@@ -891,9 +919,9 @@ def line_group_sympy_withparities(
                     )
                     characters.append(_as_complex_array(res))
                     paras_values.append([tmp_k1, tmp_m1, 0, tmp_piV, 0])
-            elif (is_gamma and np.isclose(tmp_m1, nrot / 2, atol=symprec)) or (
-                is_pi and np.isclose(tmp_m1, 0, atol=symprec)
-            ):
+            elif (
+                is_gamma and np.isclose(tmp_m1, n_axial / 2, atol=symprec)
+            ) or (is_pi and np.isclose(tmp_m1, 0, atol=symprec)):
                 res = _value_fc(
                     func3,
                     {**base_subs, piU: 0, piV: 0, piH: 0},
