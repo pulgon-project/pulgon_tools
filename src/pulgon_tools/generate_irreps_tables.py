@@ -21,6 +21,9 @@ from ase import Atom, Atoms
 from ase.io import read
 from pymatgen.core.operations import SymmOp
 
+from pulgon_tools.character_table_metadata import (
+    build_character_table_metadata,
+)
 from pulgon_tools.cli import RawDescriptionDefaultsHelpFormatter
 from pulgon_tools.detect_generalized_translational_group import (
     CyclicGroupAnalyzer,
@@ -156,8 +159,8 @@ def main() -> None:
             "direction.\n"
             "  Output is saved as an .npz file; for example, -s characters "
             "writes characters.npz.\n"
-            "  Without -r, the file stores character tables and irrep labels "
-            "only.\n"
+            "  Without -r, the file stores character tables, irrep labels, "
+            "and operation/conjugacy-class metadata.\n"
             "  With -r, representation matrices D_irrep_* are also stored.\n"
             "  tolerance controls atomic matching during symmetry detection; "
             "qpoint-tolerance controls special-q-point numerical comparisons."
@@ -247,43 +250,35 @@ def main() -> None:
         **gen_angles,
     }
 
+    (
+        characters,
+        irreps_values,
+        irreps_symbols,
+    ) = get_character_num_withparities(DictParams, symprec=symprec)
+    metadata = build_character_table_metadata(
+        ops_car_sym,
+        order_ops,
+        characters,
+        aL,
+        qpoint_z,
+        symprec=symprec,
+    )
+    output: Dict[str, object] = {
+        "characters": characters,
+        "ireps_values": irreps_values,
+        "ireps_symbols": irreps_symbols,
+        **metadata,
+    }
+
     if enable_rep_matrix:
-        (
-            characters,
-            irreps_values,
-            irreps_symbols,
-        ) = get_character_num_withparities(DictParams, symprec=symprec)
         representation_mat, _, _ = get_character_withparities(
             DictParams, symprec=symprec
         )
-        representation_mat_dict: Dict[str, np.ndarray] = {}
         for i, rep in enumerate(representation_mat):
-            representation_mat_dict[f"D_irrep_{i}"] = rep
+            output[f"D_irrep_{i}"] = rep
 
-        np.savez(
-            chara_filename,
-            characters=characters,
-            ireps_values=irreps_values,
-            ireps_symbols=irreps_symbols,
-            **representation_mat_dict,
-        )
-        print(f"Successfully generated {_npz_output_name(chara_filename)}.")
-
-    else:
-
-        (
-            characters,
-            irreps_values,
-            irreps_symbols,
-        ) = get_character_num_withparities(DictParams, symprec=symprec)
-
-        np.savez(
-            chara_filename,
-            characters=characters,
-            ireps_values=irreps_values,
-            ireps_symbols=irreps_symbols,
-        )
-        print(f"Successfully generated {_npz_output_name(chara_filename)}.")
+    np.savez(chara_filename, **output)
+    print(f"Successfully generated {_npz_output_name(chara_filename)}.")
 
 
 if __name__ == "__main__":

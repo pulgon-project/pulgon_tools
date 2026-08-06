@@ -226,6 +226,55 @@ pulgon-irreps-tables -p POSCAR -q 0.0 -s mos2_chartable
 
 The output is saved by `numpy.savez`; for example, `-s mos2_chartable` writes `mos2_chartable.npz`.
 
+### Saved `.npz` fields
+
+Let `N_irrep` be the number of irreducible representations, `N_op` the number of finite-factor-group operations, and `N_class` the number of ordinary conjugacy classes. The following fields are always saved:
+
+| Field | Shape | Description |
+| ----- | ----- | ----------- |
+| `characters` | `(N_irrep, N_op)` | Character table with one column per operation. The original column order is preserved. |
+| `ireps_values` | irrep dependent | Numerical quantum-number values associated with the irrep rows. This legacy key retains its original spelling. |
+| `ireps_symbols` | irrep dependent | Symbols used to interpret the entries in `ireps_values`. |
+| `qpoint_z` | scalar | Reduced axial q coordinate supplied with `--qpoint_z`. |
+| `operation_labels` | `(N_op,)` | Human-readable affine-operation labels, including axes or plane normals and any fractional translation. |
+| `operation_words` | `(N_op,)` | Comma-separated generator words reproducing the operation order. `0` denotes the identity seed and positive integers are one-based generator indices. |
+| `conjugacy_class_scope` | scalar string | Currently `finite_factor_group`; it identifies the group whose ordinary conjugacy classes are reported. |
+| `conjugacy_class_ids` | `(N_op,)` | Zero-based class ID for every operation/character-table column. |
+| `operation_class_labels` | `(N_op,)` | Class label repeated in character-table column order for convenient reporting. |
+| `conjugacy_class_labels` | `(N_class,)` | Labels formed from each class size and a representative operation, for example `2 S4(+90deg,axis=z)`. |
+| `conjugacy_class_sizes` | `(N_class,)` | Number of operations in each conjugacy class. |
+| `conjugacy_class_representatives` | `(N_class,)` | Column index selected as the representative of each class. |
+| `conjugacy_class_members` | `(N_class, max_class_size)` | Column indices in each class, padded with `-1`. |
+| `class_characters_available` | scalar bool | Whether an ordinary class-compressed character table is valid and included. |
+| `class_characters_scope` | scalar string | `finite_factor_group_at_gamma` or `unavailable_non_gamma`. |
+| `class_characters` | `(N_irrep, N_class)` or `(N_irrep, 0)` | One character column per ordinary conjugacy class at a Gamma-equivalent q point; empty away from Gamma. |
+| `q_preserving_mask` | `(N_op,)` | Boolean mask selecting operations that leave q invariant modulo a reciprocal lattice vector. |
+| `little_group_operation_indices` | `(N_little_op,)` | Original character-table column indices belonging to the q-point little group. |
+| `little_group_conjugacy_class_scope` | scalar string | `q_preserving_subgroup_of_finite_factor_group`; identifies the subgroup used for the following class fields. |
+| `little_group_conjugacy_class_ids` | `(N_op,)` | Little-group class IDs in original column order; nonmembers are `-1`. |
+| `little_group_conjugacy_class_labels` | `(N_little_class,)` | Labels for ordinary conjugacy classes of the q-preserving subgroup. |
+| `little_group_conjugacy_class_sizes` | `(N_little_class,)` | Sizes of the little-group conjugacy classes. |
+| `little_group_conjugacy_class_representatives` | `(N_little_class,)` | Original column index representing each little-group class. |
+| `little_group_conjugacy_class_members` | `(N_little_class, max_little_class_size)` | Original column indices in each little-group class, padded with `-1`. |
+
+With `--enable_rep_matrix`, the file additionally contains `D_irrep_0`, `D_irrep_1`, ... with the representation matrices for the corresponding irrep rows.
+
+At Gamma, the finite-factor-group characters are checked to be constant within every conjugacy class before `class_characters` is saved. Away from Gamma, nonsymmorphic Bloch phases can produce projective little-group representations, so the program does not compress `characters` using ordinary factor-group classes. It instead saves an empty `class_characters` array together with `q_preserving_mask` and the separately labeled ordinary classes of the q-preserving subgroup.
+
+The labels are deterministic, coordinate-explicit descriptions of the computed operations rather than manually assigned conventional character-table symbols. For example, `sigma_v(normal=y) | z=1/2` denotes a vertical mirror with normal along y followed by a half-cell axial translation.
+
+The new metadata fields use numeric and Unicode NumPy arrays rather than object arrays, so they can be accessed without enabling pickle. The legacy `ireps_symbols` field remains an object array for backward compatibility.
+
+```python
+import numpy as np
+
+with np.load("mos2_chartable.npz", allow_pickle=False) as table:
+    for column, (operation, conjugacy_class) in enumerate(
+        zip(table["operation_labels"], table["operation_class_labels"])
+    ):
+        print(column, operation, conjugacy_class)
+```
+
 ---
 
 ## Module 4: IFC Correction

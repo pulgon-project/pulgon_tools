@@ -18,6 +18,9 @@ import numpy as np
 import pytest
 from ase.io.vasp import read_vasp
 
+from pulgon_tools.character_table_metadata import (
+    build_character_table_metadata,
+)
 from pulgon_tools.generate_irreps_tables import get_linegroup_symmetry_dataset
 from pulgon_tools.utils import (
     get_character_num_withparities,
@@ -67,6 +70,35 @@ def _params_from_structure(path: Path) -> dict:
         "a": a_lattice,
         **gen_angles,
     }
+
+
+def _metadata_from_structure(family: int, qpoint_z: float = 0.0):
+    (
+        _,
+        detected_family,
+        nrot,
+        a_lattice,
+        operations,
+        operation_words,
+        gen_angles,
+    ) = get_linegroup_symmetry_dataset(str(_structure_path(family)))
+    params = {
+        "qpoints": qpoint_z / a_lattice * 2 * np.pi,
+        "nrot": nrot,
+        "order": operation_words,
+        "family": detected_family,
+        "a": a_lattice,
+        **gen_angles,
+    }
+    characters, _, _ = get_character_num_withparities(params, symprec=1e-8)
+    metadata = build_character_table_metadata(
+        operations,
+        operation_words,
+        characters,
+        a_lattice,
+        qpoint_z,
+    )
+    return characters, metadata
 
 
 @pytest.mark.parametrize("family", EXPECTED)
@@ -133,6 +165,86 @@ def test_gamma_character_table_satisfies_finite_group_invariants(family):
         np.column_stack((characters.real, characters.imag)), decimals=10
     )
     assert len(np.unique(rounded_rows, axis=0)) == len(characters)
+
+
+@pytest.mark.parametrize(
+    ("family", "expected_class_sizes"),
+    [
+        (9, [1, 1, 2, 2, 2]),
+        (10, [1, 1, 2, 2, 2]),
+        (11, [1, 1, 1, 1, 1, 1, 1, 1]),
+    ],
+)
+def test_gamma_conjugacy_class_metadata(family, expected_class_sizes):
+    characters, metadata = _metadata_from_structure(family)
+    class_ids = metadata["conjugacy_class_ids"]
+    class_labels = metadata["conjugacy_class_labels"]
+    class_members = metadata["conjugacy_class_members"]
+    representatives = metadata["conjugacy_class_representatives"]
+
+    assert metadata["conjugacy_class_scope"] == "finite_factor_group"
+    assert metadata["class_characters_available"]
+    assert metadata["class_characters_scope"] == (
+        "finite_factor_group_at_gamma"
+    )
+    assert len(metadata["operation_labels"]) == EXPECTED[family]["ops"]
+    assert (
+        len(np.unique(metadata["operation_labels"])) == EXPECTED[family]["ops"]
+    )
+    assert sorted(metadata["conjugacy_class_sizes"].tolist()) == (
+        expected_class_sizes
+    )
+    assert sorted(class_members[class_members >= 0].tolist()) == list(
+        range(EXPECTED[family]["ops"])
+    )
+    np.testing.assert_array_equal(
+        metadata["operation_class_labels"], class_labels[class_ids]
+    )
+    np.testing.assert_allclose(
+        metadata["class_characters"], characters[:, representatives]
+    )
+
+    for class_id, size in enumerate(metadata["conjugacy_class_sizes"]):
+        members = class_members[class_id, :size]
+        expected = metadata["class_characters"][:, class_id, np.newaxis]
+        np.testing.assert_allclose(
+            characters[:, members], np.repeat(expected, int(size), axis=1)
+        )
+
+
+def test_non_gamma_metadata_separates_little_group_and_factor_group():
+    characters, metadata = _metadata_from_structure(10, qpoint_z=0.25)
+
+    assert metadata["qpoint_z"] == pytest.approx(0.25)
+    assert metadata["q_preserving_mask"].tolist() == [
+        True,
+        True,
+        False,
+        False,
+        False,
+        True,
+        False,
+        True,
+    ]
+    assert metadata["little_group_operation_indices"].tolist() == [0, 1, 5, 7]
+    assert metadata["little_group_conjugacy_class_scope"] == (
+        "q_preserving_subgroup_of_finite_factor_group"
+    )
+    assert metadata["little_group_conjugacy_class_sizes"].tolist() == [
+        1,
+        1,
+        1,
+        1,
+    ]
+    assert not metadata["class_characters_available"]
+    assert metadata["class_characters_scope"] == "unavailable_non_gamma"
+    assert metadata["class_characters"].shape == (characters.shape[0], 0)
+    assert np.all(
+        metadata["little_group_conjugacy_class_ids"][
+            ~metadata["q_preserving_mask"]
+        ]
+        == -1
+    )
 
 
 @pytest.mark.parametrize(
@@ -229,13 +341,40 @@ def test_main_cli_saves_character_table(tmp_path, monkeypatch):
 
     main()
 
-    data = np.load(f"{outfile}.npz", allow_pickle=True)
+    data = np.load(f"{outfile}.npz", allow_pickle=False)
     assert data["characters"].shape == (
         EXPECTED[4]["irreps"],
         EXPECTED[4]["ops"],
     )
     assert "ireps_values" in data
     assert "ireps_symbols" in data
+    metadata_fields = {
+        "qpoint_z",
+        "operation_labels",
+        "operation_words",
+        "conjugacy_class_scope",
+        "conjugacy_class_ids",
+        "operation_class_labels",
+        "conjugacy_class_labels",
+        "conjugacy_class_sizes",
+        "conjugacy_class_representatives",
+        "conjugacy_class_members",
+        "class_characters_available",
+        "class_characters_scope",
+        "class_characters",
+        "q_preserving_mask",
+        "little_group_operation_indices",
+        "little_group_conjugacy_class_scope",
+        "little_group_conjugacy_class_ids",
+        "little_group_conjugacy_class_labels",
+        "little_group_conjugacy_class_sizes",
+        "little_group_conjugacy_class_representatives",
+        "little_group_conjugacy_class_members",
+    }
+    assert metadata_fields.issubset(data.files)
+    assert data["operation_labels"].shape == (EXPECTED[4]["ops"],)
+    assert data["operation_words"].shape == (EXPECTED[4]["ops"],)
+    assert data["class_characters"].shape[0] == EXPECTED[4]["irreps"]
 
 
 def test_main_cli_saves_representation_matrices(tmp_path, monkeypatch):
