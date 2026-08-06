@@ -37,3 +37,4 @@ jobs:
       with:
         file: coverage.lcov
         format: lcov
+        fail-on-error: false
