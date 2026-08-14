@@ -318,3 +318,18 @@ Additional examples for all modules are available in the `examples/` directory o
 ## Citation
 
 If you use Pulgon-tools in your research, please cite:
+
+```bibtex
+@article{CEN2026110351,
+  title = {Pulgon-tools: A toolkit for analysing and harnessing symmetries in quasi-1D systems},
+  journal = {Computer Physics Communications},
+  volume = {328},
+  pages = {110351},
+  year = {2026},
+  issn = {0010-4655},
+  doi = {https://doi.org/10.1016/j.cpc.2026.110351},
+  url = {https://www.sciencedirect.com/science/article/pii/S0010465526003334},
+  author = {Yu-Jie Cen and Sandro Wieser and Georg K. H. Madsen and Jesús Carrete},
+  keywords = {Line-group, Symmetry, Quasi-1D, Nanotubes, Nanowires, Toolkit}
+}
+```
